@@ -66,13 +66,13 @@ export default function ExperienceDetailPage() {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [selectedDateTimeIndex, setSelectedDateTimeIndex] = useState(0);
+  const [selectedDate, setSelectedDate] = useState("2025-10-25");
+  const [selectedTime, setSelectedTime] = useState("");
   const [guests, setGuests] = useState(2);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [experienceData, setExperienceData] = useState({});
   const [loading, setLoading] = useState(false);
   const [isLoadingVerification, setIsLoadingVerification] = useState(false);
-  const [reviewsData, setReviewsData] = useState([]);
 
   const { user, isVerified } = useAuth();
   const navigate = useNavigate();
@@ -145,29 +145,10 @@ export default function ExperienceDetailPage() {
 
         setExperienceData({ ...data, reviewCount, host: hostData });
 
-        // Fetch reviews
-        const reviewsWithUsers = await Promise.all(
-          reviewSnap.docs.map(async (reviewDoc) => {
-            const reviewData = reviewDoc.data();
-            let userData = null;
-
-            if (reviewData.user_id) {
-              const userRef = doc(db, "users", reviewData.user_id);
-              const userSnap = await getDoc(userRef);
-              if (userSnap.exists()) {
-                userData = userSnap.data();
-              }
-            }
-
-            return {
-              id: reviewDoc.id,
-              ...reviewData,
-              user: userData,
-            };
-          })
-        );
-
-        setReviewsData(reviewsWithUsers);
+        // Set first available time slot
+        if (data?.availableTimes?.length > 0) {
+          setSelectedTime(data?.availableTimes[0]);
+        }
       } catch (error) {
         console.error(error);
       } finally {
@@ -401,55 +382,48 @@ export default function ExperienceDetailPage() {
             )}
 
             {/* Reviews */}
-            {reviewsData.length > 0 && (
-              <div className="pb-8 border-b border-slate-700">
-                <div className="flex items-center gap-2 mb-6">
-                  <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
-                  <h3 className="text-xl font-semibold text-white">
-                    {experienceData?.rating || 0} ·{" "}
-                    {experienceData?.reviewCount || 0} reviews
-                  </h3>
-                </div>
-                <div className="space-y-6">
-                  {reviewsData.map((review) => (
-                    <div key={review.id} className="flex gap-4">
-                      <img
-                        src={review.user?.photoURL || "https://via.placeholder.com/100"}
-                        alt={review.user?.fullName || "User"}
-                        className="w-12 h-12 rounded-full flex-shrink-0"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-white">
-                            {review.user?.fullName || "Anonymous"}
-                          </span>
-                          <span className="text-slate-500 text-sm">·</span>
-                          <span className="text-slate-500 text-sm">
-                            {review.createdAt
-                              ? new Date(review.createdAt.toDate()).toLocaleDateString('en-US', {
-                                  month: 'long',
-                                  year: 'numeric'
-                                })
-                              : 'Recently'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 mb-2">
-                          {Array.from({ length: review.rating || 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className="w-3 h-3 fill-yellow-400 text-yellow-400"
-                            />
-                          ))}
-                        </div>
-                        <p className="text-slate-300 text-sm leading-relaxed">
-                          {review.comment || review.review || "Great experience!"}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div className="pb-8 border-b border-slate-700">
+              <div className="flex items-center gap-2 mb-6">
+                <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
+                <h3 className="text-xl font-semibold text-white">
+                  {experienceData?.rating || 0} ·{" "}
+                  {experienceData?.reviewCount || 0} reviews
+                </h3>
               </div>
-            )}
+              <div className="space-y-6">
+                {reviews.map((review) => (
+                  <div key={review.id} className="flex gap-4">
+                    <img
+                      src={review.avatar}
+                      alt={review.author}
+                      className="w-12 h-12 rounded-full flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-white">
+                          {review.author}
+                        </span>
+                        <span className="text-slate-500 text-sm">·</span>
+                        <span className="text-slate-500 text-sm">
+                          {review.date}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 mb-2">
+                        {Array.from({ length: review.rating }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className="w-3 h-3 fill-yellow-400 text-yellow-400"
+                          />
+                        ))}
+                      </div>
+                      <p className="text-slate-300 text-sm leading-relaxed">
+                        {review.comment}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* Important Information */}
             <div>
@@ -480,30 +454,35 @@ export default function ExperienceDetailPage() {
               <div className="space-y-4 mb-6">
                 <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
                   <label className="text-xs font-medium text-slate-300 block mb-1">
-                    SELECT DATE & TIME
+                    SELECT DATE
+                  </label>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                    className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white"
+                  />
+                </div>
+
+                <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
+                  <label className="text-xs font-medium text-slate-300 block mb-1">
+                    SELECT TIME
                   </label>
                   <select
-                    value={selectedDateTimeIndex}
-                    onChange={(e) => setSelectedDateTimeIndex(Number(e.target.value))}
-                    className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white"
+                    value={selectedTime}
+                    onChange={(e) => setSelectedTime(e.target.value)}
+                    className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white relative z-[9999]"
                   >
-                    {experienceData?.availableDates?.length > 0 ? (
-                      experienceData.availableDates.map((dateTime, idx) => (
-                        <option
-                          key={idx}
-                          value={idx}
-                          className="bg-white text-gray-900"
-                        >
-                          {new Date(dateTime.date).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })} at {dateTime.time}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>No available dates</option>
-                    )}
+                    {experienceData?.availableDates?.map((time, idx) => (
+                      <option
+                        key={idx}
+                        value={time}
+                        className="bg-white text-gray-900"
+                      >
+                        {time}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -660,21 +639,11 @@ export default function ExperienceDetailPage() {
             <div className="space-y-4 mb-6">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-400">Date</span>
-                <span className="font-medium text-white">
-                  {experienceData?.availableDates?.[selectedDateTimeIndex]?.date
-                    ? new Date(experienceData.availableDates[selectedDateTimeIndex].date).toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })
-                    : 'Not selected'}
-                </span>
+                <span className="font-medium text-white">{selectedDate}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-400">Time</span>
-                <span className="font-medium text-white">
-                  {experienceData?.availableDates?.[selectedDateTimeIndex]?.time || 'Not selected'}
-                </span>
+                <span className="font-medium text-white">{selectedTime}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-400">Guests</span>
