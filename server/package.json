@@ -1,0 +1,4 @@
+{
+  "type": "module",
+  "proxy": "http://localhost:5000"
+}
