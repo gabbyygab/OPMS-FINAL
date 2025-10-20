@@ -68,12 +68,7 @@ function LocationPicker({ marker, setMarker, setFormData, formData }) {
         await new Promise((resolve) => setTimeout(resolve, 300)); // Rate limiting
 
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-          {
-            headers: {
-              "User-Agent": "BookingNest/1.0",
-            },
-          }
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
         );
         if (!res.ok) throw new Error("Geocoding failed");
 
@@ -122,6 +117,7 @@ export default function HostMyStays({ user, userData }) {
   //houseRule
 
   const [newRule, setNewRule] = useState("");
+  const [newAvailableDate, setNewAvailableDate] = useState("");
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -137,7 +133,8 @@ export default function HostMyStays({ user, userData }) {
     bedrooms: "",
     beds: "",
     bathrooms: "",
-    availableDate: { from: "", to: "" },
+    availableDates: [],
+    bookedDates: [],
     amenities: [],
     discount: { type: "percentage", value: "" },
     description: "",
@@ -155,7 +152,8 @@ export default function HostMyStays({ user, userData }) {
       const q = query(
         listingRef,
         where("host_id", "==", userData.id),
-        where("isDraft", "==", false)
+        where("isDraft", "==", false),
+        where("type", "==", "stays")
       );
       const querySnapshot = await getDocs(q);
       const data = await Promise.all(
@@ -273,6 +271,27 @@ export default function HostMyStays({ user, userData }) {
     setShowSuggestions(false);
   };
 
+  // Add/Remove Available Date handlers
+  const addAvailableDate = () => {
+    if (newAvailableDate.trim()) {
+      const dateTimestamp = new Date(newAvailableDate);
+      setFormData({
+        ...formData,
+        availableDates: [...formData.availableDates, dateTimestamp],
+      });
+      setNewAvailableDate("");
+    } else {
+      toast.warning("Please select a date");
+    }
+  };
+
+  const removeAvailableDate = (index) => {
+    setFormData({
+      ...formData,
+      availableDates: formData.availableDates.filter((_, i) => i !== index),
+    });
+  };
+
   // Filter and search stays
   const filteredStays = listings.filter((stay) => {
     const matchesSearch =
@@ -319,17 +338,19 @@ export default function HostMyStays({ user, userData }) {
         location: formData.location || "",
         price: Number(formData.price) || 0,
         numberOfGuests: Number(formData.guests) || 1,
-        bedrooms: Number(formData.bedrooms) || 0, // ✅ added
-        bathrooms: Number(formData.bathrooms) || 0, // ✅ added
+        bedrooms: Number(formData.bedrooms) || 0,
+        bathrooms: Number(formData.bathrooms) || 0,
         amenities: Array.isArray(formData.amenities) ? formData.amenities : [],
         houseRules: Array.isArray(formData.houseRules)
           ? formData.houseRules
-          : [], // ✅ added
+          : [],
         photos: imageUrls && imageUrls.length > 0 ? imageUrls : [],
-        availableDate: {
-          from: formData.availableDate?.from || null,
-          to: formData.availableDate?.to || null,
-        },
+        availableDates: Array.isArray(formData.availableDates)
+          ? formData.availableDates.map(date =>
+              date instanceof Date ? date : new Date(date)
+            )
+          : [],
+        bookedDates: [],
         discount: {
           type: formData.discount?.type || "percentage",
           value: Number(formData.discount?.value) || 0,
@@ -352,7 +373,6 @@ export default function HostMyStays({ user, userData }) {
         }, {});
 
       const cleanStay = sanitizeData(newStay);
-      cleanStay.availableDate = sanitizeData(cleanStay.availableDate);
       cleanStay.discount = sanitizeData(cleanStay.discount);
 
       // Add to Firestore
@@ -391,15 +411,17 @@ export default function HostMyStays({ user, userData }) {
       bedrooms: "",
       bathrooms: "",
       beds: "",
-      availableDate: { from: "", to: "" },
+      availableDates: [],
+      bookedDates: [],
       amenities: [],
       discount: { type: "percentage", value: "" },
       description: "",
-      houseRules: [], // ✅ reset
+      houseRules: [],
     });
     setPreviewImages([]);
     setMarker(null);
     setNewRule("");
+    setNewAvailableDate("");
   };
 
   // Handle Edit Stay
@@ -459,11 +481,14 @@ export default function HostMyStays({ user, userData }) {
           ? formData.houseRules
           : [],
         photos: allPhotos,
-        availableDate: {
-          from: formData.availableDate?.from || null,
-          to: formData.availableDate?.to || null,
-        },
-
+        availableDates: Array.isArray(formData.availableDates)
+          ? formData.availableDates.map(date =>
+              date instanceof Date ? date : new Date(date)
+            )
+          : [],
+        bookedDates: Array.isArray(formData.bookedDates)
+          ? formData.bookedDates
+          : (selectedListing.bookedDates || []),
         discount: {
           type: formData.discount?.type || "percentage",
           value: Number(formData.discount?.value) || 0,
@@ -488,7 +513,6 @@ export default function HostMyStays({ user, userData }) {
         }, {});
 
       const cleanStay = sanitizeData(newStay);
-      cleanStay.availableDate = sanitizeData(cleanStay.availableDate);
       cleanStay.discount = sanitizeData(cleanStay.discount);
 
       const selectedId = selectedListing.id;
@@ -521,6 +545,27 @@ export default function HostMyStays({ user, userData }) {
   };
 
   // Toggle Stay Status
+  const toggleStatus = async (id) => {
+    try {
+      const stay = listings.find((s) => s.id === id);
+      const newStatus = stay.status === "active" ? "inactive" : "active";
+
+      await updateDoc(doc(db, "listings", id), {
+        status: newStatus,
+        updated_at: serverTimestamp(),
+      });
+
+      setListings(
+        listings.map((s) => (s.id === id ? { ...s, status: newStatus } : s))
+      );
+      toast.success(
+        `Stay ${newStatus === "active" ? "activated" : "deactivated"} successfully!`
+      );
+    } catch (error) {
+      console.error("Error toggling status:", error);
+      toast.error("Failed to update status");
+    }
+  };
 
   // Open Edit Modal
   const openEditModal = (selectedListing) => {
@@ -531,7 +576,15 @@ export default function HostMyStays({ user, userData }) {
       location: selectedListing.location || "",
       price: selectedListing.price || "",
       guests: selectedListing.numberOfGuests || "",
-      availableDate: selectedListing.availableDate || { from: "", to: "" },
+      availableDates: Array.isArray(selectedListing.availableDates)
+        ? selectedListing.availableDates.map(date => {
+            if (date && date.toDate) {
+              return date.toDate();
+            }
+            return date instanceof Date ? date : new Date(date);
+          })
+        : [],
+      bookedDates: selectedListing.bookedDates || [],
       discount: selectedListing.discount || { type: "percentage", value: 0 },
       bedrooms: selectedListing.bedrooms || 0,
       bathrooms: selectedListing.bathrooms || 0,
@@ -941,46 +994,58 @@ export default function HostMyStays({ user, userData }) {
                 </div>
               </div>
 
-              {/* Availability Dates */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Available From
-                  </label>
+              {/* Available Dates */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Available Dates
+                </label>
+                <div className="flex gap-2">
                   <input
                     type="date"
-                    value={formData.availableDate?.from || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        availableDate: {
-                          ...formData.availableDate,
-                          from: e.target.value,
-                        },
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg"
+                    value={newAvailableDate}
+                    onChange={(e) => setNewAvailableDate(e.target.value)}
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                   />
+                  <button
+                    type="button"
+                    onClick={addAvailableDate}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Add
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Available To
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.availableDate?.to || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        availableDate: {
-                          ...formData.availableDate,
-                          to: e.target.value,
-                        },
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg"
-                  />
-                </div>
+                {formData.availableDates.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {formData.availableDates.map((date, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2"
+                      >
+                        <span className="text-indigo-700 text-sm font-medium">
+                          {date instanceof Date
+                            ? date.toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
+                            : new Date(date).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeAvailableDate(index)}
+                          className="text-slate-400 hover:text-red-500 transition"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Price & Guests */}
@@ -1392,46 +1457,58 @@ export default function HostMyStays({ user, userData }) {
                 </div>
               </div>
 
-              {/* Availability Dates */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Available From
-                  </label>
+              {/* Available Dates */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Available Dates
+                </label>
+                <div className="flex gap-2">
                   <input
                     type="date"
-                    value={formData.availableDate?.from || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        availableDate: {
-                          ...formData.availableDate,
-                          from: e.target.value,
-                        },
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg"
+                    value={newAvailableDate}
+                    onChange={(e) => setNewAvailableDate(e.target.value)}
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                   />
+                  <button
+                    type="button"
+                    onClick={addAvailableDate}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Add
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Available To
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.availableDate?.to || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        availableDate: {
-                          ...formData.availableDate,
-                          to: e.target.value,
-                        },
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg"
-                  />
-                </div>
+                {formData.availableDates.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {formData.availableDates.map((date, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2"
+                      >
+                        <span className="text-indigo-700 text-sm font-medium">
+                          {date instanceof Date
+                            ? date.toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
+                            : new Date(date).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeAvailableDate(index)}
+                          className="text-slate-400 hover:text-red-500 transition"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Price & Guests */}

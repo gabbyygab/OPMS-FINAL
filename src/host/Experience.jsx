@@ -65,6 +65,7 @@ L.Icon.Default.mergeOptions({
 });
 
 // LocationPicker Component
+
 function LocationPicker({ marker, setMarker, setFormData, formData }) {
   useMapEvents({
     click: async (e) => {
@@ -72,15 +73,17 @@ function LocationPicker({ marker, setMarker, setFormData, formData }) {
       setMarker([lat, lng]);
 
       try {
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        // Reverse geocode using Nominatim with proper headers and delay
+        await new Promise((resolve) => setTimeout(resolve, 300)); // Rate limiting
 
         const res = await fetch(
-          `https://opms-final-backend.onrender.com/api/nominatim/reverse?lat=${lat}&lon=${lng}`
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
         );
-
         if (!res.ok) throw new Error("Geocoding failed");
 
         const data = await res.json();
+
+        // Use display_name as the readable address
         const placeName = data.display_name || `${lat}, ${lng}`;
 
         setFormData({
@@ -193,11 +196,11 @@ export default function HostMyExperiences() {
     photos: [],
     thingsToKnow: [],
     activities: [],
+    availableDates: [],
   });
 
   // Image upload states
   const [previewImages, setPreviewImages] = useState([]);
-  const [imageFiles, setImageFiles] = useState([]);
 
   // New item input states
   const [newTime, setNewTime] = useState("");
@@ -205,6 +208,8 @@ export default function HostMyExperiences() {
   const [newActivity, setNewActivity] = useState("");
   const [newIncluded, setNewIncluded] = useState("");
   const [newToBring, setNewToBring] = useState("");
+  const [newAvailableDate, setNewAvailableDate] = useState("");
+  const [newAvailableTime, setNewAvailableTime] = useState("");
 
   // Map-related state
   const [marker, setMarker] = useState(null);
@@ -238,7 +243,7 @@ export default function HostMyExperiences() {
     };
     getHostExperiences();
   }, [userData]);
-  console.log("is there exp:" + experiences);
+  console.log(experiences);
   console.log("host_id: " + userData.id);
 
   // Image upload handlers
@@ -349,6 +354,32 @@ export default function HostMyExperiences() {
     });
   };
 
+  const addAvailableDate = () => {
+    if (newAvailableDate.trim() && newAvailableTime.trim()) {
+      const newDateTimeObj = {
+        date: newAvailableDate,
+        time: newAvailableTime,
+      };
+      setFormData({
+        ...formData,
+        availableDates: [...formData.availableDates, newDateTimeObj],
+      });
+      setNewAvailableDate("");
+      setNewAvailableTime("");
+    } else if (newAvailableDate.trim() && !newAvailableTime.trim()) {
+      toast.warning("Please select a time for this date");
+    } else if (!newAvailableDate.trim() && newAvailableTime.trim()) {
+      toast.warning("Please select a date for this time");
+    }
+  };
+
+  const removeAvailableDate = (index) => {
+    setFormData({
+      ...formData,
+      availableDates: formData.availableDates.filter((_, i) => i !== index),
+    });
+  };
+
   // Map search handler
   const handleSearch = async (query) => {
     setFormData({ ...formData, location: query });
@@ -426,9 +457,9 @@ export default function HostMyExperiences() {
 
       // Upload images to Cloudinary
       let imageUrls = [];
-      if (imageFiles.length > 0) {
+      if (formData.photos && formData.photos.length > 0) {
         try {
-          const uploadPromises = imageFiles.map((file) =>
+          const uploadPromises = formData.photos.map((file) =>
             uploadToCloudinary(file)
           );
           imageUrls = await Promise.all(uploadPromises);
@@ -452,6 +483,9 @@ export default function HostMyExperiences() {
         ageMin: Number(formData.ageMin) || 0,
         availableTimes: Array.isArray(formData.availableTimes)
           ? formData.availableTimes
+          : [],
+        availableDates: Array.isArray(formData.availableDates)
+          ? formData.availableDates
           : [],
         thingsToKnow: Array.isArray(formData.thingsToKnow)
           ? formData.thingsToKnow
@@ -500,7 +534,6 @@ export default function HostMyExperiences() {
       resetForm();
       setShowAddModal(false);
       setPreviewImages([]);
-      setImageFiles([]);
       setMarker(null);
     } catch (error) {
       console.error("Error adding experience:", error);
@@ -510,45 +543,134 @@ export default function HostMyExperiences() {
   };
 
   // Handle Edit Experience
-  const handleEditExperience = () => {
-    const updatedExperiences = experiences.map((exp) =>
-      exp.id === selectedExperience.id
-        ? {
-            ...exp,
-            title: formData.title,
-            location: formData.location,
-            price: parseFloat(formData.price),
-            duration: parseFloat(formData.duration),
-            maxGuests: parseInt(formData.maxGuests),
-            category: formData.category,
-            language: formData.language,
-            ageMin: parseInt(formData.ageMin),
-          }
-        : exp
-    );
-    setExperiences(updatedExperiences);
-    setShowEditModal(false);
-    resetForm();
+  const handleEditExperience = async () => {
+    try {
+      const loadingToast = toast.loading("Updating experience...");
+
+      // Separate existing URLs from new File objects
+      const existingPhotos = formData.photos.filter(
+        (p) => typeof p === "string"
+      );
+      const newPhotoFiles = formData.photos.filter((p) => p instanceof File);
+
+      // Upload new images to Cloudinary
+      let newImageUrls = [];
+      if (newPhotoFiles.length > 0) {
+        try {
+          const uploadPromises = newPhotoFiles.map((file) =>
+            uploadToCloudinary(file)
+          );
+          newImageUrls = await Promise.all(uploadPromises);
+        } catch (uploadError) {
+          toast.dismiss(loadingToast);
+          toast.error("Failed to upload new images. Please try again.");
+          return;
+        }
+      }
+
+      // Combine existing photos with newly uploaded ones
+      const allPhotos = [...existingPhotos, ...newImageUrls];
+
+      // Prepare updated data
+      const updatedData = {
+        title: formData.title,
+        location: formData.location,
+        price: parseFloat(formData.price),
+        duration: parseFloat(formData.duration),
+        maxGuests: parseInt(formData.maxGuests),
+        category: formData.category,
+        language: formData.language,
+        ageMin: parseInt(formData.ageMin),
+        activities: Array.isArray(formData.activities)
+          ? formData.activities
+          : [],
+        availableDates: Array.isArray(formData.availableDates)
+          ? formData.availableDates
+          : [],
+        thingsToKnow: Array.isArray(formData.thingsToKnow)
+          ? formData.thingsToKnow
+          : [],
+        photos: allPhotos,
+        updatedAt: serverTimestamp(),
+      };
+
+      // Update in Firestore
+      const docRef = doc(db, "listings", selectedExperience.id);
+      await updateDoc(docRef, updatedData);
+
+      // Update local state
+      const updatedExperiences = experiences.map((exp) =>
+        exp.id === selectedExperience.id ? { ...exp, ...updatedData } : exp
+      );
+      setExperiences(updatedExperiences);
+
+      toast.dismiss(loadingToast);
+      toast.success("Experience updated successfully!");
+      setShowEditModal(false);
+      setPreviewImages([]);
+      resetForm();
+    } catch (error) {
+      console.error("Error updating experience:", error);
+      toast.dismiss();
+      toast.error("Failed to update experience. Please try again.");
+    }
   };
 
   // Handle Delete Experience
-  const handleDeleteExperience = () => {
-    setExperiences(
-      experiences.filter((exp) => exp.id !== selectedExperience.id)
-    );
-    setShowDeleteModal(false);
-    setSelectedExperience(null);
+  const handleDeleteExperience = async () => {
+    try {
+      const loadingToast = toast.loading("Deleting experience...");
+
+      // Delete from Firestore
+      const docRef = doc(db, "listings", selectedExperience.id);
+      await deleteDoc(docRef);
+
+      // Update local state
+      setExperiences(
+        experiences.filter((exp) => exp.id !== selectedExperience.id)
+      );
+
+      toast.dismiss(loadingToast);
+      toast.success("Experience deleted successfully!");
+      setShowDeleteModal(false);
+      setSelectedExperience(null);
+    } catch (error) {
+      console.error("Error deleting experience:", error);
+      toast.error("Failed to delete experience. Please try again.");
+    }
   };
 
   // Toggle Experience Status
-  const toggleStatus = (id) => {
-    setExperiences(
-      experiences.map((exp) =>
-        exp.id === id
-          ? { ...exp, status: exp.status === "active" ? "inactive" : "active" }
-          : exp
-      )
-    );
+  const toggleStatus = async (id) => {
+    try {
+      const experience = experiences.find((exp) => exp.id === id);
+      if (!experience) return;
+
+      const newStatus = experience.status === "active" ? "inactive" : "active";
+
+      // Update in Firestore
+      const docRef = doc(db, "listings", id);
+      await updateDoc(docRef, {
+        status: newStatus,
+        updatedAt: serverTimestamp(),
+      });
+
+      // Update local state
+      setExperiences(
+        experiences.map((exp) =>
+          exp.id === id ? { ...exp, status: newStatus } : exp
+        )
+      );
+
+      toast.success(
+        `Experience ${
+          newStatus === "active" ? "activated" : "deactivated"
+        } successfully!`
+      );
+    } catch (error) {
+      console.error("Error toggling status:", error);
+      toast.error("Failed to update status. Please try again.");
+    }
   };
 
   // Open Edit Modal
@@ -563,6 +685,18 @@ export default function HostMyExperiences() {
       category: exp.category,
       language: exp.language,
       ageMin: exp.ageMin,
+      activities: Array.isArray(exp.activities) ? exp.activities : [],
+      availableDates: Array.isArray(exp.availableDates)
+        ? exp.availableDates
+        : [],
+      description: exp.description || "",
+      availableTimes: Array.isArray(exp.availableTimes)
+        ? exp.availableTimes
+        : [],
+      thingsToKnow: Array.isArray(exp.thingsToKnow) ? exp.thingsToKnow : [],
+      included: Array.isArray(exp.included) ? exp.included : [],
+      toBring: Array.isArray(exp.toBring) ? exp.toBring : [],
+      photos: Array.isArray(exp.photos) ? exp.photos : [],
     });
     setShowEditModal(true);
   };
@@ -586,19 +720,22 @@ export default function HostMyExperiences() {
       language: "",
       ageMin: "",
       availableTimes: [],
+      availableDates: [],
       thingsToKnow: [],
       activities: [],
       included: [],
       toBring: [],
+      photos: [],
     });
     setPreviewImages([]);
-    setImageFiles([]);
     setMarker(null);
     setNewTime("");
     setNewThingToKnow("");
     setNewActivity("");
     setNewIncluded("");
     setNewToBring("");
+    setNewAvailableDate("");
+    setNewAvailableTime("");
   };
 
   return (
@@ -675,9 +812,9 @@ export default function HostMyExperiences() {
                 <p className="text-slate-600 text-sm">Total Revenue</p>
                 <h3 className="text-2xl font-bold text-slate-900 mt-1">
                   ₱
-                  {experiences
+                  {/* {experiences
                     .reduce((sum, exp) => sum + exp.revenue, 0)
-                    .toLocaleString()}
+                    .toLocaleString()} */}
                 </h3>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -763,7 +900,7 @@ export default function HostMyExperiences() {
                 {/* Image */}
                 <div className="relative h-48 overflow-hidden">
                   <img
-                    src={exp.image}
+                    src={exp.photos[0]}
                     alt={exp.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
                   />
@@ -774,7 +911,7 @@ export default function HostMyExperiences() {
                   </div>
                   <div className="absolute top-3 right-3">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium   ₱{
+                      className={`px-3 py-1 rounded-full text-xs font-medium   ${
                         exp.status === "active"
                           ? "bg-green-100 text-green-700"
                           : "bg-slate-100 text-slate-700"
@@ -841,7 +978,7 @@ export default function HostMyExperiences() {
                     <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-2">
                       <p className="text-xs text-slate-600">Revenue</p>
                       <p className="font-semibold text-green-600">
-                        ₱{exp.revenue.toLocaleString()}
+                        {/* ₱{exp.revenue.toLocaleString()} */}
                       </p>
                     </div>
                   </div>
@@ -1089,6 +1226,138 @@ export default function HostMyExperiences() {
                   rows="4"
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none"
                 ></textarea>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Activities
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newActivity}
+                    onChange={(e) => setNewActivity(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && addActivity()}
+                    placeholder="e.g., Swimming, Hiking"
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={addActivity}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.activities.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {formData.activities.map((activity, i) => (
+                      <div
+                        key={i}
+                        className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
+                      >
+                        {activity}
+                        <button
+                          type="button"
+                          onClick={() => removeActivity(i)}
+                          className="hover:text-indigo-900"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Available Dates & Times
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={newAvailableDate}
+                    onChange={(e) => setNewAvailableDate(e.target.value)}
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                    placeholder="Select date"
+                  />
+                  <input
+                    type="time"
+                    value={newAvailableTime}
+                    onChange={(e) => setNewAvailableTime(e.target.value)}
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                    placeholder="Select time"
+                  />
+                  <button
+                    type="button"
+                    onClick={addAvailableDate}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.availableDates.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {formData.availableDates.map((dateTime, i) => (
+                      <div
+                        key={i}
+                        className="bg-green-50 text-green-700 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
+                      >
+                        {new Date(dateTime.date).toLocaleDateString()} at {dateTime.time}
+                        <button
+                          type="button"
+                          onClick={() => removeAvailableDate(i)}
+                          className="hover:text-green-900"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Things to Know
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newThingToKnow}
+                    onChange={(e) => setNewThingToKnow(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && addThingToKnow()}
+                    placeholder="e.g., Bring sunscreen, Wear comfortable shoes"
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={addThingToKnow}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.thingsToKnow.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {formData.thingsToKnow.map((thing, i) => (
+                      <div
+                        key={i}
+                        className="bg-amber-50 text-amber-700 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
+                      >
+                        {thing}
+                        <button
+                          type="button"
+                          onClick={() => removeThingToKnow(i)}
+                          className="hover:text-amber-900"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1345,6 +1614,231 @@ export default function HostMyExperiences() {
                   placeholder="e.g., English, Japanese"
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Activities
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newActivity}
+                    onChange={(e) => setNewActivity(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && addActivity()}
+                    placeholder="e.g., Swimming, Hiking"
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={addActivity}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.activities.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {formData.activities.map((activity, i) => (
+                      <div
+                        key={i}
+                        className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
+                      >
+                        {activity}
+                        <button
+                          type="button"
+                          onClick={() => removeActivity(i)}
+                          className="hover:text-indigo-900"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Available Dates & Times
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={newAvailableDate}
+                    onChange={(e) => setNewAvailableDate(e.target.value)}
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                    placeholder="Select date"
+                  />
+                  <input
+                    type="time"
+                    value={newAvailableTime}
+                    onChange={(e) => setNewAvailableTime(e.target.value)}
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                    placeholder="Select time"
+                  />
+                  <button
+                    type="button"
+                    onClick={addAvailableDate}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.availableDates.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {formData.availableDates.map((dateTime, i) => (
+                      <div
+                        key={i}
+                        className="bg-green-50 text-green-700 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
+                      >
+                        {new Date(dateTime.date).toLocaleDateString()} at {dateTime.time}
+                        <button
+                          type="button"
+                          onClick={() => removeAvailableDate(i)}
+                          className="hover:text-green-900"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Things to Know
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newThingToKnow}
+                    onChange={(e) => setNewThingToKnow(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && addThingToKnow()}
+                    placeholder="e.g., Bring sunscreen, Wear comfortable shoes"
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={addThingToKnow}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.thingsToKnow.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {formData.thingsToKnow.map((thing, i) => (
+                      <div
+                        key={i}
+                        className="bg-amber-50 text-amber-700 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
+                      >
+                        {thing}
+                        <button
+                          type="button"
+                          onClick={() => removeThingToKnow(i)}
+                          className="hover:text-amber-900"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Photos
+                </label>
+
+                {/* Existing Photos */}
+                {formData.photos &&
+                  formData.photos.length > 0 &&
+                  formData.photos.some((p) => typeof p === "string") && (
+                    <div className="mb-4">
+                      <p className="text-xs text-slate-600 mb-2">
+                        Current Photos
+                      </p>
+                      <div className="grid grid-cols-3 gap-4">
+                        {formData.photos.map(
+                          (photo, i) =>
+                            typeof photo === "string" && (
+                              <div key={i} className="relative">
+                                <img
+                                  src={photo}
+                                  alt={`Existing ${i}`}
+                                  className="rounded-lg object-cover w-full h-32"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData({
+                                      ...formData,
+                                      photos: formData.photos.filter(
+                                        (_, idx) => idx !== i
+                                      ),
+                                    });
+                                  }}
+                                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                {/* Add New Photos */}
+                <div
+                  onClick={() =>
+                    document.getElementById("editPhotoInput").click()
+                  }
+                  className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-indigo-500 transition cursor-pointer"
+                >
+                  <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                  <p className="text-slate-600 text-sm">
+                    Click to add new photos
+                  </p>
+                  <input
+                    id="editPhotoInput"
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </div>
+
+                {/* New Photo Previews */}
+                {previewImages.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-xs text-slate-600 mb-2">
+                      New Photos to Upload
+                    </p>
+                    <div className="grid grid-cols-3 gap-4">
+                      {previewImages.map((src, i) => (
+                        <div key={i} className="relative">
+                          <img
+                            src={src}
+                            alt={`Preview ${i}`}
+                            className="rounded-lg object-cover w-full h-32"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(i)}
+                            className="absolute top-2 right-2 bg-white rounded-full p-1 shadow"
+                          >
+                            <X className="w-4 h-4 text-slate-600" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

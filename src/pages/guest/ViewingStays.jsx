@@ -30,6 +30,11 @@ import {
   query,
   where,
   collection,
+  addDoc,
+  deleteDoc,
+  updateDoc,
+  serverTimestamp,
+  arrayUnion,
 } from "firebase/firestore";
 import LoadingSpinner from "../../loading/Loading";
 import { useAuth } from "../../context/AuthContext";
@@ -120,13 +125,17 @@ export default function ListingDetailPage() {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteId, setFavoriteId] = useState(null);
   const [checkIn, setCheckIn] = useState("2025-11-28");
   const [checkOut, setCheckOut] = useState("2025-11-30");
   const [guests, setGuests] = useState(2);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [listingData, setListingData] = useState({});
+  const [reviewsData, setReviewsData] = useState([]);
+  const [walletBalance, setWalletBalance] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isLoadingVerification, setIsLoadingVerification] = useState(false);
+  const [userData, setUserData] = useState(null);
 
   const { user, isVerified } = useAuth();
   //navigation
@@ -152,6 +161,188 @@ export default function ListingDetailPage() {
       return;
     }
     action();
+  };
+
+  // Toggle Favorite
+  const toggleFavorite = async () => {
+    if (!user || !userData) {
+      toast.error("Please log in to save favorites");
+      return;
+    }
+
+    try {
+      if (isFavorite && favoriteId) {
+        // Remove from favorites
+        await deleteDoc(doc(db, "favorites", favoriteId));
+        setIsFavorite(false);
+        setFavoriteId(null);
+        toast.success("Removed from favorites");
+      } else {
+        // Add to favorites
+        const favoriteData = {
+          guest_id: userData.id,
+          listing_id: listing_id,
+          createdAt: serverTimestamp(),
+        };
+        const docRef = await addDoc(collection(db, "favorites"), favoriteData);
+        setIsFavorite(true);
+        setFavoriteId(docRef.id);
+        toast.success("Added to favorites");
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      toast.error("Failed to update favorites");
+    }
+  };
+
+  // Handle Confirm Booking
+  const handleConfirmBooking = async () => {
+    if (!userData) {
+      toast.error("User data not loaded");
+      return;
+    }
+
+    // Check if dates are within available dates
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+
+    // Check if any dates in the stay period are booked
+    const bookedDates = listingData.bookedDates || [];
+    const stayDates = [];
+    for (
+      let d = new Date(checkInDate);
+      d <= checkOutDate;
+      d.setDate(d.getDate() + 1)
+    ) {
+      stayDates.push(new Date(d));
+    }
+
+    const isAlreadyBooked = stayDates.some((stayDate) =>
+      bookedDates.some((bookedDate) => {
+        const bookedDateObj = bookedDate.toDate
+          ? bookedDate.toDate()
+          : new Date(bookedDate);
+        return stayDate.toDateString() === bookedDateObj.toDateString();
+      })
+    );
+
+    if (isAlreadyBooked) {
+      toast.error("Some dates in your selection are already booked");
+      return;
+    }
+
+    // Check wallet balance
+    if (walletBalance < grandTotal) {
+      toast.error(
+        `Insufficient balance. You need ₱${grandTotal.toLocaleString()} but have ₱${walletBalance.toLocaleString()}`
+      );
+      return;
+    }
+
+    try {
+      const loadingToast = toast.loading("Processing your booking...");
+
+      // Create booking
+      const bookingData = {
+        listing_id: listing_id,
+        guest_id: userData.id,
+        host_id: listingData.host_id,
+        checkIn: checkInDate,
+        checkOut: checkOutDate,
+        guests: guests,
+        totalAmount: grandTotal,
+        serviceFee: serviceFee,
+        status: "confirmed",
+        createdAt: serverTimestamp(),
+      };
+      await addDoc(collection(db, "bookings"), bookingData);
+
+      // Update bookedDates in listing
+      const listingRef = doc(db, "listings", listing_id);
+      await updateDoc(listingRef, {
+        bookedDates: arrayUnion(...stayDates),
+      });
+
+      // Update guest wallet balance (deduct)
+      const guestWalletQuery = query(
+        collection(db, "wallets"),
+        where("user_id", "==", userData.id)
+      );
+      const guestWalletSnap = await getDocs(guestWalletQuery);
+      let guestWalletId = null;
+
+      if (!guestWalletSnap.empty) {
+        const guestWalletDoc = guestWalletSnap.docs[0];
+        guestWalletId = guestWalletDoc.id;
+        const currentBalance = guestWalletDoc.data().balance || 0;
+        const currentTotalSpent = guestWalletDoc.data().total_spent || 0;
+
+        await updateDoc(doc(db, "wallets", guestWalletDoc.id), {
+          balance: currentBalance - grandTotal,
+          total_spent: currentTotalSpent + grandTotal,
+        });
+
+        setWalletBalance(currentBalance - grandTotal);
+      }
+
+      // Update host wallet balance (add)
+      const hostWalletQuery = query(
+        collection(db, "wallets"),
+        where("user_id", "==", listingData.host_id)
+      );
+      const hostWalletSnap = await getDocs(hostWalletQuery);
+      let hostWalletId = null;
+
+      if (!hostWalletSnap.empty) {
+        const hostWalletDoc = hostWalletSnap.docs[0];
+        hostWalletId = hostWalletDoc.id;
+        const hostCurrentBalance = hostWalletDoc.data().balance || 0;
+        const hostTotalCashIn = hostWalletDoc.data().total_cash_in || 0;
+
+        await updateDoc(doc(db, "wallets", hostWalletDoc.id), {
+          balance: hostCurrentBalance + grandTotal,
+          total_cash_in: hostTotalCashIn + grandTotal,
+        });
+      }
+
+      // Create guest transaction (payment - deducted)
+      if (guestWalletId) {
+        await addDoc(collection(db, "transactions"), {
+          amount: -grandTotal,
+          created_at: serverTimestamp(),
+          paypal_batch_id: null,
+          paypal_email: null,
+          status: "completed",
+          type: "payment",
+          user_id: userData.id,
+          wallet_id: guestWalletId,
+        });
+      }
+
+      // Create host transaction (payment - added)
+      if (hostWalletId) {
+        await addDoc(collection(db, "transactions"), {
+          amount: grandTotal,
+          created_at: serverTimestamp(),
+          paypal_batch_id: null,
+          paypal_email: null,
+          status: "completed",
+          type: "payment",
+          user_id: listingData.host_id,
+          wallet_id: hostWalletId,
+        });
+      }
+
+      toast.dismiss(loadingToast);
+      toast.success(
+        "Booking confirmed successfully! Payment transferred to host."
+      );
+      setShowBookingModal(false);
+      navigate("/guest/my-bookings");
+    } catch (error) {
+      console.error("Error confirming booking:", error);
+      toast.error("Failed to confirm booking. Please try again.");
+    }
   };
 
   const calculateNights = () => {
@@ -184,6 +375,40 @@ export default function ListingDetailPage() {
     const getSelectedListing = async () => {
       try {
         setLoading(true);
+
+        // Fetch user data
+        if (user) {
+          const userRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            setUserData({ id: userSnap.id, ...userSnap.data() });
+          }
+
+          // Fetch wallet balance
+          const walletQuery = query(
+            collection(db, "wallets"),
+            where("user_id", "==", user.uid)
+          );
+          const walletSnap = await getDocs(walletQuery);
+          if (!walletSnap.empty) {
+            const walletData = walletSnap.docs[0].data();
+            setWalletBalance(walletData.balance || 0);
+          }
+
+          // Check if listing is favorited
+          const favQuery = query(
+            collection(db, "favorites"),
+            where("guest_id", "==", user.uid),
+            where("listing_id", "==", listing_id)
+          );
+          const favSnap = await getDocs(favQuery);
+          if (!favSnap.empty) {
+            setIsFavorite(true);
+            setFavoriteId(favSnap.docs[0].id);
+          }
+        }
+
+        // Fetch listing data
         const listingRef = doc(db, "listings", listing_id);
         const listingSnap = await getDoc(listingRef);
         if (!listingSnap.exists()) {
@@ -192,14 +417,43 @@ export default function ListingDetailPage() {
         }
 
         const data = listingSnap.data();
+
+        // Fetch reviews with user data
         const reviewsRef = collection(db, "reviews");
-        const q = query(reviewsRef, where("listing_id", "==", listing_id));
-        const reviewSnap = await getDocs(q);
+        const reviewQuery = query(
+          reviewsRef,
+          where("listing_id", "==", listing_id)
+        );
+        const reviewSnap = await getDocs(reviewQuery);
         const reviewCount = reviewSnap.size;
 
+        const reviewsWithUsers = await Promise.all(
+          reviewSnap.docs.map(async (reviewDoc) => {
+            const reviewData = reviewDoc.data();
+            let userData = null;
+
+            if (reviewData.user_id) {
+              const userRef = doc(db, "users", reviewData.user_id);
+              const userSnap = await getDoc(userRef);
+              if (userSnap.exists()) {
+                userData = userSnap.data();
+              }
+            }
+
+            return {
+              id: reviewDoc.id,
+              ...reviewData,
+              user: userData,
+            };
+          })
+        );
+
+        setReviewsData(reviewsWithUsers);
+
+        // Fetch host data
         let hostData = null;
-        if (listingData.host_id) {
-          const hostRef = doc(db, "users", listingData.host_id);
+        if (data.host_id) {
+          const hostRef = doc(db, "users", data.host_id);
           const hostSnap = await getDoc(hostRef);
           if (hostSnap.exists()) {
             hostData = { id: hostSnap.id, ...hostSnap.data() };
@@ -214,7 +468,7 @@ export default function ListingDetailPage() {
       }
     };
     getSelectedListing();
-  }, [listing_id]);
+  }, [listing_id, user]);
   // useEffect(() => {
   //   if (listingData) {
   //     console.log("✅ Listing data loaded:", listingData);
@@ -243,9 +497,7 @@ export default function ListingDetailPage() {
               </button>
               <button
                 onClick={() =>
-                  handleActionWithVerification(() =>
-                    setIsFavorite(!isFavorite)
-                  )
+                  handleActionWithVerification(() => toggleFavorite())
                 }
                 className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-700 transition text-slate-300"
               >
@@ -254,7 +506,9 @@ export default function ListingDetailPage() {
                     isFavorite ? "fill-red-500 text-red-500" : ""
                   }`}
                 />
-                <span className="hidden sm:inline text-sm">Save</span>
+                <span className="hidden sm:inline text-sm">
+                  {isFavorite ? "Saved" : "Save"}
+                </span>
               </button>
             </div>
           </div>
@@ -423,50 +677,62 @@ export default function ListingDetailPage() {
             </div>
 
             {/* Reviews */}
-            <div className="pb-8 border-b border-slate-700">
-              <div className="flex items-center gap-2 mb-6">
-                <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
-                <h3 className="text-xl font-semibold text-white">
-                  {listingData?.rating || 0} · {listingData?.reviewCount || 0}{" "}
-                  reviews
-                </h3>
-              </div>
-              <div className="space-y-6">
-                {reviews?.map((review) => (
-                  <div key={review.id} className="flex gap-4">
-                    <img
-                      src={review?.avatar}
-                      alt={review?.author}
-                      className="w-12 h-12 rounded-full flex-shrink-0"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-white">
-                          {review?.author}
-                        </span>
-                        <span className="text-slate-500 text-sm">·</span>
-                        <span className="text-slate-500 text-sm">
-                          {review?.date}
-                        </span>
+            {reviewsData.length > 0 && (
+              <div className="pb-8 border-b border-slate-700">
+                <div className="flex items-center gap-2 mb-6">
+                  <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
+                  <h3 className="text-xl font-semibold text-white">
+                    {listingData?.rating || 0} · {listingData?.reviewCount || 0}{" "}
+                    reviews
+                  </h3>
+                </div>
+                <div className="space-y-6">
+                  {reviewsData.map((review) => (
+                    <div key={review.id} className="flex gap-4">
+                      <img
+                        src={
+                          review.user?.photoURL ||
+                          "https://via.placeholder.com/100"
+                        }
+                        alt={review.user?.fullName || "User"}
+                        className="w-12 h-12 rounded-full flex-shrink-0"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-white">
+                            {review.user?.fullName || "Anonymous"}
+                          </span>
+                          <span className="text-slate-500 text-sm">·</span>
+                          <span className="text-slate-500 text-sm">
+                            {review.createdAt
+                              ? new Date(
+                                  review.createdAt.toDate()
+                                ).toLocaleDateString("en-US", {
+                                  month: "long",
+                                  year: "numeric",
+                                })
+                              : "Recently"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 mb-2">
+                          {Array.from({ length: review.rating || 5 }).map(
+                            (_, i) => (
+                              <Star
+                                key={i}
+                                className="w-3 h-3 fill-yellow-400 text-yellow-400"
+                              />
+                            )
+                          )}
+                        </div>
+                        <p className="text-slate-300 text-sm leading-relaxed">
+                          {review.comment || review.review || "Great stay!"}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-1 mb-2">
-                        {Array.from({ length: review?.rating || 0 }).map(
-                          (_, i) => (
-                            <Star
-                              key={i}
-                              className="w-3 h-3 fill-yellow-400 text-yellow-400"
-                            />
-                          )
-                        )}
-                      </div>
-                      <p className="text-slate-300 text-sm leading-relaxed">
-                        {review?.comment}
-                      </p>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* House Rules */}
             <div>
@@ -530,7 +796,7 @@ export default function ListingDetailPage() {
                     className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white"
                   >
                     {Array.from(
-                      { length: listingData?.details?.guests || 1 },
+                      { length: listingData?.numberOfGuests || 1 },
                       (_, i) => i + 1
                     ).map((num) => (
                       <option key={num} value={num}>
@@ -581,7 +847,9 @@ export default function ListingDetailPage() {
               <button
                 onClick={() =>
                   handleActionWithVerification(() =>
-                    navigate(`/guest/messages/${user.uid}/${listingData.host_id}`)
+                    navigate(
+                      `/guest/messages/${user.uid}/${listingData.host_id}`
+                    )
                   )
                 }
                 className="w-full mt-6 flex items-center justify-center gap-2 py-3 border border-slate-600 rounded-lg text-slate-300 hover:bg-slate-700 transition"
@@ -695,10 +963,25 @@ export default function ListingDetailPage() {
               </p>
             </div>
 
+            <div className="mb-4 p-3 bg-slate-700 rounded-lg">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-400">Wallet Balance</span>
+                <span className="font-semibold text-white">
+                  ₱{walletBalance.toLocaleString()}
+                </span>
+              </div>
+              {walletBalance < grandTotal && (
+                <p className="text-xs text-red-400 mt-2">
+                  Insufficient balance. Please add funds to your wallet.
+                </p>
+              )}
+            </div>
+
             <div className="flex gap-3">
               <button
-                // onClick={handleConfirmBooking}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition"
+                onClick={handleConfirmBooking}
+                disabled={walletBalance < grandTotal}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Confirm booking
               </button>

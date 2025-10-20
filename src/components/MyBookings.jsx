@@ -7,59 +7,26 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
-
-// Sample booking data - replace with your Firebase data
-const sampleBookings = [
-  {
-    id: 1,
-    title: "Beachfront Villa",
-    location: "Boracay, Philippines",
-    checkIn: "2025-10-20",
-    checkOut: "2025-10-23",
-    guests: 4,
-    price: 5000,
-    status: "confirmed",
-    photo: "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=400",
-    type: "stays",
-  },
-  {
-    id: 2,
-    title: "Mountain Hiking Tour",
-    location: "Baguio, Philippines",
-    checkIn: "2025-10-25",
-    checkOut: "2025-10-25",
-    guests: 2,
-    price: 1500,
-    status: "pending",
-    photo: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=400",
-    type: "experiences",
-  },
-  {
-    id: 3,
-    title: "Photography Service",
-    location: "Manila, Philippines",
-    checkIn: "2025-11-05",
-    checkOut: "2025-11-05",
-    guests: 6,
-    price: 3000,
-    status: "confirmed",
-    photo: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=400",
-    type: "services",
-  },
-  {
-    id: 4,
-    title: "Luxury Condo Stay",
-    location: "Makati, Philippines",
-    checkIn: "2025-11-15",
-    checkOut: "2025-11-18",
-    guests: 2,
-    price: 8000,
-    status: "confirmed",
-    photo: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400",
-    type: "stays",
-  },
-];
+import { db } from "../firebase/firebase";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  arrayRemove,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { useAuth } from "../context/AuthContext";
+import { toast } from "react-toastify";
+import LoadingSpinner from "../loading/Loading";
 
 function parseDate(dateStr) {
   return dateStr ? new Date(dateStr) : null;
@@ -76,18 +43,218 @@ function formatDate(dateStr) {
 }
 
 export default function MyBookingsSection() {
-  const [bookings, setBookings] = useState(sampleBookings);
+  const { user } = useAuth();
+  const [bookings, setBookings] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const bookingsPerPage = 4;
+
+  // Fetch bookings from Firestore
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (!user) return;
+
+      try {
+        setLoading(true);
+        const bookingsRef = collection(db, "bookings");
+        const q = query(bookingsRef, where("guest_id", "==", user.uid));
+        const querySnapshot = await getDocs(q);
+
+        const bookingsData = await Promise.all(
+          querySnapshot.docs.map(async (bookingDoc) => {
+            const booking = { id: bookingDoc.id, ...bookingDoc.data() };
+
+            // Fetch listing data
+            if (booking.listing_id) {
+              const listingRef = doc(db, "listings", booking.listing_id);
+              const listingSnap = await getDoc(listingRef);
+              if (listingSnap.exists()) {
+                const listingData = listingSnap.data();
+                booking.title = listingData.title;
+                booking.location = listingData.location;
+                booking.photo =
+                  listingData.photos?.[0] || "https://via.placeholder.com/400";
+                booking.type = listingData.type;
+              }
+            }
+
+            // Convert Firestore Timestamps to Date strings
+            if (booking.checkIn && booking.checkIn.toDate) {
+              booking.checkIn = booking.checkIn
+                .toDate()
+                .toISOString()
+                .split("T")[0];
+            }
+            if (booking.checkOut && booking.checkOut.toDate) {
+              booking.checkOut = booking.checkOut
+                .toDate()
+                .toISOString()
+                .split("T")[0];
+            }
+
+            return booking;
+          })
+        );
+
+        setBookings(bookingsData);
+      } catch (error) {
+        console.error("Error fetching bookings:", error);
+        toast.error("Failed to load bookings");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookings();
+  }, [user]);
+
+  // Handle refund
+  const handleRefund = async () => {
+    if (!selectedBooking) return;
+
+    const checkInDate = new Date(selectedBooking.checkIn);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (checkInDate <= today) {
+      toast.error("Cannot refund bookings on or after check-in date");
+      return;
+    }
+
+    try {
+      const loadingToast = toast.loading("Processing refund...");
+
+      // Get guest wallet
+      const guestWalletQuery = query(
+        collection(db, "wallets"),
+        where("user_id", "==", user.uid)
+      );
+      const guestWalletSnap = await getDocs(guestWalletQuery);
+
+      if (guestWalletSnap.empty) {
+        toast.dismiss(loadingToast);
+        toast.error("Wallet not found");
+        return;
+      }
+
+      const guestWalletDoc = guestWalletSnap.docs[0];
+      const guestWalletId = guestWalletDoc.id;
+      const guestBalance = guestWalletDoc.data().balance || 0;
+      const guestTotalSpent = guestWalletDoc.data().total_spent || 0;
+
+      // Get host wallet
+      const hostWalletQuery = query(
+        collection(db, "wallets"),
+        where("user_id", "==", selectedBooking.host_id)
+      );
+      const hostWalletSnap = await getDocs(hostWalletQuery);
+
+      if (hostWalletSnap.empty) {
+        toast.dismiss(loadingToast);
+        toast.error("Host wallet not found");
+        return;
+      }
+
+      const hostWalletDoc = hostWalletSnap.docs[0];
+      const hostWalletId = hostWalletDoc.id;
+      const hostBalance = hostWalletDoc.data().balance || 0;
+      const hostTotalCashIn = hostWalletDoc.data().total_cash_in || 0;
+
+      // Update guest wallet (add refund)
+      await updateDoc(doc(db, "wallets", guestWalletDoc.id), {
+        balance: guestBalance + selectedBooking.totalAmount,
+        total_spent: Math.max(0, guestTotalSpent - selectedBooking.totalAmount),
+      });
+
+      // Update host wallet (deduct refund)
+      await updateDoc(doc(db, "wallets", hostWalletDoc.id), {
+        balance: hostBalance - selectedBooking.totalAmount,
+        total_cash_in: Math.max(
+          0,
+          hostTotalCashIn - selectedBooking.totalAmount
+        ),
+      });
+
+      // Create guest transaction (refund - added)
+      await addDoc(collection(db, "transactions"), {
+        amount: selectedBooking.totalAmount,
+        created_at: serverTimestamp(),
+        paypal_batch_id: null,
+        paypal_email: null,
+        status: "completed",
+        type: "refund",
+        user_id: user.uid,
+        wallet_id: guestWalletId,
+      });
+
+      // Create host transaction (refund - deducted)
+      await addDoc(collection(db, "transactions"), {
+        amount: -selectedBooking.totalAmount,
+        created_at: serverTimestamp(),
+        paypal_batch_id: null,
+        paypal_email: null,
+        status: "completed",
+        type: "refund",
+        user_id: selectedBooking.host_id,
+        wallet_id: hostWalletId,
+      });
+
+      // Remove booked dates from listing
+      const listingRef = doc(db, "listings", selectedBooking.listing_id);
+      const checkInDate = new Date(selectedBooking.checkIn);
+      const checkOutDate = new Date(selectedBooking.checkOut);
+      const datesToRemove = [];
+
+      for (
+        let d = new Date(checkInDate);
+        d <= checkOutDate;
+        d.setDate(d.getDate() + 1)
+      ) {
+        datesToRemove.push(new Date(d));
+      }
+
+      await updateDoc(listingRef, {
+        bookedDates: arrayRemove(...datesToRemove),
+      });
+
+      // Delete booking
+      await deleteDoc(doc(db, "bookings", selectedBooking.id));
+
+      // Update local state
+      setBookings(bookings.filter((b) => b.id !== selectedBooking.id));
+
+      toast.dismiss(loadingToast);
+      toast.success("Booking cancelled and refund processed successfully!");
+      setShowRefundModal(false);
+      setSelectedBooking(null);
+    } catch (error) {
+      console.error("Error processing refund:", error);
+      toast.error("Failed to process refund. Please try again.");
+    }
+  };
 
   // Get bookings for selected date
   const getBookingsForDate = (date) => {
     return bookings.filter((booking) => {
       const checkIn = parseDate(booking.checkIn);
       const checkOut = parseDate(booking.checkOut);
-      return date >= checkIn && date <= checkOut;
+
+      // Set time to midnight for accurate date comparison
+      const compareDate = new Date(date);
+      compareDate.setHours(0, 0, 0, 0);
+
+      const checkInDate = new Date(checkIn);
+      checkInDate.setHours(0, 0, 0, 0);
+
+      const checkOutDate = new Date(checkOut);
+      checkOutDate.setHours(0, 0, 0, 0);
+
+      return compareDate >= checkInDate && compareDate <= checkOutDate;
     });
   };
 
@@ -97,9 +264,16 @@ export default function MyBookingsSection() {
     bookings.forEach((booking) => {
       const checkIn = parseDate(booking.checkIn);
       const checkOut = parseDate(booking.checkOut);
-      const current = new Date(checkIn);
 
-      while (current <= checkOut) {
+      if (!checkIn || !checkOut) return;
+
+      const current = new Date(checkIn);
+      current.setHours(0, 0, 0, 0);
+
+      const endDate = new Date(checkOut);
+      endDate.setHours(0, 0, 0, 0);
+
+      while (current <= endDate) {
         if (
           current.getMonth() === currentMonth.getMonth() &&
           current.getFullYear() === currentMonth.getFullYear()
@@ -158,18 +332,49 @@ export default function MyBookingsSection() {
   };
 
   const selectDate = (day) => {
-    setSelectedDate(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
-    );
+    const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    setSelectedDate(newDate);
+    // Reset to first page when selecting a date
+    setCurrentPage(1);
   };
 
-  // Filter bookings
-  const filteredBookings =
-    activeFilter === "all"
-      ? bookings
-      : bookings.filter((b) => b.type === activeFilter);
-
+  // Get bookings for selected date in calendar sidebar
   const selectedDateBookings = getBookingsForDate(selectedDate);
+
+  // Filter bookings by type
+  let filteredBookings = activeFilter === "all"
+    ? bookings
+    : bookings.filter((b) => b.type === activeFilter);
+
+  // Further filter by selected date if bookings exist for that date
+  // Only apply date filter if a date with bookings is selected
+  const hasBookingsOnSelectedDate = selectedDateBookings.length > 0;
+  if (hasBookingsOnSelectedDate) {
+    filteredBookings = selectedDateBookings.filter((booking) =>
+      activeFilter === "all" ? true : booking.type === activeFilter
+    );
+  }
+
+  // Pagination
+  const indexOfLastBooking = currentPage * bookingsPerPage;
+  const indexOfFirstBooking = indexOfLastBooking - bookingsPerPage;
+  const currentBookings = filteredBookings.slice(
+    indexOfFirstBooking,
+    indexOfLastBooking
+  );
+  const totalPages = Math.ceil(filteredBookings.length / bookingsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  // Check if booking can be refunded
+  const canRefund = (booking) => {
+    const checkInDate = new Date(booking.checkIn);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return checkInDate > today;
+  };
+
+  if (loading) return <LoadingSpinner />;
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -184,7 +389,7 @@ export default function MyBookingsSection() {
             </p>
           </div>
 
-          <div className="flex gap-3 mb-8 flex-wrap">
+          <div className="flex flex-wrap items-center gap-3 mb-8">
             {["all", "stays", "services", "experiences"].map((filter) => (
               <button
                 key={filter}
@@ -198,78 +403,139 @@ export default function MyBookingsSection() {
                 {filter.charAt(0).toUpperCase() + filter.slice(1)}
               </button>
             ))}
+
+            {hasBookingsOnSelectedDate && (
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-sm text-slate-400">
+                  Showing bookings for {selectedDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </span>
+                <button
+                  onClick={() => {
+                    setSelectedDate(new Date());
+                    setCurrentPage(1);
+                  }}
+                  className="px-3 py-2 bg-slate-700/50 border border-slate-600 text-slate-300 rounded-lg hover:bg-slate-700 hover:text-white text-xs font-medium transition"
+                >
+                  Clear Date Filter
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
-              {filteredBookings.length > 0 ? (
-                filteredBookings.map((booking) => (
-                  <div
-                    key={booking.id}
-                    className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 overflow-hidden hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 cursor-pointer group"
-                    onClick={() => setSelectedBooking(booking)}
-                  >
-                    <div className="flex flex-col sm:flex-row">
-                      <div className="sm:w-48 h-48 flex-shrink-0 relative overflow-hidden">
-                        <img
-                          src={booking.photo}
-                          alt={booking.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      </div>
-
-                      <div className="p-5 flex-1 flex flex-col justify-between">
-                        <div>
-                          <div className="flex items-start justify-between mb-3">
-                            <h3 className="text-lg font-bold text-white">
-                              {booking.title}
-                            </h3>
-                            <span
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
-                                booking.status === "confirmed"
-                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                                  : "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                              }`}
-                            >
-                              {booking.status.charAt(0).toUpperCase() +
-                                booking.status.slice(1)}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center text-slate-300 text-sm mb-2">
-                            <MapPin className="w-4 h-4 mr-1.5 text-indigo-400" />
-                            {booking.location}
-                          </div>
-
-                          <div className="flex items-center text-slate-400 text-sm mb-2">
-                            <Calendar className="w-4 h-4 mr-1.5 text-emerald-400" />
-                            {formatDate(booking.checkIn)} -{" "}
-                            {formatDate(booking.checkOut)}
-                          </div>
-
-                          <div className="flex items-center text-slate-400 text-sm">
-                            <Users className="w-4 h-4 mr-1.5 text-amber-400" />
-                            {booking.guests}{" "}
-                            {booking.guests === 1 ? "Guest" : "Guests"}
-                          </div>
+              {currentBookings.length > 0 ? (
+                <>
+                  {currentBookings.map((booking) => (
+                    <div
+                      key={booking.id}
+                      className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 overflow-hidden hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 cursor-pointer group"
+                      onClick={() => setSelectedBooking(booking)}
+                    >
+                      <div className="flex flex-col sm:flex-row">
+                        <div className="sm:w-48 h-48 flex-shrink-0 relative overflow-hidden">
+                          <img
+                            src={booking.photo}
+                            alt={booking.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                         </div>
 
-                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-700">
+                        <div className="p-5 flex-1 flex flex-col justify-between">
                           <div>
-                            <span className="text-xs text-slate-400 block">Total Amount</span>
-                            <span className="text-xl font-bold text-white">
-                              ₱{booking.price.toFixed(2)}
-                            </span>
+                            <div className="flex items-start justify-between mb-3">
+                              <h3 className="text-lg font-bold text-white">
+                                {booking.title}
+                              </h3>
+                              <span
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+                                  booking.status === "confirmed"
+                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                    : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                }`}
+                              >
+                                {booking.status.charAt(0).toUpperCase() +
+                                  booking.status.slice(1)}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center text-slate-300 text-sm mb-2">
+                              <MapPin className="w-4 h-4 mr-1.5 text-indigo-400" />
+                              {booking.location}
+                            </div>
+
+                            <div className="flex items-center text-slate-400 text-sm mb-2">
+                              <Calendar className="w-4 h-4 mr-1.5 text-emerald-400" />
+                              {formatDate(booking.checkIn)} -{" "}
+                              {formatDate(booking.checkOut)}
+                            </div>
+
+                            <div className="flex items-center text-slate-400 text-sm">
+                              <Users className="w-4 h-4 mr-1.5 text-amber-400" />
+                              {booking.guests}{" "}
+                              {booking.guests === 1 ? "Guest" : "Guests"}
+                            </div>
                           </div>
-                          <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40">
-                            View Details
-                          </button>
+
+                          <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-700">
+                            <div>
+                              <span className="text-xs text-slate-400 block">
+                                Total Amount
+                              </span>
+                              <span className="text-xl font-bold text-white">
+                                ₱
+                                {booking.totalAmount?.toFixed(2) ||
+                                  booking.price?.toFixed(2) ||
+                                  0}
+                              </span>
+                            </div>
+                            <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40">
+                              View Details
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-6">
+                      <button
+                        onClick={() => paginate(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="px-4 py-2 bg-slate-800/50 border border-slate-700 text-slate-300 rounded-lg hover:bg-slate-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                        (page) => (
+                          <button
+                            key={page}
+                            onClick={() => paginate(page)}
+                            className={`px-4 py-2 rounded-lg font-semibold transition ${
+                              currentPage === page
+                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30"
+                                : "bg-slate-800/50 border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        )
+                      )}
+
+                      <button
+                        onClick={() => paginate(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="px-4 py-2 bg-slate-800/50 border border-slate-700 text-slate-300 rounded-lg hover:bg-slate-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-12 text-center">
                   <Calendar className="w-16 h-16 text-slate-500 mx-auto mb-4" />
@@ -391,8 +657,8 @@ export default function MyBookingsSection() {
         </main>
 
         {selectedBooking && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-            <div className="bg-slate-800/90 backdrop-blur-lg border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start justify-center z-50 px-4">
+            <div className="bg-slate-800/90 backdrop-blur-lg border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6 relative mt-[110px]">
               <button
                 onClick={() => setSelectedBooking(null)}
                 className="absolute top-4 right-4 text-slate-400 hover:text-white hover:bg-slate-700 p-2 rounded-lg transition-all"
@@ -445,17 +711,124 @@ export default function MyBookingsSection() {
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400">Total Amount</span>
                   <span className="text-2xl font-bold text-white">
-                    ₱{selectedBooking.price.toFixed(2)}
+                    ₱
+                    {selectedBooking.totalAmount?.toFixed(2) ||
+                      selectedBooking.price?.toFixed(2) ||
+                      0}
                   </span>
                 </div>
               </div>
 
+              {canRefund(selectedBooking) && (
+                <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-amber-300">
+                      You can request a full refund for this booking since the
+                      check-in date hasn't arrived yet.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-3">
-                <button className="flex-1 bg-slate-700 text-white py-3 rounded-lg font-semibold hover:bg-slate-600 transition-all border border-slate-600">
-                  Cancel Booking
-                </button>
+                {canRefund(selectedBooking) ? (
+                  <button
+                    onClick={() => setShowRefundModal(true)}
+                    className="flex-1 bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40 flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Request Refund
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    className="flex-1 bg-slate-700 text-slate-500 py-3 rounded-lg font-semibold cursor-not-allowed border border-slate-600"
+                  >
+                    Refund Not Available
+                  </button>
+                )}
                 <button className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40">
-                  Contact Host
+                  View Listing
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Refund Confirmation Modal */}
+        {showRefundModal && selectedBooking && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start justify-center z-50 px-4 mt-[110px]">
+            <div className="bg-slate-800/90 backdrop-blur-lg border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+              <button
+                onClick={() => setShowRefundModal(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white hover:bg-slate-700 p-2 rounded-lg transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-amber-500/10 border-2 border-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-8 h-8 text-amber-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Confirm Refund Request
+                </h2>
+                <p className="text-slate-400 text-sm">
+                  Are you sure you want to cancel this booking and request a
+                  refund?
+                </p>
+              </div>
+
+              <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4 mb-6">
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Booking:</span>
+                    <span className="font-semibold text-white">
+                      {selectedBooking.title}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Check-in:</span>
+                    <span className="font-semibold text-white">
+                      {formatDate(selectedBooking.checkIn)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Refund Amount:</span>
+                    <span className="font-bold text-emerald-400 text-lg">
+                      ₱
+                      {selectedBooking.totalAmount?.toFixed(2) ||
+                        selectedBooking.price?.toFixed(2) ||
+                        0}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-6">
+                <p className="text-xs text-amber-300 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>
+                    The refund will be processed to your wallet immediately. The
+                    amount will be deducted from the host's wallet.
+                  </span>
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowRefundModal(false)}
+                  className="flex-1 bg-slate-700 text-white py-3 rounded-lg font-semibold hover:bg-slate-600 transition-all border border-slate-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRefund}
+                  className="flex-1 bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40 flex items-center justify-center gap-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Confirm Refund
                 </button>
               </div>
             </div>

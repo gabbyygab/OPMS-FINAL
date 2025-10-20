@@ -52,6 +52,7 @@ L.Icon.Default.mergeOptions({
 });
 
 // LocationPicker Component
+
 function LocationPicker({ marker, setMarker, setFormData, formData }) {
   useMapEvents({
     click: async (e) => {
@@ -59,15 +60,17 @@ function LocationPicker({ marker, setMarker, setFormData, formData }) {
       setMarker([lat, lng]);
 
       try {
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        // Reverse geocode using Nominatim with proper headers and delay
+        await new Promise((resolve) => setTimeout(resolve, 300)); // Rate limiting
 
         const res = await fetch(
-          `https://opms-final-backend.onrender.com/api/nominatim/reverse?lat=${lat}&lon=${lng}`
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
         );
-
         if (!res.ok) throw new Error("Geocoding failed");
 
         const data = await res.json();
+
+        // Use display_name as the readable address
         const placeName = data.display_name || `${lat}, ${lng}`;
 
         setFormData({
