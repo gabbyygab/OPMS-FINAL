@@ -1,9 +1,12 @@
-import { getDoc, updateDoc, doc } from "firebase/firestore";
+import { getDoc, updateDoc, doc, setDoc } from "firebase/firestore";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "react-toastify";
 import { sendOtpToUser } from "../../utils/sendOtpToUser";
-import { db } from "../../firebase/firebase";
+import { sendSignupOtp } from "../../utils/sendSignupOtp";
+import { db, auth } from "../../firebase/firebase";
 import { useNavigate } from "react-router-dom";
+import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import { serverTimestamp } from "firebase/firestore";
 
 export default function OTPVerificationPage({ user, userData }) {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -11,6 +14,20 @@ export default function OTPVerificationPage({ user, userData }) {
   const [resendTimer, setResendTimer] = useState(0);
   const inputRefs = useRef([]);
   const navigate = useNavigate();
+
+  // Check if coming from signup flow
+  const [signupData, setSignupData] = useState(null);
+  const [isSignupMode, setIsSignupMode] = useState(false);
+
+  useEffect(() => {
+    // Check sessionStorage for signup data
+    const storedData = sessionStorage.getItem("signupData");
+    if (storedData) {
+      const parsed = JSON.parse(storedData);
+      setSignupData(parsed);
+      setIsSignupMode(parsed.signupMode || false);
+    }
+  }, []);
 
   useEffect(() => {
     if (resendTimer > 0) {
@@ -59,21 +76,106 @@ export default function OTPVerificationPage({ user, userData }) {
 
     setIsVerifying(true);
     try {
+      // SIGNUP MODE: Verify OTP then create Firebase account
+      if (isSignupMode && signupData) {
+        // Check OTP against sessionStorage data
+        if (!signupData.otpData || Date.now() > signupData.otpData.otpExpiry) {
+          toast.error("OTP expired. Please sign up again.", {
+            position: "top-right",
+          });
+          sessionStorage.removeItem("signupData");
+          navigate("/signup");
+          return;
+        }
+
+        if (signupData.otpData.otp !== otpCode) {
+          toast.error("Incorrect code. Try again.", {
+            position: "top-right",
+          });
+          setIsVerifying(false);
+          return;
+        }
+
+        // OTP is correct - create Firebase account
+        const { email, password, fullName, role } = signupData.userData;
+
+        const result = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+        const newUser = result.user;
+
+        // Immediately sign out to prevent login session
+        await signOut(auth);
+
+        // Save user record in Firestore
+        await setDoc(doc(db, "users", newUser.uid), {
+          id: newUser.uid,
+          email,
+          fullName: fullName || "",
+          photoURL: newUser.photoURL || "",
+          role: role,
+          isVerified: true, // Already verified via OTP
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+
+        // Create wallet for host accounts
+        if (role === "host") {
+          await setDoc(doc(db, "wallets", newUser.uid), {
+            user_id: newUser.uid,
+            balance: 0,
+            createdAt: new Date(),
+            currency: "PHP",
+            total_cash_in: 0,
+            total_spent: 0,
+            updated_at: new Date(),
+          });
+        }
+
+        // Clear sessionStorage
+        sessionStorage.removeItem("signupData");
+
+        toast.success("Account created successfully! Please sign in.", {
+          position: "top-right",
+        });
+        navigate("/login");
+        return;
+      }
+
+      // ACCOUNT VERIFICATION MODE: Verify existing user's email
+      if (!user || !user.uid) {
+        toast.error("User not found. Please sign in.", {
+          position: "top-right",
+        });
+        navigate("/login");
+        return;
+      }
+
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
 
-      if (!userSnap.exists())
-        return toast.error("User not found", { position: "top-right" });
+      if (!userSnap.exists()) {
+        toast.error("User not found", { position: "top-right" });
+        return;
+      }
+
       const data = userSnap.data();
 
-      if (!data.otp || Date.now() > data.otpExpiry)
-        return toast.error("OTP expired or not sent", {
+      if (!data.otp || Date.now() > data.otpExpiry) {
+        toast.error("OTP expired or not sent", {
           position: "top-right",
         });
-      if (data.otp !== otpCode)
-        return toast.error("Incorrect code. Try again.", {
+        return;
+      }
+
+      if (data.otp !== otpCode) {
+        toast.error("Incorrect code. Try again.", {
           position: "top-right",
         });
+        return;
+      }
 
       await updateDoc(userRef, {
         isVerified: true,
@@ -81,24 +183,51 @@ export default function OTPVerificationPage({ user, userData }) {
         otpExpiry: 0,
         otpSentAt: 0,
       });
+
       toast.success("Account Verified Successfully!");
+      navigate("/");
     } catch (error) {
       toast.error("Verification failed");
       console.error(error);
     } finally {
       setIsVerifying(false);
-      navigate("/");
     }
   };
 
   const handleResend = async () => {
     if (resendTimer > 0) return;
     try {
-      await sendOtpToUser(user);
-      toast.success("New OTP sent to your email!", { position: "top-right" });
-      setOtp(["", "", "", "", "", ""]);
-      inputRefs.current[0]?.focus();
-      setResendTimer(60);
+      // SIGNUP MODE: Resend signup OTP
+      if (isSignupMode && signupData) {
+        const { email, fullName } = signupData.userData;
+        const newOtpData = await sendSignupOtp(email, fullName);
+
+        if (newOtpData) {
+          // Update sessionStorage with new OTP data
+          const updatedSignupData = {
+            ...signupData,
+            otpData: {
+              otp: newOtpData.otp,
+              otpExpiry: newOtpData.otpExpiry,
+              otpSentAt: newOtpData.otpSentAt,
+            },
+          };
+          sessionStorage.setItem("signupData", JSON.stringify(updatedSignupData));
+          setSignupData(updatedSignupData);
+
+          toast.success("New OTP sent to your email!", { position: "top-right" });
+          setOtp(["", "", "", "", "", ""]);
+          inputRefs.current[0]?.focus();
+          setResendTimer(60);
+        }
+      } else {
+        // ACCOUNT VERIFICATION MODE: Resend OTP to existing user
+        await sendOtpToUser(user);
+        toast.success("New OTP sent to your email!", { position: "top-right" });
+        setOtp(["", "", "", "", "", ""]);
+        inputRefs.current[0]?.focus();
+        setResendTimer(60);
+      }
     } catch (err) {
       toast.error("Failed to resend code");
       console.error(err);
@@ -144,12 +273,16 @@ export default function OTPVerificationPage({ user, userData }) {
               </svg>
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">
-              Verify your account
+              {isSignupMode ? "Verify your email" : "Verify your account"}
             </h1>
             <p className="text-slate-400">
               We've sent a 6-digit code to your email
             </p>
-            <p className="text-indigo-400 font-medium mt-1">user@example.com</p>
+            <p className="text-indigo-400 font-medium mt-1">
+              {isSignupMode && signupData
+                ? signupData.userData.email
+                : user?.email || "user@example.com"}
+            </p>
           </div>
 
           {/* OTP Input */}

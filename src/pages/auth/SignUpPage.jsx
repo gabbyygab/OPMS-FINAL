@@ -12,6 +12,7 @@ import { toast } from "react-toastify";
 import { serverTimestamp } from "firebase/firestore";
 import { Loader2 } from "lucide-react";
 import LoadingSpinner from "../../loading/Loading";
+import { sendSignupOtp } from "../../utils/sendSignupOtp";
 export default function SignUpPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -34,43 +35,45 @@ export default function SignUpPage() {
       const methods = await fetchSignInMethodsForEmail(auth, email);
       if (methods.length > 0) {
         toast.warning(
-          "This email is already registered, please Sign in and click Become a Host.",
+          "This email is already registered, please Sign in.",
           { position: "top-right" }
         );
         return;
       }
 
-      // Create user
-      const result = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
+      // Send OTP for email verification before creating account
+      const otpData = await sendSignupOtp(email, fullName);
+
+      if (!otpData) {
+        toast.error("Failed to send verification code. Please try again.");
+        return;
+      }
+
+      // Store signup data temporarily in sessionStorage
+      sessionStorage.setItem(
+        "signupData",
+        JSON.stringify({
+          signupMode: true,
+          userData: {
+            fullName,
+            email,
+            password,
+            role: "guest",
+          },
+          otpData: {
+            otp: otpData.otp,
+            otpExpiry: otpData.otpExpiry,
+            otpSentAt: otpData.otpSentAt,
+          },
+        })
       );
-      const user = result.user;
 
-      // Immediately sign out to prevent login session
-      await signOut(auth);
-
-      // Save user record
-      await setDoc(doc(db, "users", user.uid), {
-        id: user.uid,
-        email,
-        fullName: fullName || "",
-        photoURL: user.photoURL || "",
-        role: "guest",
-        isVerified: false,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      toast.success("You have registered successfully. Please Sign in.", {
-        position: "top-right",
-      });
-      navigate("/login");
+      // Navigate to OTP verification page
+      navigate("/account-verification");
     } catch (error) {
       toast.error(error.message, { position: "top-right" });
     } finally {
-      setisLoading(true);
+      setisLoading(false);
     }
   };
 

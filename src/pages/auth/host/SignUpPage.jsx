@@ -10,6 +10,7 @@ import {
 import { db, auth, googleAuthProvider } from "../../../firebase/firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import LoadingSpinner from "../../../loading/Loading";
+import { sendSignupOtp } from "../../../utils/sendSignupOtp";
 
 export default function SignUpPageHost() {
   const [fullName, setFullName] = useState("");
@@ -23,6 +24,7 @@ export default function SignUpPageHost() {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     try {
+      setIsLoading(true);
       if (password !== confirmPassword) {
         toast.error("Password does not match.", {
           position: "top-right",
@@ -33,60 +35,47 @@ export default function SignUpPageHost() {
       const methods = await fetchSignInMethodsForEmail(auth, email);
       if (methods.length > 0) {
         toast.warning(
-          "This email is already registered, please Sign in and click Become a Host.",
+          "This email is already registered, please Sign in.",
           { position: "top-right" }
         );
         return;
       }
-      const result = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const user = result.user;
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
 
-      if (userSnap.exists()) {
-        toast.warning(
-          "This email is already registered, Please Sign in and click Become a Host.",
-          {
-            position: "top-right",
-          }
-        );
+      // Send OTP for email verification before creating account
+      const otpData = await sendSignupOtp(email, fullName);
+
+      if (!otpData) {
+        toast.error("Failed to send verification code. Please try again.");
         return;
       }
 
-      if (user) {
-        await setDoc(doc(db, "users", user.uid), {
-          id: user.uid,
-          email: user.email,
-          fullName: user.displayName || "",
-          photoURL: user.photoURL || "",
-          role: "host", // 'guest' or 'host'
-          isVerified: false, // For email or ID verification
-          createdAt: serverTimestamp(), // When the account was created
-          updatedAt: serverTimestamp(),
-        });
-        await setDoc(doc(db, "wallets", user.uid), {
-          user_id: user.uid,
-          balance: 0,
-          createdAt: new Date(),
-          currency: "PHP",
-          total_cash_in: 0,
-          total_spent: 0,
-          updated_at: new Date(),
-        });
-      }
+      // Store signup data temporarily in sessionStorage
+      sessionStorage.setItem(
+        "signupData",
+        JSON.stringify({
+          signupMode: true,
+          userData: {
+            fullName,
+            email,
+            password,
+            role: "host",
+          },
+          otpData: {
+            otp: otpData.otp,
+            otpExpiry: otpData.otpExpiry,
+            otpSentAt: otpData.otpSentAt,
+          },
+        })
+      );
 
-      toast.success("You have Registered Successfully", {
-        position: "top-right",
-      });
-      navigate("/host");
+      // Navigate to OTP verification page
+      navigate("/account-verification");
     } catch (error) {
       toast.error(error.message, {
         position: "top-right",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
   const doSignUpwithGoogle = async (e) => {
