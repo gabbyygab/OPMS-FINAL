@@ -117,7 +117,7 @@ export default function WalletPage({ user, userData }) {
 
     setIsLoading(true);
 
-    const backendUrl = "https://booking-paypal-backend.vercel.app";
+    const backendUrl = "https://opms-final-backend.onrender.com";
     try {
       const res = await fetch(`${backendUrl}/api/paypal/withdraw`, {
         method: "POST",

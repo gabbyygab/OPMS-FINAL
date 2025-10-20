@@ -23,3 +23,7 @@ app.use("/api/paypal", paypalRoutes);
 app.get("/", (req, res) => {
   res.send("✅ PayPal backend running");
 });
+
+app.listen(5000, () => {
+  console.log("Server running on port 5000");
+});

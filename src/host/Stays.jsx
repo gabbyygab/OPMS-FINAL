@@ -62,13 +62,14 @@ function LocationPicker({ marker, setMarker, setFormData, formData }) {
     click: async (e) => {
       const { lat, lng } = e.latlng;
       setMarker([lat, lng]);
+      // `https://booking-paypal-backend.vercel.app/api/nominatim/reverse?lat=${lat}&lon=${lng}`
 
       try {
         // Reverse geocode using Nominatim with proper headers and delay
         await new Promise((resolve) => setTimeout(resolve, 300)); // Rate limiting
 
         const res = await fetch(
-          `https://booking-paypal-backend.vercel.app/api/nominatim/reverse?lat=${lat}&lon=${lng}`
+          `https://opms-final-backend.onrender.com/api/nominatim/reverse?lat=${lat}&lon=${lng}`
         );
 
         if (!res.ok) throw new Error("Geocoding failed");

@@ -62,7 +62,7 @@ function LocationPicker({ marker, setMarker, setFormData, formData }) {
         await new Promise((resolve) => setTimeout(resolve, 300));
 
         const res = await fetch(
-          `https://booking-paypal-backend.vercel.app/api/nominatim/reverse?lat=${lat}&lon=${lng}`
+          `https://opms-final-backend.onrender.com/api/nominatim/reverse?lat=${lat}&lon=${lng}`
         );
 
         if (!res.ok) throw new Error("Geocoding failed");
