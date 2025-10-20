@@ -62,16 +62,19 @@ function LocationPicker({ marker, setMarker, setFormData, formData }) {
     click: async (e) => {
       const { lat, lng } = e.latlng;
       setMarker([lat, lng]);
-      // `https://booking-paypal-backend.vercel.app/api/nominatim/reverse?lat=${lat}&lon=${lng}`
 
       try {
         // Reverse geocode using Nominatim with proper headers and delay
         await new Promise((resolve) => setTimeout(resolve, 300)); // Rate limiting
 
         const res = await fetch(
-          `https://opms-final-backend.onrender.com/api/nominatim/reverse?lat=${lat}&lon=${lng}`
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+          {
+            headers: {
+              "User-Agent": "BookingNest/1.0",
+            },
+          }
         );
-
         if (!res.ok) throw new Error("Geocoding failed");
 
         const data = await res.json();
