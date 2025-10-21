@@ -28,10 +28,14 @@ export async function sendOtpToUser(user) {
       otpSentAt: Date.now(),
     });
 
+    // Extract first name from full name
+    const firstName = user.fullName?.split(" ")[0] || "User";
+
     const templateParams = {
       email: user.email,
       passcode: otp,
       time: expiryTime,
+      username: firstName,
     };
     await emailjs.send(serviceId, templateId, templateParams, publicKey);
     toast.success("Verification code sent to your email.", {

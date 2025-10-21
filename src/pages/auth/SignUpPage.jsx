@@ -58,10 +58,9 @@ export default function SignUpPage() {
 
       const methods = await fetchSignInMethodsForEmail(auth, email);
       if (methods.length > 0) {
-        toast.warning(
-          "This email is already registered, please Sign in.",
-          { position: "top-right" }
-        );
+        toast.warning("This email is already registered, please Sign in.", {
+          position: "top-right",
+        });
         return;
       }
 

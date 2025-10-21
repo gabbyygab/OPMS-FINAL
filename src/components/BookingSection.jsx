@@ -13,12 +13,42 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import VerificationBanner from "./Verification";
 import { sendOtpToUser } from "../utils/sendOtpToUser";
 import LoadingSpinner from "../loading/Loading";
 import { point } from "leaflet";
+// Extract city from location string
+function extractCity(location) {
+  if (!location) return "Other";
+
+  // Split by comma and get the last or second-to-last part (city is usually before state/province)
+  const parts = location.split(",").map((part) => part.trim());
+
+  // Return the part before the last (which is usually the city)
+  // If only one part, return it
+  if (parts.length > 1) {
+    return parts[parts.length - 2] || parts[0];
+  }
+  return parts[0];
+}
+
+// Group listings by city
+function groupListingsByCity(listings) {
+  const grouped = {};
+
+  listings.forEach((listing) => {
+    const city = extractCity(listing.location);
+    if (!grouped[city]) {
+      grouped[city] = [];
+    }
+    grouped[city].push(listing);
+  });
+
+  return grouped;
+}
+
 function parseToDate(ts) {
   if (!ts && ts !== 0) return null;
 
@@ -98,6 +128,7 @@ export default function BookingsSection({ userData, isFavoritePage }) {
   const [listings, setListings] = useState([]);
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedListing, setSelectedListing] = useState(null); // for modal
+  const [searchParams] = useSearchParams();
 
   //favorites
 
@@ -109,6 +140,19 @@ export default function BookingsSection({ userData, isFavoritePage }) {
   const { isVerified, user } = useAuth();
 
   const navigate = useNavigate();
+
+  // Get search filters from URL params
+  const searchFilters = {
+    location: searchParams.get("location") || "",
+    checkIn: searchParams.get("checkIn") || "",
+    checkOut: searchParams.get("checkOut") || "",
+    guests: parseInt(searchParams.get("guests") || "1"),
+  };
+
+  // Clear filters function
+  const clearFilters = () => {
+    navigate("/guest");
+  };
   const handleVerification = async () => {
     try {
       setLoading(true);
@@ -203,15 +247,45 @@ export default function BookingsSection({ userData, isFavoritePage }) {
       }
     }, [userData]);
   }
+  // Helper function to check if listing matches filters
+  const matchesSearchFilters = (listing) => {
+    // Check location
+    if (searchFilters.location && !listing.location?.toLowerCase().includes(searchFilters.location.toLowerCase())) {
+      return false;
+    }
+
+    // Check guest count
+    if (searchFilters.guests && listing.numberOfGuests < searchFilters.guests) {
+      return false;
+    }
+
+    // Check availability dates
+    if (searchFilters.checkIn || searchFilters.checkOut) {
+      const listingAvail = listing.availableDate || {};
+      const fromDate = parseToDate(listingAvail.from);
+      const toDate = parseToDate(listingAvail.to);
+
+      if (searchFilters.checkIn && fromDate && new Date(searchFilters.checkIn) < fromDate) {
+        return false;
+      }
+
+      if (searchFilters.checkOut && toDate && new Date(searchFilters.checkOut) > toDate) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const filteredFavoriteItems =
     activeFilter === "all"
-      ? favorites
-      : favorites.filter((item) => item.type === activeFilter);
+      ? favorites.filter(matchesSearchFilters)
+      : favorites.filter((item) => item.type === activeFilter && matchesSearchFilters(item));
 
   const filteredItems =
     activeFilter === "all"
-      ? listings
-      : listings.filter((item) => item.type === activeFilter);
+      ? listings.filter(matchesSearchFilters)
+      : listings.filter((item) => item.type === activeFilter && matchesSearchFilters(item));
 
   const toggleFavorite = async (listingId, guestId, setListings) => {
     try {
@@ -273,7 +347,7 @@ export default function BookingsSection({ userData, isFavoritePage }) {
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <div className="absolute inset-0 bg-[url('/guestBg.png')] bg-cover bg-center opacity-5"></div>
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 lg:pt-32 pb-8">
         {!isVerified && (
           <VerificationBanner
             handleVerification={handleVerification}
@@ -307,125 +381,181 @@ export default function BookingsSection({ userData, isFavoritePage }) {
             </button>
           ))}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {currentListings.length > 0 ? (
-            currentListings.map((listing) => {
-              const raw = listing.availableDate || {};
-              const fromDate = parseToDate(raw.from);
-              const toDate = parseToDate(raw.to);
-              const availabilityText = formatRange(fromDate, toDate);
 
-              return (
-                <div
-                  key={listing.id}
-                  className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 overflow-hidden hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 flex flex-col h-full group"
-                >
-                  <div className="relative overflow-hidden">
-                    {listing.photos && listing.photos.length > 0 ? (
-                      <img
-                        src={listing.photos[0]}
-                        alt={listing.title || "Listing"}
-                        className="w-full h-60 object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-60 bg-slate-900 flex items-center justify-center text-slate-500">
-                        No Image
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <button
-                      onClick={() =>
-                        toggleFavorite(listing.id, userData.id, setListings)
-                      }
-                      className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-sm p-2.5 rounded-full hover:bg-slate-900 transition-all hover:scale-110"
-                    >
-                      <Heart
-                        className={`w-5 h-5 transition-all ${
-                          listing.isFavorite
-                            ? "fill-red-500 text-red-500"
-                            : "text-slate-300 hover:text-red-400"
-                        }`}
-                      />
-                    </button>
-                  </div>
+        {/* Active Filters Display */}
+        {(searchFilters.location || searchFilters.checkIn || searchFilters.checkOut || searchFilters.guests > 1) && (
+          <div className="mb-6 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                {searchFilters.location && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-600/20 border border-indigo-500/50 rounded-full text-sm text-indigo-300">
+                    <MapPin className="w-3 h-3" />
+                    {searchFilters.location}
+                  </span>
+                )}
+                {searchFilters.checkIn && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-600/20 border border-emerald-500/50 rounded-full text-sm text-emerald-300">
+                    <Calendar className="w-3 h-3" />
+                    Check-in: {new Date(searchFilters.checkIn).toLocaleDateString()}
+                  </span>
+                )}
+                {searchFilters.checkOut && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600/20 border border-blue-500/50 rounded-full text-sm text-blue-300">
+                    <Calendar className="w-3 h-3" />
+                    Check-out: {new Date(searchFilters.checkOut).toLocaleDateString()}
+                  </span>
+                )}
+                {searchFilters.guests > 1 && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-600/20 border border-amber-500/50 rounded-full text-sm text-amber-300">
+                    <Users className="w-3 h-3" />
+                    {searchFilters.guests} guests
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={clearFilters}
+                className="text-sm text-slate-400 hover:text-slate-200 underline transition"
+              >
+                Clear Filters
+              </button>
+            </div>
+          </div>
+        )}
 
-                  <div className="p-5 flex flex-col h-full">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-white truncate mb-2">
-                        {listing.title || "Untitled Listing"}
-                      </h3>
-                      <div className="flex items-center text-slate-300 text-sm mt-2">
-                        <MapPin className="w-4 h-4 mr-1.5 text-indigo-400" />
-                        {listing.location || "Unknown Location"}
-                      </div>
-                      <div className="flex items-center text-slate-400 text-sm mt-2">
-                        <Calendar className="w-4 h-4 mr-1.5 text-emerald-400" />
-                        {availabilityText}
-                      </div>
-                      <div className="flex items-center text-slate-400 text-sm mt-2">
-                        <Users className="w-4 h-4 mr-1.5 text-amber-400" />
-                        Max Guests: {listing.numberOfGuests || 1}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-4 border-t border-slate-700">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <span className="text-xs text-slate-400 block">
-                            Starting at
-                          </span>
-                          <span className="text-2xl font-bold text-white">
-                            ₱{(parseFloat(listing.price) || 0).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex items-center bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">
-                          <Star className="w-4 h-4 mr-1 fill-amber-400 text-amber-400" />
-                          <span className="text-amber-400 font-semibold text-sm">
-                            {listing.rating || "New"}
-                          </span>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          if (!isVerified) {
-                            return toast.warning(
-                              "Please verify to use this feature!",
-                              { position: "top-right" }
-                            );
-                          }
-                          navigate(
-                            `/guest/listing-details/${listing.type}/${listing.id}`
-                          );
-                        }}
-                        className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40"
-                      >
-                        Book Now
-                      </button>
-                    </div>
-                  </div>
+        {/* Group listings by city */}
+        {currentListings.length > 0 ? (
+          Object.entries(groupListingsByCity(currentListings)).map(
+            ([city, cityListings]) => (
+              <div key={city} className="mb-12">
+                <div className="flex items-center gap-3 mb-6">
+                  <MapPin className="w-6 h-6 text-indigo-400" />
+                  <h2 className="text-2xl font-bold text-white">{city}</h2>
+                  <span className="ml-auto text-sm text-slate-400">
+                    {cityListings.length}{" "}
+                    {cityListings.length === 1 ? "listing" : "listings"}
+                  </span>
                 </div>
-              );
-            })
-          ) : (
-            <div className="col-span-full flex items-center justify-center py-24">
-              <div className="text-center">
-                <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-12">
-                  <p className="text-slate-300 text-lg font-medium">
-                    {isFavoritePage
-                      ? "No Favorites Available"
-                      : "No listings available."}
-                  </p>
-                  <p className="text-slate-500 text-sm mt-2">
-                    {isFavoritePage
-                      ? "Start adding listings to your favorites"
-                      : "Check back later for new listings"}
-                  </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {cityListings.map((listing) => {
+                    const raw = listing.availableDate || {};
+                    const fromDate = parseToDate(raw.from);
+                    const toDate = parseToDate(raw.to);
+                    const availabilityText = formatRange(fromDate, toDate);
+
+                    return (
+                      <div
+                        key={listing.id}
+                        className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 overflow-hidden hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 flex flex-col h-full group"
+                      >
+                        <div className="relative overflow-hidden">
+                          {listing.photos && listing.photos.length > 0 ? (
+                            <img
+                              src={listing.photos[0]}
+                              alt={listing.title || "Listing"}
+                              className="w-full h-60 object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-60 bg-slate-900 flex items-center justify-center text-slate-500">
+                              No Image
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          <button
+                            onClick={() =>
+                              toggleFavorite(listing.id, userData.id, setListings)
+                            }
+                            className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-sm p-2.5 rounded-full hover:bg-slate-900 transition-all hover:scale-110"
+                          >
+                            <Heart
+                              className={`w-5 h-5 transition-all ${
+                                listing.isFavorite
+                                  ? "fill-red-500 text-red-500"
+                                  : "text-slate-300 hover:text-red-400"
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        <div className="p-5 flex flex-col h-full">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-white truncate mb-2">
+                              {listing.title || "Untitled Listing"}
+                            </h3>
+                            <div className="flex items-center text-slate-300 text-sm mt-2">
+                              <MapPin className="w-4 h-4 mr-1.5 text-indigo-400" />
+                              {listing.location || "Unknown Location"}
+                            </div>
+                            <div className="flex items-center text-slate-400 text-sm mt-2">
+                              <Calendar className="w-4 h-4 mr-1.5 text-emerald-400" />
+                              {availabilityText}
+                            </div>
+                            <div className="flex items-center text-slate-400 text-sm mt-2">
+                              <Users className="w-4 h-4 mr-1.5 text-amber-400" />
+                              Max Guests: {listing.numberOfGuests || 1}
+                            </div>
+                          </div>
+
+                          <div className="mt-4 pt-4 border-t border-slate-700">
+                            <div className="flex items-center justify-between mb-4">
+                              <div>
+                                <span className="text-xs text-slate-400 block">
+                                  Starting at
+                                </span>
+                                <span className="text-2xl font-bold text-white">
+                                  ₱{(parseFloat(listing.price) || 0).toFixed(2)}
+                                </span>
+                              </div>
+                              <div className="flex items-center bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">
+                                <Star className="w-4 h-4 mr-1 fill-amber-400 text-amber-400" />
+                                <span className="text-amber-400 font-semibold text-sm">
+                                  {listing.rating || "New"}
+                                </span>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => {
+                                if (!isVerified) {
+                                  return toast.warning(
+                                    "Please verify to use this feature!",
+                                    { position: "top-right" }
+                                  );
+                                }
+                                navigate(
+                                  `/guest/listing-details/${listing.type}/${listing.id}`
+                                );
+                              }}
+                              className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40"
+                            >
+                              Book Now
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
+            )
+          )
+        ) : (
+          <div className="flex items-center justify-center py-24">
+            <div className="text-center">
+              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-12">
+                <p className="text-slate-300 text-lg font-medium">
+                  {isFavoritePage
+                    ? "No Favorites Available"
+                    : "No listings available."}
+                </p>
+                <p className="text-slate-500 text-sm mt-2">
+                  {isFavoritePage
+                    ? "Start adding listings to your favorites"
+                    : "Check back later for new listings"}
+                </p>
+              </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* ✅ Pagination Controls */}
         {totalPages > 1 && (

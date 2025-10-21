@@ -14,6 +14,8 @@ export default function OTPVerificationPage({ user, userData }) {
   const [resendTimer, setResendTimer] = useState(0);
   const [expiryTimer, setExpiryTimer] = useState(900); // 15 minutes in seconds
   const [isExpired, setIsExpired] = useState(false);
+  const [hasShownAuthError, setHasShownAuthError] = useState(false);
+  const [hasShownResendToast, setHasShownResendToast] = useState(false);
   const inputRefs = useRef([]);
   const navigate = useNavigate();
 
@@ -28,8 +30,18 @@ export default function OTPVerificationPage({ user, userData }) {
       const parsed = JSON.parse(storedData);
       setSignupData(parsed);
       setIsSignupMode(parsed.signupMode || false);
+    } else {
+      // If not in signup mode, validate that user is authenticated in Firebase
+      const currentUser = auth.currentUser;
+      if (!currentUser && !hasShownAuthError) {
+        setHasShownAuthError(true);
+        toast.error("You must be signed in to verify your account.", {
+          position: "top-right",
+        });
+        setTimeout(() => navigate("/login"), 2000);
+      }
     }
-  }, []);
+  }, [navigate, hasShownAuthError]);
 
   useEffect(() => {
     if (resendTimer > 0) {
@@ -163,15 +175,16 @@ export default function OTPVerificationPage({ user, userData }) {
       }
 
       // ACCOUNT VERIFICATION MODE: Verify existing user's email
-      if (!user || !user.uid) {
-        toast.error("User not found. Please sign in.", {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        toast.error("You must be signed in to verify your account.", {
           position: "top-right",
         });
         navigate("/login");
         return;
       }
 
-      const userRef = doc(db, "users", user.uid);
+      const userRef = doc(db, "users", currentUser.uid);
       const userSnap = await getDoc(userRef);
 
       if (!userSnap.exists()) {
@@ -202,10 +215,14 @@ export default function OTPVerificationPage({ user, userData }) {
         otpSentAt: 0,
       });
 
-      toast.success("Account Verified Successfully!");
+      toast.success("Account Verified Successfully!", {
+        position: "top-right",
+      });
       navigate("/");
     } catch (error) {
-      toast.error("Verification failed");
+      toast.error("Verification failed", {
+        position: "top-right",
+      });
       console.error(error);
     } finally {
       setIsVerifying(false);
@@ -214,6 +231,7 @@ export default function OTPVerificationPage({ user, userData }) {
 
   const handleResend = async () => {
     if (resendTimer > 0) return;
+
     try {
       // SIGNUP MODE: Resend signup OTP
       if (isSignupMode && signupData) {
@@ -233,7 +251,8 @@ export default function OTPVerificationPage({ user, userData }) {
           sessionStorage.setItem("signupData", JSON.stringify(updatedSignupData));
           setSignupData(updatedSignupData);
 
-          toast.success("New OTP sent to your email!", { position: "top-right" });
+          // Only show toast once by checking the flag
+          setHasShownResendToast(false);
           setOtp(["", "", "", "", "", ""]);
           inputRefs.current[0]?.focus();
           setResendTimer(60);
@@ -242,8 +261,18 @@ export default function OTPVerificationPage({ user, userData }) {
         }
       } else {
         // ACCOUNT VERIFICATION MODE: Resend OTP to existing user
-        await sendOtpToUser(user);
-        toast.success("New OTP sent to your email!", { position: "top-right" });
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          toast.error("User not authenticated. Please sign in again.", {
+            position: "top-right",
+          });
+          return;
+        }
+
+        await sendOtpToUser(currentUser);
+
+        // Only show toast once by checking the flag
+        setHasShownResendToast(false);
         setOtp(["", "", "", "", "", ""]);
         inputRefs.current[0]?.focus();
         setResendTimer(60);
@@ -251,7 +280,9 @@ export default function OTPVerificationPage({ user, userData }) {
         setIsExpired(false);
       }
     } catch (err) {
-      toast.error("Failed to resend code");
+      toast.error("Failed to resend code", {
+        position: "top-right",
+      });
       console.error(err);
     }
   };

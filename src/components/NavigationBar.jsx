@@ -51,51 +51,139 @@ const Logo = () => (
 );
 
 // Guest Search Bar Component
-const GuestSearchBar = () => (
-  <div className="flex-1 flex justify-center relative">
-    <div className="hidden xl:flex items-center bg-white rounded-full px-4 py-2 text-gray-700 shadow-md w-full max-w-3xl justify-between transition-all duration-300">
-      {/* Location */}
-      <div className="flex items-center gap-2">
-        <MapPin className="w-4 h-4 text-gray-500" />
-        <input
-          type="text"
-          placeholder="Where?"
-          className="outline-none bg-transparent text-sm w-24"
-        />
-      </div>
+const GuestSearchBar = ({ onSearch }) => {
+  const [location, setLocation] = useState("");
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
+  const [guests, setGuests] = useState(1);
+  const [isOpen, setIsOpen] = useState(false);
 
-      <div className="border-l h-5 border-gray-300 mx-2"></div>
+  const handleSearch = () => {
+    onSearch({ location, checkIn, checkOut, guests });
+    setIsOpen(false);
+  };
 
-      {/* Date Range */}
-      <div className="flex items-center gap-2">
-        <Calendar className="w-4 h-4 text-gray-500" />
-        <input
-          type="text"
-          placeholder="When?"
-          className="outline-none bg-transparent text-sm w-24"
-        />
-      </div>
+  const handleClear = () => {
+    setLocation("");
+    setCheckIn("");
+    setCheckOut("");
+    setGuests(1);
+    onSearch({ location: "", checkIn: "", checkOut: "", guests: 1 });
+    setIsOpen(false);
+  };
 
-      <div className="border-l h-5 border-gray-300 mx-2"></div>
+  const hasFilters = location || checkIn || checkOut || guests > 1;
 
-      {/* Number of Guests */}
-      <div className="flex items-center gap-2">
-        <Users className="w-4 h-4 text-gray-500" />
-        <input
-          type="number"
-          placeholder="Who?"
-          min="1"
-          className="outline-none bg-transparent text-sm w-16"
-        />
-      </div>
-
-      {/* Search Button */}
-      <button className="bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 transition">
-        <Search className="w-4 h-4" />
+  return (
+    <div className="flex-1 flex justify-center relative px-2">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="hidden lg:flex items-center bg-white text-gray-700 hover:shadow-lg rounded-full px-3 py-2 shadow-md w-full max-w-xl justify-between transition-all duration-300 cursor-pointer"
+      >
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <Search className="w-4 h-4 text-gray-500 flex-shrink-0" />
+          <div className="flex items-center gap-1 text-xs text-gray-600 truncate">
+            <span className="truncate">{location || "Where"}</span>
+            <span className="text-gray-400">•</span>
+            <span className="truncate">
+              {checkIn && checkOut
+                ? `${new Date(checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                : checkIn
+                ? new Date(checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : "When"
+              }
+            </span>
+            <span className="text-gray-400">•</span>
+            <span className="flex-shrink-0">{guests > 1 ? `${guests} Guests` : "Who"}</span>
+          </div>
+        </div>
       </button>
+
+      {/* Search Modal */}
+      {isOpen && (
+        <div className="absolute top-full mt-3 bg-white rounded-2xl shadow-2xl p-6 w-full sm:w-96 z-50 left-1/2 transform -translate-x-1/2 border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Search listings</h3>
+
+          {/* Location */}
+          <div className="mb-4">
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">WHERE?</label>
+            <input
+              type="text"
+              placeholder="Search location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Dates Row */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            {/* Check-in Date */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">CHECK-IN</label>
+              <input
+                type="date"
+                value={checkIn}
+                onChange={(e) => setCheckIn(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Check-out Date */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">CHECK-OUT</label>
+              <input
+                type="date"
+                value={checkOut}
+                onChange={(e) => setCheckOut(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Number of Guests */}
+          <div className="mb-6">
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">GUESTS</label>
+            <div className="flex items-center justify-between border border-gray-300 rounded-lg px-3 py-2.5">
+              <button
+                onClick={() => setGuests(Math.max(1, guests - 1))}
+                className="text-indigo-600 hover:text-indigo-700 font-bold text-lg"
+              >
+                −
+              </button>
+              <span className="text-gray-900 font-semibold">{guests}</span>
+              <button
+                onClick={() => setGuests(guests + 1)}
+                className="text-indigo-600 hover:text-indigo-700 font-bold text-lg"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* Search Buttons */}
+          <div className="flex gap-2">
+            {hasFilters && (
+              <button
+                onClick={handleClear}
+                className="flex-1 px-3 py-2.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
+              >
+                Clear
+              </button>
+            )}
+            <button
+              onClick={handleSearch}
+              className={`${hasFilters ? 'flex-1' : 'w-full'} px-3 py-2.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold flex items-center justify-center gap-2`}
+            >
+              <Search className="w-4 h-4" />
+              Search
+            </button>
+          </div>
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 // Host Navigation Links Component
 const HostNavLinks = () => {
@@ -464,9 +552,34 @@ const MobileMenu = ({
   setMobileSearchOpen,
   setMobileMenuOpen,
   handleLogout,
+  onSearch,
 }) => {
+  const [mobileLocation, setMobileLocation] = useState("");
+  const [mobileCheckIn, setMobileCheckIn] = useState("");
+  const [mobileCheckOut, setMobileCheckOut] = useState("");
+  const [mobileGuests, setMobileGuests] = useState(1);
+  const navigate = useNavigate();
+
   const isGuest = userData?.role === "guest";
   const isHost = userData?.role === "host";
+
+  const handleMobileSearch = () => {
+    onSearch({ location: mobileLocation, checkIn: mobileCheckIn, checkOut: mobileCheckOut, guests: mobileGuests });
+    setMobileSearchOpen(false);
+    setMobileMenuOpen(false);
+  };
+
+  const handleMobileClear = () => {
+    setMobileLocation("");
+    setMobileCheckIn("");
+    setMobileCheckOut("");
+    setMobileGuests(1);
+    onSearch({ location: "", checkIn: "", checkOut: "", guests: 1 });
+    setMobileSearchOpen(false);
+    setMobileMenuOpen(false);
+  };
+
+  const hasMobileFilters = mobileLocation || mobileCheckIn || mobileCheckOut || mobileGuests > 1;
 
   return (
     <div className="xl:hidden bg-slate-900/95 backdrop-blur-md shadow-lg border-t border-slate-700">
@@ -498,48 +611,87 @@ const MobileMenu = ({
         ) : isGuest ? (
           <>
             <button
-              className="flex items-center gap-2 hover:text-white transition"
+              className="flex items-center gap-2 hover:text-white transition font-medium text-slate-200"
               onClick={() => setMobileSearchOpen(!isMobileSearchOpen)}
             >
-              <Search className="w-5 h-5" /> Search
+              <Search className="w-5 h-5" /> Search Listings
             </button>
             {isMobileSearchOpen && (
-              <div className="flex flex-col gap-3 bg-white text-gray-700 rounded-2xl shadow-md p-4">
+              <div className="flex flex-col gap-3 bg-slate-800 border border-slate-700 text-gray-200 rounded-2xl p-4">
+                <h4 className="text-sm font-semibold text-white mb-2">Search Listings</h4>
+
                 {/* Where */}
-                <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-                  <MapPin className="w-4 h-4 text-gray-500" />
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 mb-1.5 block">WHERE?</label>
                   <input
                     type="text"
-                    placeholder="Where?"
-                    className="outline-none bg-transparent text-sm w-full"
+                    placeholder="Enter location"
+                    value={mobileLocation}
+                    onChange={(e) => setMobileLocation(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                   />
                 </div>
 
-                {/* When */}
-                <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-                  <Calendar className="w-4 h-4 text-gray-500" />
+                {/* Check-in */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 mb-1.5 block">CHECK-IN</label>
                   <input
-                    type="text"
-                    placeholder="When?"
-                    className="outline-none bg-transparent text-sm w-full"
+                    type="date"
+                    value={mobileCheckIn}
+                    onChange={(e) => setMobileCheckIn(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                   />
                 </div>
 
-                {/* Who */}
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-gray-500" />
+                {/* Check-out */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 mb-1.5 block">CHECK-OUT</label>
                   <input
-                    type="text"
-                    placeholder="Who?"
-                    className="outline-none bg-transparent text-sm w-full"
+                    type="date"
+                    value={mobileCheckOut}
+                    onChange={(e) => setMobileCheckOut(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                   />
                 </div>
 
-                {/* Search button */}
-                <button className="bg-indigo-600 text-white flex items-center justify-center gap-2 py-2 rounded-full hover:bg-indigo-700 transition">
-                  <Search className="w-4 h-4" />
-                  <span className="text-sm font-medium">Search</span>
-                </button>
+                {/* Guests */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 mb-1.5 block">GUESTS</label>
+                  <div className="flex items-center justify-between bg-slate-900/50 border border-slate-600 rounded-lg px-3 py-2">
+                    <button
+                      onClick={() => setMobileGuests(Math.max(1, mobileGuests - 1))}
+                      className="text-indigo-400 hover:text-indigo-300 font-bold text-lg"
+                    >
+                      −
+                    </button>
+                    <span className="text-slate-200 font-semibold">{mobileGuests}</span>
+                    <button
+                      onClick={() => setMobileGuests(mobileGuests + 1)}
+                      className="text-indigo-400 hover:text-indigo-300 font-bold text-lg"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Buttons */}
+                <div className="flex gap-2 mt-4">
+                  {hasMobileFilters && (
+                    <button
+                      onClick={handleMobileClear}
+                      className="flex-1 px-3 py-2.5 text-sm border border-slate-600 text-slate-300 hover:bg-slate-700 rounded-lg transition font-semibold"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <button
+                    onClick={handleMobileSearch}
+                    className={`${hasMobileFilters ? 'flex-1' : 'w-full'} px-3 py-2.5 text-sm bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition font-semibold flex items-center justify-center gap-2`}
+                  >
+                    <Search className="w-4 h-4" />
+                    Search
+                  </button>
+                </div>
               </div>
             )}
 
@@ -674,8 +826,26 @@ export default function NavigationBar({ userData, user }) {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [notificationDropdownOpen, setNotificationDropdownOpen] =
     useState(false);
+  const [searchFilters, setSearchFilters] = useState({
+    location: "",
+    checkIn: "",
+    checkOut: "",
+    guests: 1,
+  });
 
   const navigate = useNavigate();
+
+  const handleSearch = (filters) => {
+    setSearchFilters(filters);
+    // Scroll to listings or navigate with filter params
+    const params = new URLSearchParams();
+    if (filters.location) params.append("location", filters.location);
+    if (filters.checkIn) params.append("checkIn", filters.checkIn);
+    if (filters.checkOut) params.append("checkOut", filters.checkOut);
+    if (filters.guests) params.append("guests", filters.guests);
+
+    navigate(`/guest?${params.toString()}`);
+  };
 
   const handleLogout = async () => {
     if (!confirm("Are you sure you want to logout?")) return;
@@ -695,9 +865,13 @@ export default function NavigationBar({ userData, user }) {
   }, [isScrolled]);
 
   const getNavbarBg = () => {
-    if (user) return "bg-slate-900 shadow-md";
+    if (user) {
+      return isScrolled
+        ? "bg-slate-900/80 backdrop-blur-lg shadow-lg rounded-2xl border border-slate-700/50 mx-2 sm:mx-4 top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4"
+        : "bg-slate-900 shadow-md";
+    }
     return isScrolled
-      ? "bg-slate-900/95 backdrop-blur-md shadow-lg"
+      ? "bg-slate-900/80 backdrop-blur-lg shadow-lg rounded-2xl border border-slate-700/50 mx-2 sm:mx-4 top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4"
       : "bg-transparent";
   };
 
@@ -706,9 +880,11 @@ export default function NavigationBar({ userData, user }) {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 py-3 lg:py-4 ${getNavbarBg()}`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isScrolled ? "py-2 lg:py-3 px-2 sm:px-4 lg:px-8" : "py-3 lg:py-4 px-4 sm:px-6 lg:px-8"
+      } ${getNavbarBg()}`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between h-14 lg:h-20 gap-x-4 lg:gap-x-12">
           {/* Logo */}
           <Logo />
@@ -716,7 +892,7 @@ export default function NavigationBar({ userData, user }) {
           {/* Center: Guest Search or Host Nav */}
           {user ? (
             isGuest ? (
-              <GuestSearchBar />
+              <GuestSearchBar onSearch={handleSearch} />
             ) : isHost ? (
               <HostNavLinks />
             ) : null
@@ -773,6 +949,7 @@ export default function NavigationBar({ userData, user }) {
           setMobileSearchOpen={setMobileSearchOpen}
           setMobileMenuOpen={setMobileMenuOpen}
           handleLogout={handleLogout}
+          onSearch={handleSearch}
         />
       )}
     </nav>

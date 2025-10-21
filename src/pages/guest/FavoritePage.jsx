@@ -9,7 +9,7 @@ export default function FavoritesPage({ user, userData }) {
       <NavigationBar user={user} userData={userData} />
 
       {/* Main content grows and adapts */}
-      <main className="mt-[110px]">
+      <main>
         <BookingsSection userData={userData} isFavoritePage={true} />
       </main>
 

@@ -13,7 +13,7 @@ export default function GuestPage({ userData, user }) {
   return (
     <>
       <NavigationBar user={user} userData={userData} />
-      <section className="mt-[110px]">
+      <section>
         <BookingsSection userData={userData} isFavoritePage={false} />
       </section>
       <Footer />

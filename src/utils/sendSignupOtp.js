@@ -21,11 +21,15 @@ export async function sendSignupOtp(email, fullName) {
       minute: "2-digit",
     });
 
+    // Extract first name from full name
+    const firstName = fullName?.split(" ")[0] || "User";
+
     const templateParams = {
       email: email,
       passcode: otp,
       time: expiryTime,
       to_name: fullName || "User",
+      username: firstName,
     };
 
     await emailjs.send(serviceId, templateId, templateParams, publicKey);

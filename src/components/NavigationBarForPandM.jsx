@@ -1,6 +1,6 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -23,6 +23,7 @@ export default function NavBar2() {
   const navigate = useNavigate();
   const { user, userData } = useAuth();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   // const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -32,9 +33,21 @@ export default function NavBar2() {
     navigate(ROUTES.HOME);
   };
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-900 shadow-md text-white px-4 sm:px-6 py-4">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
+    <nav className={`fixed top-0 left-0 right-0 z-50 text-white transition-all duration-300 ${
+      isScrolled
+        ? "bg-slate-900/80 backdrop-blur-lg shadow-lg rounded-2xl border border-slate-700/50 mx-2 sm:mx-4 top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 px-3 sm:px-6 py-3"
+        : "bg-slate-900 shadow-md px-4 sm:px-6 py-4"
+    }`}>
+      <div className={`max-w-7xl mx-auto flex items-center justify-between`}>
         <Link
           to={ROUTES.HOME}
           className="flex items-center gap-2 hover:opacity-80 transition-opacity"

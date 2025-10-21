@@ -27,9 +27,9 @@ export default function ServicesPage({ user, userData }) {
   return (
     <>
       <NavigationBar user={user} userData={userData} />
-      <section className="mt-11">
+      <section className="pt-24 sm:pt-28 lg:pt-32">
         {!isVerified && (
-          <div className="max-w-7xl mx-auto px-6 lg:px-8 mb-6 pt-24">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
             <VerificationBanner handleVerification={handleVerification} />
           </div>
         )}

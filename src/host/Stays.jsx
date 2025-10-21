@@ -57,6 +57,37 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
+// Helper function to extract street, city, and province from Nominatim address
+function parseNominatimAddress(addressData) {
+  const address = addressData.address || {};
+  const components = [];
+
+  // Add street address if available
+  if (address.road || address.street) {
+    components.push(address.road || address.street);
+  } else if (address.house_number) {
+    components.push(address.house_number);
+  }
+
+  // Add city/municipality
+  if (address.city) {
+    components.push(address.city);
+  } else if (address.town) {
+    components.push(address.town);
+  } else if (address.municipality) {
+    components.push(address.municipality);
+  }
+
+  // Add province/state
+  if (address.state) {
+    components.push(address.state);
+  } else if (address.province) {
+    components.push(address.province);
+  }
+
+  return components.length > 0 ? components.join(", ") : null;
+}
+
 function LocationPicker({ marker, setMarker, setFormData, formData }) {
   useMapEvents({
     click: async (e) => {
@@ -74,8 +105,9 @@ function LocationPicker({ marker, setMarker, setFormData, formData }) {
 
         const data = await res.json();
 
-        // Use display_name as the readable address
-        const placeName = data.display_name || `${lat}, ${lng}`;
+        // Extract only street, city, and province from the address
+        const parsedAddress = parseNominatimAddress(data);
+        const placeName = parsedAddress || data.display_name || `${lat}, ${lng}`;
 
         setFormData({
           ...formData,
