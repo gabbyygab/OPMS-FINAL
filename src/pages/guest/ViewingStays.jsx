@@ -206,6 +206,26 @@ export default function ListingDetailPage() {
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
 
+    // Validate check-in is before check-out
+    if (checkInDate >= checkOutDate) {
+      toast.error("Check-out date must be after check-in date");
+      return;
+    }
+
+    // Check if selected dates fall within available date ranges
+    const availableDates = Array.isArray(listingData.availableDates) ? listingData.availableDates : [];
+    const isWithinAvailable = availableDates.some((range) => {
+      const rangeStart = new Date(range.startDate);
+      const rangeEnd = new Date(range.endDate);
+      // Check if the entire booking period falls within this available range
+      return checkInDate >= rangeStart && checkOutDate <= rangeEnd;
+    });
+
+    if (availableDates.length > 0 && !isWithinAvailable) {
+      toast.error("Selected dates are not within available date ranges");
+      return;
+    }
+
     // Check if any dates in the stay period are booked
     const bookedDates = listingData.bookedDates || [];
     const stayDates = [];

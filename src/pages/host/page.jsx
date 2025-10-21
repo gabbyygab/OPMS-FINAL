@@ -17,7 +17,7 @@ export default function HostPage() {
   return (
     <>
       <NavigationBar user={user} userData={userData} />
-      <section className="pt-24 sm:pt-28 lg:pt-32">
+      <section className="">
         <HostDashboard isVerified={isVerified} user={user} />
       </section>
       <Footer />

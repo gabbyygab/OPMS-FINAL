@@ -166,16 +166,16 @@ export default function HostDashboard({ isVerified, user }) {
     return <LoadingSpinner />;
   }
   return (
-    <div className="min-h-screen bg-slate-50 pt-24 pb-12">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 pb-12">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-32 lg:pt-40">
         {/* Verification Banner */}
         {!isVerified && (
           <VerificationBanner handleVerification={handleVerification} />
         )}
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-slate-600 mt-1">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent">Dashboard</h1>
+          <p className="text-indigo-300/60 mt-1">
             Welcome back! Here's what's happening with your listings.
           </p>
         </div>
@@ -188,8 +188,8 @@ export default function HostDashboard({ isVerified, user }) {
               onClick={() => setSelectedPeriod(period)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                 selectedPeriod === period
-                  ? "bg-indigo-600 text-white"
-                  : "bg-white text-slate-700 hover:bg-slate-100"
+                  ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white"
+                  : "bg-slate-800/50 text-indigo-300 hover:bg-slate-700/50 border border-indigo-500/20"
               }`}
             >
               {period.charAt(0).toUpperCase() + period.slice(1)}
@@ -200,14 +200,14 @@ export default function HostDashboard({ isVerified, user }) {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Total Earnings */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 bg-green-500/20 border border-green-500/30 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-green-400" />
               </div>
               <span
                 className={`flex items-center text-sm font-medium ${
-                  stats.earningsChange >= 0 ? "text-green-600" : "text-red-600"
+                  stats.earningsChange >= 0 ? "text-green-400" : "text-red-400"
                 }`}
               >
                 {stats.earningsChange >= 0 ? (
@@ -218,21 +218,21 @@ export default function HostDashboard({ isVerified, user }) {
                 {Math.abs(stats.earningsChange)}%
               </span>
             </div>
-            <h3 className="text-2xl font-bold text-slate-900">
+            <h3 className="text-2xl font-bold text-indigo-100">
               ${stats.totalEarnings.toLocaleString()}
             </h3>
-            <p className="text-slate-600 text-sm mt-1">Total Earnings</p>
+            <p className="text-indigo-300/70 text-sm mt-1">Total Earnings</p>
           </div>
 
           {/* Total Bookings */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-blue-500/20 border border-blue-500/30 rounded-lg flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-blue-400" />
               </div>
               <span
                 className={`flex items-center text-sm font-medium ${
-                  stats.bookingsChange >= 0 ? "text-green-600" : "text-red-600"
+                  stats.bookingsChange >= 0 ? "text-green-400" : "text-red-400"
                 }`}
               >
                 {stats.bookingsChange >= 0 ? (
@@ -243,21 +243,21 @@ export default function HostDashboard({ isVerified, user }) {
                 {Math.abs(stats.bookingsChange)}%
               </span>
             </div>
-            <h3 className="text-2xl font-bold text-slate-900">
+            <h3 className="text-2xl font-bold text-indigo-100">
               {stats.totalBookings}
             </h3>
-            <p className="text-slate-600 text-sm mt-1">Total Bookings</p>
+            <p className="text-indigo-300/70 text-sm mt-1">Total Bookings</p>
           </div>
 
           {/* Active Listings */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Home className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-purple-500/20 border border-purple-500/30 rounded-lg flex items-center justify-center">
+                <Home className="w-6 h-6 text-purple-400" />
               </div>
               <span
                 className={`flex items-center text-sm font-medium ${
-                  stats.listingsChange >= 0 ? "text-green-600" : "text-red-600"
+                  stats.listingsChange >= 0 ? "text-green-400" : "text-red-400"
                 }`}
               >
                 {stats.listingsChange >= 0 ? (
@@ -268,21 +268,21 @@ export default function HostDashboard({ isVerified, user }) {
                 {Math.abs(stats.listingsChange)}
               </span>
             </div>
-            <h3 className="text-2xl font-bold text-slate-900">
+            <h3 className="text-2xl font-bold text-indigo-100">
               {stats.activeListings}
             </h3>
-            <p className="text-slate-600 text-sm mt-1">Active Listings</p>
+            <p className="text-indigo-300/70 text-sm mt-1">Active Listings</p>
           </div>
 
           {/* Average Rating */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <Star className="w-6 h-6 text-yellow-600" />
+              <div className="w-12 h-12 bg-yellow-500/20 border border-yellow-500/30 rounded-lg flex items-center justify-center">
+                <Star className="w-6 h-6 text-yellow-400" />
               </div>
               <span
                 className={`flex items-center text-sm font-medium ${
-                  stats.ratingChange >= 0 ? "text-green-600" : "text-red-600"
+                  stats.ratingChange >= 0 ? "text-green-400" : "text-red-400"
                 }`}
               >
                 {stats.ratingChange >= 0 ? (
@@ -293,18 +293,18 @@ export default function HostDashboard({ isVerified, user }) {
                 {Math.abs(stats.ratingChange)}
               </span>
             </div>
-            <h3 className="text-2xl font-bold text-slate-900">
+            <h3 className="text-2xl font-bold text-indigo-100">
               {stats.avgRating}
             </h3>
-            <p className="text-slate-600 text-sm mt-1">Average Rating</p>
+            <p className="text-indigo-300/70 text-sm mt-1">Average Rating</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Upcoming Bookings */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="lg:col-span-2 bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-xl font-bold text-indigo-100">
                 Upcoming Bookings
               </h2>
               <a
@@ -319,19 +319,19 @@ export default function HostDashboard({ isVerified, user }) {
               {upcomingBookings.map((booking) => (
                 <div
                   key={booking.id}
-                  className="flex items-center justify-between p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition"
+                  className="flex items-center justify-between p-4 bg-slate-700/30 hover:bg-slate-600/30 border border-indigo-500/20 rounded-lg transition"
                 >
                   <div className="flex items-center gap-4 flex-1">
-                    <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+                    <div className="w-10 h-10 bg-indigo-500/20 border border-indigo-500/30 rounded-full flex items-center justify-center text-indigo-400">
                       {getTypeIcon(booking.type)}
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-slate-900">
+                      <h3 className="font-semibold text-indigo-100">
                         {booking.property}
                       </h3>
-                      <p className="text-sm text-slate-600">{booking.guest}</p>
+                      <p className="text-sm text-indigo-300/60">{booking.guest}</p>
                       <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs text-slate-500 flex items-center gap-1">
+                        <span className="text-xs text-indigo-300/50 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           {booking.checkIn} - {booking.checkOut}
                         </span>
@@ -346,10 +346,10 @@ export default function HostDashboard({ isVerified, user }) {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-slate-900">
+                    <p className="font-bold text-indigo-100">
                       ${booking.amount}
                     </p>
-                    <p className="text-xs text-slate-500">{booking.type}</p>
+                    <p className="text-xs text-indigo-300/50">{booking.type}</p>
                   </div>
                 </div>
               ))}
@@ -357,9 +357,9 @@ export default function HostDashboard({ isVerified, user }) {
           </div>
 
           {/* Recent Messages */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-slate-900">Messages</h2>
+              <h2 className="text-xl font-bold text-indigo-100">Messages</h2>
               <a
                 href="/host/messages"
                 className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
@@ -372,22 +372,22 @@ export default function HostDashboard({ isVerified, user }) {
               {recentMessages.map((message) => (
                 <div
                   key={message.id}
-                  className={`p-4 rounded-lg hover:bg-slate-50 transition cursor-pointer ${
-                    message.unread ? "bg-indigo-50" : "bg-slate-50"
+                  className={`p-4 rounded-lg transition cursor-pointer ${
+                    message.unread ? "bg-indigo-500/20 border border-indigo-500/30" : "bg-slate-700/30 border border-indigo-500/20"
                   }`}
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-slate-900">
+                    <h3 className="font-semibold text-indigo-100">
                       {message.guest}
                     </h3>
                     {message.unread && (
-                      <span className="w-2 h-2 bg-indigo-600 rounded-full"></span>
+                      <span className="w-2 h-2 bg-indigo-400 rounded-full"></span>
                     )}
                   </div>
-                  <p className="text-sm text-slate-600 mb-2 line-clamp-2">
+                  <p className="text-sm text-indigo-300/60 mb-2 line-clamp-2">
                     {message.message}
                   </p>
-                  <span className="text-xs text-slate-500">{message.time}</span>
+                  <span className="text-xs text-indigo-300/50">{message.time}</span>
                 </div>
               ))}
             </div>
@@ -395,31 +395,31 @@ export default function HostDashboard({ isVerified, user }) {
         </div>
 
         {/* Listing Performance */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-6">
-          <h2 className="text-xl font-bold text-slate-900 mb-6">
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6 mt-6">
+          <h2 className="text-xl font-bold text-indigo-100 mb-6">
             Listing Performance
           </h2>
 
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
+                <tr className="border-b border-indigo-500/20">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-indigo-300">
                     Listing
                   </th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-indigo-300">
                     Type
                   </th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-indigo-300">
                     Views
                   </th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-indigo-300">
                     Bookings
                   </th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-indigo-300">
                     Revenue
                   </th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-indigo-300">
                     Rating
                   </th>
                 </tr>
@@ -428,38 +428,38 @@ export default function HostDashboard({ isVerified, user }) {
                 {listingPerformance.map((listing, index) => (
                   <tr
                     key={index}
-                    className="border-b border-slate-100 hover:bg-slate-50 transition"
+                    className="border-b border-indigo-500/20 hover:bg-slate-700/30 transition"
                   >
                     <td className="py-4 px-4">
-                      <div className="font-medium text-slate-900">
+                      <div className="font-medium text-indigo-100">
                         {listing.name}
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="inline-flex items-center gap-1 text-sm text-slate-600">
+                      <span className="inline-flex items-center gap-1 text-sm text-indigo-300/60">
                         {getTypeIcon(listing.type)}
                         {listing.type}
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="flex items-center gap-1 text-sm text-slate-900">
-                        <Eye className="w-4 h-4 text-slate-500" />
+                      <span className="flex items-center gap-1 text-sm text-indigo-100">
+                        <Eye className="w-4 h-4 text-indigo-300/60" />
                         {listing.views}
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="text-sm font-medium text-slate-900">
+                      <span className="text-sm font-medium text-indigo-100">
                         {listing.bookings}
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="text-sm font-semibold text-green-600">
+                      <span className="text-sm font-semibold text-green-400">
                         ${listing.revenue.toLocaleString()}
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="flex items-center gap-1 text-sm text-slate-900">
-                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                      <span className="flex items-center gap-1 text-sm text-indigo-100">
+                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                         {listing.rating}
                       </span>
                     </td>

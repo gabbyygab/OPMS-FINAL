@@ -383,15 +383,15 @@ export default function HostMyServices() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-24 pb-12">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 pb-12">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-32 lg:pt-40">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent flex items-center gap-3">
               My Services
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-indigo-300/60 mt-1">
               Manage your professional services
             </p>
           </div>
@@ -399,7 +399,7 @@ export default function HostMyServices() {
             onClick={() =>
               handleActionWithVerification(() => setShowAddModal(true))
             }
-            className="mt-4 md:mt-0 bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 font-medium"
+            className="mt-4 md:mt-0 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 shadow-lg shadow-indigo-500/20 text-white px-6 py-3 rounded-lg transition flex items-center gap-2 font-medium"
           >
             <Plus className="w-5 h-5" />
             Add New Service
@@ -408,85 +408,85 @@ export default function HostMyServices() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-600 text-sm">Total Services</p>
-                <h3 className="text-2xl font-bold text-slate-900 mt-1">
+                <p className="text-indigo-300/60 text-sm">Total Services</p>
+                <h3 className="text-2xl font-bold text-indigo-100 mt-1">
                   {services.length}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Briefcase className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg flex items-center justify-center border border-blue-500/30">
+                <Briefcase className="w-6 h-6 text-blue-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-600 text-sm">Active Services</p>
-                <h3 className="text-2xl font-bold text-slate-900 mt-1">
+                <p className="text-indigo-300/60 text-sm">Active Services</p>
+                <h3 className="text-2xl font-bold text-indigo-100 mt-1">
                   {services.filter((s) => s.status === "active").length}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Eye className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-lg flex items-center justify-center border border-green-500/30">
+                <Eye className="w-6 h-6 text-green-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-600 text-sm">Total Bookings</p>
-                <h3 className="text-2xl font-bold text-slate-900 mt-1">
+                <p className="text-indigo-300/60 text-sm">Total Bookings</p>
+                <h3 className="text-2xl font-bold text-indigo-100 mt-1">
                   {services.reduce((sum, service) => sum + service.bookings, 0)}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-orange-600" />
+              <div className="w-12 h-12 bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-lg flex items-center justify-center border border-orange-500/30">
+                <Calendar className="w-6 h-6 text-orange-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-600 text-sm">Total Revenue</p>
-                <h3 className="text-2xl font-bold text-slate-900 mt-1">
+                <p className="text-indigo-300/60 text-sm">Total Revenue</p>
+                <h3 className="text-2xl font-bold text-indigo-100 mt-1">
                   $
                   {services
                     .reduce((sum, service) => sum + service.revenue, 0)
                     .toLocaleString()}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-pink-600" />
+              <div className="w-12 h-12 bg-gradient-to-br from-pink-500/20 to-pink-600/20 rounded-lg flex items-center justify-center border border-pink-500/30">
+                <DollarSign className="w-6 h-6 text-pink-400" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Search and Filter */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200 mb-6">
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6 mb-6">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-indigo-300/50" />
               <input
                 type="text"
                 placeholder="Search services by name or location..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
               />
             </div>
             <div className="flex items-center gap-2">
-              <Filter className="w-5 h-5 text-slate-600" />
+              <Filter className="w-5 h-5 text-indigo-300" />
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
               >
                 <option value="all">All Categories</option>
                 {categories.map((cat) => (
@@ -498,7 +498,7 @@ export default function HostMyServices() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -510,12 +510,12 @@ export default function HostMyServices() {
 
         {/* Services Grid */}
         {filteredServices.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-12 border border-slate-200 text-center">
-            <Briefcase className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-slate-900 mb-2">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-12 text-center">
+            <Briefcase className="w-16 h-16 text-indigo-300/30 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-indigo-100 mb-2">
               No services found
             </h3>
-            <p className="text-slate-600 mb-6">
+            <p className="text-indigo-300/60 mb-6">
               {searchTerm || filterStatus !== "all" || filterCategory !== "all"
                 ? "Try adjusting your search or filters"
                 : "Get started by adding your first service"}
@@ -527,7 +527,7 @@ export default function HostMyServices() {
                   onClick={() =>
                     handleActionWithVerification(() => setShowAddModal(true))
                   }
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition inline-flex items-center gap-2"
+                  className="bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 shadow-lg shadow-indigo-500/20 text-white px-6 py-3 rounded-lg transition inline-flex items-center gap-2"
                 >
                   <Plus className="w-5 h-5" />
                   Add Your First Service
@@ -539,7 +539,7 @@ export default function HostMyServices() {
             {filteredServices.map((service) => (
               <div
                 key={service.id}
-                className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition"
+                className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm overflow-hidden hover:shadow-indigo-500/20 transition"
               >
                 {/* Image */}
                 <div className="relative h-48 overflow-hidden">
@@ -549,7 +549,7 @@ export default function HostMyServices() {
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute top-3 left-3">
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-600 text-white">
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/20">
                       {service.category}
                     </span>
                   </div>
@@ -557,8 +557,8 @@ export default function HostMyServices() {
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-medium ${
                         service.status === "active"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-slate-100 text-slate-700"
+                          ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                          : "bg-slate-500/20 text-slate-300 border border-slate-500/30"
                       }`}
                     >
                       {service.status}
@@ -568,16 +568,16 @@ export default function HostMyServices() {
 
                 {/* Content */}
                 <div className="p-5">
-                  <h3 className="text-lg font-bold text-slate-900 mb-1">
+                  <h3 className="text-lg font-bold text-indigo-100 mb-1">
                     {service.title}
                   </h3>
-                  <p className="text-sm text-slate-600 flex items-center gap-1 mb-3">
+                  <p className="text-sm text-indigo-300/70 flex items-center gap-1 mb-3">
                     <MapPin className="w-4 h-4" />
                     {service.location}
                   </p>
 
                   {/* Details */}
-                  <div className="flex items-center gap-4 text-sm text-slate-600 mb-4">
+                  <div className="flex items-center gap-4 text-sm text-indigo-300/70 mb-4">
                     <span className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
                       {service.duration}h
@@ -589,35 +589,35 @@ export default function HostMyServices() {
                   </div>
 
                   {/* Stats */}
-                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-200">
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-indigo-500/20">
                     <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                      <span className="font-semibold text-slate-900">
+                      <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                      <span className="font-semibold text-indigo-100">
                         {service.rating}
                       </span>
-                      <span className="text-slate-600 text-sm">
+                      <span className="text-indigo-300/70 text-sm">
                         ({service.reviews})
                       </span>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-slate-900">
+                      <p className="text-2xl font-bold text-indigo-100">
                         ${service.price}
                       </p>
-                      <p className="text-xs text-slate-600">per service</p>
+                      <p className="text-xs text-indigo-300/60">per service</p>
                     </div>
                   </div>
 
                   {/* Performance */}
                   <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="bg-slate-50 rounded-lg p-2">
-                      <p className="text-xs text-slate-600">Bookings</p>
-                      <p className="font-semibold text-blue-600">
+                    <div className="bg-slate-700/50 border border-indigo-500/20 rounded-lg p-2">
+                      <p className="text-xs text-indigo-300/60">Bookings</p>
+                      <p className="font-semibold text-blue-400">
                         {service.bookings}
                       </p>
                     </div>
-                    <div className="bg-slate-50 rounded-lg p-2">
-                      <p className="text-xs text-slate-600">Revenue</p>
-                      <p className="font-semibold text-green-600">
+                    <div className="bg-slate-700/50 border border-indigo-500/20 rounded-lg p-2">
+                      <p className="text-xs text-indigo-300/60">Revenue</p>
+                      <p className="font-semibold text-green-400">
                         ${service.revenue.toLocaleString()}
                       </p>
                     </div>
@@ -625,7 +625,7 @@ export default function HostMyServices() {
 
                   {/* Response Time Badge */}
                   <div className="mb-4">
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-medium rounded-full">
                       <Award className="w-3 h-3" />
                       Responds in {service.responseTime}
                     </span>
@@ -637,8 +637,8 @@ export default function HostMyServices() {
                       onClick={() => toggleStatus(service.id)}
                       className={`flex-1 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
                         service.status === "active"
-                          ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                          : "bg-green-100 text-green-700 hover:bg-green-200"
+                          ? "bg-slate-700/50 text-slate-300 hover:bg-slate-700/70 border border-slate-500/30"
+                          : "bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-500/30"
                       }`}
                     >
                       {service.status === "active" ? (
@@ -655,13 +655,13 @@ export default function HostMyServices() {
                     </button>
                     <button
                       onClick={() => openEditModal(service)}
-                      className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
+                      className="px-4 py-2 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg hover:bg-blue-500/30 transition"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => openDeleteModal(service)}
-                      className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
+                      className="px-4 py-2 bg-red-500/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -676,9 +676,9 @@ export default function HostMyServices() {
       {/* Add Service Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-slate-900">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-indigo-500/30 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-indigo-500/30 p-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-indigo-100">
                 Add New Service
               </h2>
               <button
@@ -686,7 +686,7 @@ export default function HostMyServices() {
                   setShowAddModal(false);
                   resetForm();
                 }}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-indigo-300/50 hover:text-indigo-300"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -694,7 +694,7 @@ export default function HostMyServices() {
 
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Service Title *
                 </label>
                 <input
@@ -704,12 +704,12 @@ export default function HostMyServices() {
                     setFormData({ ...formData, title: e.target.value })
                   }
                   placeholder="e.g., Professional House Cleaning"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Location *
                 </label>
                 <div className="relative">
@@ -718,16 +718,16 @@ export default function HostMyServices() {
                     value={formData.location}
                     onChange={(e) => handleSearch(e.target.value)}
                     placeholder="Type a location or click on map"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
                   />
 
                   {showSuggestions && suggestions.length > 0 && (
-                    <ul className="absolute w-full bg-white border border-slate-200 rounded-lg mt-1 shadow-lg max-h-60 overflow-y-auto z-[999]">
+                    <ul className="absolute w-full bg-slate-800 border border-indigo-500/30 rounded-lg mt-1 shadow-lg max-h-60 overflow-y-auto z-[999]">
                       {suggestions.map((place) => (
                         <li
                           key={place.place_id}
                           onClick={() => handleSelect(place)}
-                          className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm text-slate-700"
+                          className="px-4 py-2 hover:bg-indigo-500/20 cursor-pointer text-sm text-indigo-100"
                         >
                           {place.display_name}
                         </li>
@@ -736,7 +736,7 @@ export default function HostMyServices() {
                   )}
                 </div>
 
-                <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 z-[998]">
+                <div className="mt-4 rounded-xl overflow-hidden border border-indigo-500/30 z-[998]">
                   <MapContainer
                     center={marker || defaultCenter}
                     zoom={10}
@@ -760,7 +760,7 @@ export default function HostMyServices() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Category *
                 </label>
                 <select
@@ -768,7 +768,7 @@ export default function HostMyServices() {
                   onChange={(e) =>
                     setFormData({ ...formData, category: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100"
                 >
                   {categories.map((cat) => (
                     <option key={cat.name} value={cat.name}>
@@ -780,11 +780,11 @@ export default function HostMyServices() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
                     Price per Service *
                   </label>
                   <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-indigo-300/50" />
                     <input
                       type="number"
                       value={formData.price}
@@ -792,13 +792,13 @@ export default function HostMyServices() {
                         setFormData({ ...formData, price: e.target.value })
                       }
                       placeholder="120"
-                      className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                      className="w-full pl-10 pr-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
                     Duration (hours) *
                   </label>
                   <input
@@ -809,14 +809,14 @@ export default function HostMyServices() {
                       setFormData({ ...formData, duration: e.target.value })
                     }
                     placeholder="3"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
                     Availability *
                   </label>
                   <input
@@ -826,12 +826,12 @@ export default function HostMyServices() {
                       setFormData({ ...formData, availability: e.target.value })
                     }
                     placeholder="e.g., Mon-Sat"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
                     Response Time *
                   </label>
                   <input
@@ -841,13 +841,13 @@ export default function HostMyServices() {
                       setFormData({ ...formData, responseTime: e.target.value })
                     }
                     placeholder="e.g., 1 hour"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Description
                 </label>
                 <textarea
@@ -857,39 +857,39 @@ export default function HostMyServices() {
                   }
                   placeholder="Describe your service..."
                   rows="4"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 resize-none"
                 ></textarea>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Photos
                 </label>
-                <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-blue-500 transition cursor-pointer">
-                  <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                  <p className="text-slate-600 text-sm">
+                <div className="border-2 border-dashed border-indigo-500/30 rounded-lg p-8 text-center hover:border-indigo-500/50 transition cursor-pointer bg-slate-700/30">
+                  <Upload className="w-12 h-12 text-indigo-300/50 mx-auto mb-3" />
+                  <p className="text-indigo-300/70 text-sm">
                     Click to upload or drag and drop
                   </p>
-                  <p className="text-slate-500 text-xs mt-1">
+                  <p className="text-indigo-300/50 text-xs mt-1">
                     PNG, JPG up to 10MB
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 p-6 flex gap-3">
+            <div className="sticky bottom-0 bg-gradient-to-r from-slate-800 to-slate-900 border-t border-indigo-500/30 p-6 flex gap-3">
               <button
                 onClick={() => {
                   setShowAddModal(false);
                   resetForm();
                 }}
-                className="flex-1 px-6 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition font-medium"
+                className="flex-1 px-6 py-3 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 transition font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddService}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center gap-2"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 shadow-lg shadow-indigo-500/20 text-white rounded-lg transition font-medium flex items-center justify-center gap-2"
               >
                 <Save className="w-5 h-5" />
                 Add Service
@@ -902,9 +902,9 @@ export default function HostMyServices() {
       {/* Edit Service Modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-slate-900">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-indigo-500/30 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-indigo-500/30 p-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-indigo-100">
                 Edit Service
               </h2>
               <button
@@ -912,7 +912,7 @@ export default function HostMyServices() {
                   setShowEditModal(false);
                   resetForm();
                 }}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-indigo-300/50 hover:text-indigo-300"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -920,7 +920,7 @@ export default function HostMyServices() {
 
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Service Title *
                 </label>
                 <input
@@ -929,12 +929,12 @@ export default function HostMyServices() {
                   onChange={(e) =>
                     setFormData({ ...formData, title: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Location *
                 </label>
                 <input
@@ -943,12 +943,12 @@ export default function HostMyServices() {
                   onChange={(e) =>
                     setFormData({ ...formData, location: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Category *
                 </label>
                 <select
@@ -956,7 +956,7 @@ export default function HostMyServices() {
                   onChange={(e) =>
                     setFormData({ ...formData, category: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100"
                 >
                   {categories.map((cat) => (
                     <option key={cat.name} value={cat.name}>
@@ -968,24 +968,24 @@ export default function HostMyServices() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
                     Price per Service *
                   </label>
                   <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-indigo-300/50" />
                     <input
                       type="number"
                       value={formData.price}
                       onChange={(e) =>
                         setFormData({ ...formData, price: e.target.value })
                       }
-                      className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                      className="w-full pl-10 pr-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
                     Duration (hours) *
                   </label>
                   <input
@@ -995,14 +995,14 @@ export default function HostMyServices() {
                     onChange={(e) =>
                       setFormData({ ...formData, duration: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
                     Availability *
                   </label>
                   <input
@@ -1012,12 +1012,12 @@ export default function HostMyServices() {
                       setFormData({ ...formData, availability: e.target.value })
                     }
                     placeholder="e.g., Mon-Sat"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
                     Response Time *
                   </label>
                   <input
@@ -1030,13 +1030,13 @@ export default function HostMyServices() {
                       })
                     }
                     placeholder="e.g., 1 hour"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Description
                 </label>
                 <textarea
@@ -1046,39 +1046,39 @@ export default function HostMyServices() {
                   }
                   placeholder="Describe your service..."
                   rows="4"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 resize-none"
                 ></textarea>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Photos
                 </label>
-                <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-blue-500 transition cursor-pointer">
-                  <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                  <p className="text-slate-600 text-sm">
+                <div className="border-2 border-dashed border-indigo-500/30 rounded-lg p-8 text-center hover:border-indigo-500/50 transition cursor-pointer bg-slate-700/30">
+                  <Upload className="w-12 h-12 text-indigo-300/50 mx-auto mb-3" />
+                  <p className="text-indigo-300/70 text-sm">
                     Click to upload or drag and drop
                   </p>
-                  <p className="text-slate-500 text-xs mt-1">
+                  <p className="text-indigo-300/50 text-xs mt-1">
                     PNG, JPG up to 10MB
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 p-6 flex gap-3">
+            <div className="sticky bottom-0 bg-gradient-to-r from-slate-800 to-slate-900 border-t border-indigo-500/30 p-6 flex gap-3">
               <button
                 onClick={() => {
                   setShowEditModal(false);
                   resetForm();
                 }}
-                className="flex-1 px-6 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition font-medium"
+                className="flex-1 px-6 py-3 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 transition font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={handleEditService}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center gap-2"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 shadow-lg shadow-indigo-500/20 text-white rounded-lg transition font-medium flex items-center justify-center gap-2"
               >
                 <Save className="w-5 h-5" />
                 Save Changes
@@ -1091,26 +1091,26 @@ export default function HostMyServices() {
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 text-center">
-            <Trash2 className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-indigo-500/30 rounded-2xl max-w-md w-full p-6 text-center">
+            <Trash2 className="w-12 h-12 text-red-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-indigo-100 mb-2">
               Delete Service
             </h2>
-            <p className="text-slate-600 mb-6">
+            <p className="text-indigo-300/70 mb-6">
               Are you sure you want to delete{" "}
-              <span className="font-semibold">{selectedService?.title}</span>?
+              <span className="font-semibold text-indigo-200">{selectedService?.title}</span>?
               This action cannot be undone.
             </p>
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="px-6 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition font-medium"
+                className="px-6 py-3 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 transition font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteService}
-                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+                className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 shadow-lg shadow-red-500/20 text-white rounded-lg transition font-medium"
               >
                 Delete
               </button>
