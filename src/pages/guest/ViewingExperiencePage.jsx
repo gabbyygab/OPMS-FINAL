@@ -78,7 +78,7 @@ export default function ExperienceDetailPage() {
   const navigate = useNavigate();
   const { listing_id } = useParams();
 
-  const handleVerification = async () => {
+  const handleVerification = async () => {``
     try {
       setIsLoadingVerification(true);
       await sendOtpToUser(user);

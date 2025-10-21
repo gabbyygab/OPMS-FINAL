@@ -94,44 +94,44 @@ export default function SignInPage() {
           </div>
 
           {/* Email + Password Sign In Form */}
-          <form className="space-y-6 mb-6" onSubmit={handleFormSubmit}>
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-slate-200"
-              >
-                Email address
-              </label>
+          <form className="space-y-5 mb-6" onSubmit={handleFormSubmit}>
+            <div className="relative">
               <input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="peer w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
+              <label
+                htmlFor="email"
+                className="absolute left-4 top-3 text-slate-400 text-sm transition-all duration-200 peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:bg-slate-800 peer-focus:px-1 peer-focus:text-indigo-400 peer-not-placeholder-shown:top-0 peer-not-placeholder-shown:-translate-y-1/2 peer-not-placeholder-shown:bg-slate-800 peer-not-placeholder-shown:px-1"
+              >
+                Email address
+              </label>
             </div>
 
-            <div className="space-y-2">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-slate-200"
-              >
-                Password
-              </label>
+            <div className="relative">
               <input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="peer w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
+              <label
+                htmlFor="password"
+                className="absolute left-4 top-3 text-slate-400 text-sm transition-all duration-200 peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:bg-slate-800 peer-focus:px-1 peer-focus:text-indigo-400 peer-not-placeholder-shown:top-0 peer-not-placeholder-shown:-translate-y-1/2 peer-not-placeholder-shown:bg-slate-800 peer-not-placeholder-shown:px-1"
+              >
+                Password
+              </label>
 
               {/* Forgot Password Link */}
-              <div className="text-right mt-1">
+              <div className="text-right mt-2">
                 <Link
                   to="/forgot-password"
                   className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"

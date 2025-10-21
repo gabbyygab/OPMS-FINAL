@@ -21,10 +21,32 @@ export default function SignUpPageHost() {
   const navigate = useNavigate();
   if (isLoading) return <LoadingSpinner />;
 
+  const validatePassword = (pwd) => {
+    if (pwd.length < 8) {
+      return "Password must be at least 8 characters long.";
+    }
+    if (!/[0-9]/.test(pwd)) {
+      return "Password must contain at least one number.";
+    }
+    if (!/[a-zA-Z]/.test(pwd)) {
+      return "Password must contain at least one letter.";
+    }
+    return "";
+  };
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     try {
       setIsLoading(true);
+
+      const passwordError = validatePassword(password);
+      if (passwordError) {
+        toast.error(passwordError, {
+          position: "top-right",
+        });
+        return;
+      }
+
       if (password !== confirmPassword) {
         toast.error("Password does not match.", {
           position: "top-right",
@@ -200,76 +222,76 @@ export default function SignUpPageHost() {
 
           {/* Sign Up Form */}
           <form className="space-y-5" onSubmit={handleFormSubmit}>
-            <div className="space-y-2">
-              <label
-                htmlFor="fullName"
-                className="block text-sm font-medium text-slate-200"
-              >
-                Full name
-              </label>
+            <div className="relative">
               <input
                 id="fullName"
                 type="text"
-                placeholder="John Doe"
+                placeholder="Full name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
-                className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="peer w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
+              <label
+                htmlFor="fullName"
+                className="absolute left-4 top-3 text-slate-400 text-sm transition-all duration-200 peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:bg-slate-800 peer-focus:px-1 peer-focus:text-indigo-400 peer-not-placeholder-shown:top-0 peer-not-placeholder-shown:-translate-y-1/2 peer-not-placeholder-shown:bg-slate-800 peer-not-placeholder-shown:px-1"
+              >
+                Full name
+              </label>
             </div>
 
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-slate-200"
-              >
-                Email address
-              </label>
+            <div className="relative">
               <input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="peer w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
+              <label
+                htmlFor="email"
+                className="absolute left-4 top-3 text-slate-400 text-sm transition-all duration-200 peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:bg-slate-800 peer-focus:px-1 peer-focus:text-indigo-400 peer-not-placeholder-shown:top-0 peer-not-placeholder-shown:-translate-y-1/2 peer-not-placeholder-shown:bg-slate-800 peer-not-placeholder-shown:px-1"
+              >
+                Email address
+              </label>
             </div>
 
-            <div className="space-y-2">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-slate-200"
-              >
-                Password
-              </label>
+            <div className="relative">
               <input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="peer w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
+              <label
+                htmlFor="password"
+                className="absolute left-4 top-3 text-slate-400 text-sm transition-all duration-200 peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:bg-slate-800 peer-focus:px-1 peer-focus:text-indigo-400 peer-not-placeholder-shown:top-0 peer-not-placeholder-shown:-translate-y-1/2 peer-not-placeholder-shown:bg-slate-800 peer-not-placeholder-shown:px-1"
+              >
+                Password (8+ chars, letters & numbers)
+              </label>
             </div>
 
-            <div className="space-y-2">
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-slate-200"
-              >
-                Confirm password
-              </label>
+            <div className="relative">
               <input
                 id="confirmPassword"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Confirm password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="peer w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
+              <label
+                htmlFor="confirmPassword"
+                className="absolute left-4 top-3 text-slate-400 text-sm transition-all duration-200 peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:bg-slate-800 peer-focus:px-1 peer-focus:text-indigo-400 peer-not-placeholder-shown:top-0 peer-not-placeholder-shown:-translate-y-1/2 peer-not-placeholder-shown:bg-slate-800 peer-not-placeholder-shown:px-1"
+              >
+                Confirm password
+              </label>
             </div>
 
             <button
