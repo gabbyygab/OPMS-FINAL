@@ -18,6 +18,10 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [fullNameFocused, setFullNameFocused] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
   const navigate = useNavigate();
   const [isLoading, setisLoading] = useState(false);
   if (isLoading) return <LoadingSpinner />;
@@ -242,12 +246,18 @@ export default function SignUpPage() {
                 placeholder="Full name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+                onFocus={() => setFullNameFocused(true)}
+                onBlur={() => setFullNameFocused(false)}
                 required
                 className="peer w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
               <label
                 htmlFor="fullName"
-                className="absolute left-4 top-3 text-slate-400 text-sm transition-all duration-200 peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:bg-slate-800 peer-focus:px-1 peer-focus:text-indigo-400 peer-not-placeholder-shown:top-0 peer-not-placeholder-shown:-translate-y-1/2 peer-not-placeholder-shown:bg-slate-800 peer-not-placeholder-shown:px-1"
+                className={`absolute left-4 text-slate-400 text-sm transition-all duration-200 ${
+                  fullNameFocused || fullName
+                    ? "top-0 -translate-y-1/2 bg-slate-800 px-1 text-indigo-400"
+                    : "top-3"
+                }`}
               >
                 Full name
               </label>
@@ -260,12 +270,18 @@ export default function SignUpPage() {
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onFocus={() => setEmailFocused(true)}
+                onBlur={() => setEmailFocused(false)}
                 required
                 className="peer w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
               <label
                 htmlFor="email"
-                className="absolute left-4 top-3 text-slate-400 text-sm transition-all duration-200 peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:bg-slate-800 peer-focus:px-1 peer-focus:text-indigo-400 peer-not-placeholder-shown:top-0 peer-not-placeholder-shown:-translate-y-1/2 peer-not-placeholder-shown:bg-slate-800 peer-not-placeholder-shown:px-1"
+                className={`absolute left-4 text-slate-400 text-sm transition-all duration-200 ${
+                  emailFocused || email
+                    ? "top-0 -translate-y-1/2 bg-slate-800 px-1 text-indigo-400"
+                    : "top-3"
+                }`}
               >
                 Email address
               </label>
@@ -278,12 +294,18 @@ export default function SignUpPage() {
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => setPasswordFocused(true)}
+                onBlur={() => setPasswordFocused(false)}
                 required
                 className="peer w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
               <label
                 htmlFor="password"
-                className="absolute left-4 top-3 text-slate-400 text-sm transition-all duration-200 peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:bg-slate-800 peer-focus:px-1 peer-focus:text-indigo-400 peer-not-placeholder-shown:top-0 peer-not-placeholder-shown:-translate-y-1/2 peer-not-placeholder-shown:bg-slate-800 peer-not-placeholder-shown:px-1"
+                className={`absolute left-4 text-slate-400 text-sm transition-all duration-200 ${
+                  passwordFocused || password
+                    ? "top-0 -translate-y-1/2 bg-slate-800 px-1 text-indigo-400"
+                    : "top-3"
+                }`}
               >
                 Password (8+ chars, letters & numbers)
               </label>
@@ -296,12 +318,18 @@ export default function SignUpPage() {
                 placeholder="Confirm password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                onFocus={() => setConfirmPasswordFocused(true)}
+                onBlur={() => setConfirmPasswordFocused(false)}
                 required
                 className="peer w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
               <label
                 htmlFor="confirmPassword"
-                className="absolute left-4 top-3 text-slate-400 text-sm transition-all duration-200 peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:bg-slate-800 peer-focus:px-1 peer-focus:text-indigo-400 peer-not-placeholder-shown:top-0 peer-not-placeholder-shown:-translate-y-1/2 peer-not-placeholder-shown:bg-slate-800 peer-not-placeholder-shown:px-1"
+                className={`absolute left-4 text-slate-400 text-sm transition-all duration-200 ${
+                  confirmPasswordFocused || confirmPassword
+                    ? "top-0 -translate-y-1/2 bg-slate-800 px-1 text-indigo-400"
+                    : "top-3"
+                }`}
               >
                 Confirm password
               </label>

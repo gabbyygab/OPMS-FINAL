@@ -817,8 +817,8 @@ export default function HostMyExperiences() {
                     .toLocaleString()} */}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-pink-600" />
               </div>
             </div>
           </div>
@@ -1029,7 +1029,7 @@ export default function HostMyExperiences() {
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex items-center justify-between">
+            <div className="sticky top-0 z-[1000] bg-white border-b border-slate-200 p-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-slate-900">
                 Add New Experience
               </h2>
@@ -1088,13 +1088,20 @@ export default function HostMyExperiences() {
                   )}
                 </div>
 
-                <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 z-[998]">
+                <div
+                  className="mt-4 rounded-xl overflow-hidden border border-slate-200 relative"
+                  style={{ zIndex: 1 }}
+                >
                   <MapContainer
                     center={marker || defaultCenter}
                     zoom={10}
-                    scrollWheelZoom
+                    scrollWheelZoom={false}
                     zoomControl={false}
-                    style={{ height: "350px", width: "100%" }}
+                    style={{
+                      height: "350px",
+                      width: "100%",
+                      position: "relative",
+                    }}
                   >
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -1304,7 +1311,8 @@ export default function HostMyExperiences() {
                         key={i}
                         className="bg-green-50 text-green-700 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
                       >
-                        {new Date(dateTime.date).toLocaleDateString()} at {dateTime.time}
+                        {new Date(dateTime.date).toLocaleDateString()} at{" "}
+                        {dateTime.time}
                         <button
                           type="button"
                           onClick={() => removeAvailableDate(i)}
@@ -1404,7 +1412,7 @@ export default function HostMyExperiences() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 p-6 flex gap-3">
+            <div className="sticky bottom-0 z-[999] bg-slate-50 border-t border-slate-200 p-6 flex gap-3">
               <button
                 onClick={() => {
                   setShowAddModal(false);
@@ -1437,7 +1445,7 @@ export default function HostMyExperiences() {
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex items-center justify-between">
+            <div className="sticky top-0 z-[1000] bg-white border-b border-slate-200 p-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-slate-900">
                 Edit Experience
               </h2>
@@ -1495,13 +1503,20 @@ export default function HostMyExperiences() {
                   )}
                 </div>
 
-                <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 z-[998]">
+                <div
+                  className="mt-4 rounded-xl overflow-hidden border border-slate-200 relative"
+                  style={{ zIndex: 1 }}
+                >
                   <MapContainer
                     center={marker || defaultCenter}
                     zoom={10}
-                    scrollWheelZoom
+                    scrollWheelZoom={false}
                     zoomControl={false}
-                    style={{ height: "350px", width: "100%" }}
+                    style={{
+                      height: "350px",
+                      width: "100%",
+                      position: "relative",
+                    }}
                   >
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -1692,7 +1707,8 @@ export default function HostMyExperiences() {
                         key={i}
                         className="bg-green-50 text-green-700 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
                       >
-                        {new Date(dateTime.date).toLocaleDateString()} at {dateTime.time}
+                        {new Date(dateTime.date).toLocaleDateString()} at{" "}
+                        {dateTime.time}
                         <button
                           type="button"
                           onClick={() => removeAvailableDate(i)}
@@ -1842,7 +1858,7 @@ export default function HostMyExperiences() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 p-6 flex gap-3">
+            <div className="sticky bottom-0 z-[999] bg-slate-50 border-t border-slate-200 p-6 flex gap-3">
               <button
                 onClick={() => {
                   setShowEditModal(false);

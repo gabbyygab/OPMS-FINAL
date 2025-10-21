@@ -9,6 +9,12 @@ import {
   MessageSquare,
   LogOut,
   LucideWallet,
+  Home,
+  Calendar,
+  Briefcase,
+  BarChart3,
+  Settings,
+  Bell,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase/firebase";
@@ -46,12 +52,21 @@ export default function NavBar2() {
           <span className="text-lg sm:text-xl font-bold">BookingNest</span>
         </Link>
         <div className="flex items-center gap-4 sm:gap-6">
-          <Link
-            to={ROUTES.GUEST.MY_BOOKINGS}
-            className="hidden sm:block hover:text-gray-300 transition-colors font-medium"
-          >
-            My Bookings
-          </Link>
+          {userData?.role === "host" ? (
+            <Link
+              to={ROUTES.HOST.DASHBOARD}
+              className="hidden sm:block hover:text-gray-300 transition-colors font-medium"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <Link
+              to={ROUTES.GUEST.MY_BOOKINGS}
+              className="hidden sm:block hover:text-gray-300 transition-colors font-medium"
+            >
+              My Bookings
+            </Link>
+          )}
           <div className="flex items-center gap-3">
             <div className="relative">
               <button
@@ -91,51 +106,139 @@ export default function NavBar2() {
               {profileDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-56 bg-slate-800 text-slate-200 rounded-xl shadow-lg border border-slate-700 overflow-hidden z-50">
                   <Link
-                    to={ROUTES.GUEST.PROFILE}
+                    to={userData?.role === "host" ? ROUTES.HOST.PROFILE : ROUTES.GUEST.PROFILE}
                     className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
                     onClick={() => setProfileDropdownOpen(false)}
                   >
                     <User className="w-4 h-4" /> My Profile
                   </Link>
 
-                  <Link
-                    to={ROUTES.GUEST.MY_BOOKINGS}
-                    className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors sm:hidden"
-                    onClick={() => setProfileDropdownOpen(false)}
-                  >
-                    <User className="w-4 h-4" /> My Bookings
-                  </Link>
+                  {userData?.role === "guest" && (
+                    <>
+                      <Link
+                        to={ROUTES.GUEST.MY_BOOKINGS}
+                        className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors sm:hidden"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <Calendar className="w-4 h-4" /> My Bookings
+                      </Link>
 
-                  <Link
-                    to={ROUTES.GUEST.FAVORITES}
-                    className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
-                    onClick={() => setProfileDropdownOpen(false)}
-                  >
-                    <Heart className="w-4 h-4" /> Favorites
-                  </Link>
+                      <div className="border-t border-slate-700">
+                        <Link
+                          to={ROUTES.GUEST.FAVORITES}
+                          className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          <Heart className="w-4 h-4" /> Favorites
+                        </Link>
 
-                  <Link
-                    to={ROUTES.GUEST.MESSAGES}
-                    className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
-                    onClick={() => setProfileDropdownOpen(false)}
-                  >
-                    <MessageSquare className="w-4 h-4" /> Messages
-                  </Link>
+                        <Link
+                          to={ROUTES.GUEST.MESSAGES}
+                          className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          <MessageSquare className="w-4 h-4" /> Messages
+                        </Link>
 
-                  <Link
-                    to={ROUTES.GUEST.E_WALLET}
-                    className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
-                    onClick={() => setProfileDropdownOpen(false)}
-                  >
-                    <LucideWallet className="w-4 h-4" /> E-Wallet
-                  </Link>
+                        <Link
+                          to={ROUTES.GUEST.E_WALLET}
+                          className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          <LucideWallet className="w-4 h-4" /> E-Wallet
+                        </Link>
+                      </div>
+                    </>
+                  )}
 
-                  <button
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors text-left"
-                    onClick={handleLogout}
-                  >
-                    <LogOut className="w-4 h-4" /> Logout
-                  </button>
+                  {userData?.role === "host" && (
+                    <>
+                      <div className="border-t border-slate-700">
+                        <Link
+                          to={ROUTES.HOST.DASHBOARD}
+                          className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          <BarChart3 className="w-4 h-4" /> Dashboard
+                        </Link>
+
+                        <Link
+                          to={ROUTES.HOST.STAYS}
+                          className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          <Home className="w-4 h-4" /> My Stays
+                        </Link>
+
+                        <Link
+                          to={ROUTES.HOST.EXPERIENCES}
+                          className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          <Calendar className="w-4 h-4" /> My Experiences
+                        </Link>
+
+                        <Link
+                          to={ROUTES.HOST.SERVICES}
+                          className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          <Briefcase className="w-4 h-4" /> My Services
+                        </Link>
+
+                        <Link
+                          to={ROUTES.HOST.MESSAGES}
+                          className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          <MessageSquare className="w-4 h-4" /> Messages
+                        </Link>
+
+                        <Link
+                          to={ROUTES.HOST.NOTIFICATIONS}
+                          className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          <Bell className="w-4 h-4" /> Notifications
+                        </Link>
+                      </div>
+
+                      <div className="border-t border-slate-700">
+                        <Link
+                          to={ROUTES.HOST.SETTINGS}
+                          className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          <Settings className="w-4 h-4" /> Account Settings
+                        </Link>
+
+                        <Link
+                          to={ROUTES.HOST.E_WALLET}
+                          className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          <LucideWallet className="w-4 h-4" /> E-Wallet
+                        </Link>
+
+                        <Link
+                          to={ROUTES.HOST.CALENDAR}
+                          className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          <Calendar className="w-4 h-4" /> Calendar
+                        </Link>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="border-t border-slate-700">
+                    <button
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors text-left"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="w-4 h-4" /> Logout
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

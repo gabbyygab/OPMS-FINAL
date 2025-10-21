@@ -242,7 +242,7 @@ export default function ListingDetailPage() {
     try {
       const loadingToast = toast.loading("Processing your booking...");
 
-      // Create booking
+      // Create booking with pending status
       const bookingData = {
         listing_id: listing_id,
         guest_id: userData.id,
@@ -252,10 +252,25 @@ export default function ListingDetailPage() {
         guests: guests,
         totalAmount: grandTotal,
         serviceFee: serviceFee,
-        status: "confirmed",
+        status: "pending",
         createdAt: serverTimestamp(),
       };
-      await addDoc(collection(db, "bookings"), bookingData);
+      const bookingRef = await addDoc(collection(db, "bookings"), bookingData);
+
+      // Create notification for host
+      const notificationData = {
+        host_id: listingData.host_id,
+        type: "booking",
+        title: "New Booking",
+        message: `${userData.fullName || "A guest"} has booked your ${listingData.title} for ${checkIn} to ${checkOut}`,
+        listing_id: listing_id,
+        booking_id: bookingRef.id,
+        guest_id: userData.id,
+        guest_avatar: userData.photoURL || null,
+        read: false,
+        createdAt: serverTimestamp(),
+      };
+      await addDoc(collection(db, "notifications"), notificationData);
 
       // Update bookedDates in listing
       const listingRef = doc(db, "listings", listing_id);
@@ -335,7 +350,7 @@ export default function ListingDetailPage() {
 
       toast.dismiss(loadingToast);
       toast.success(
-        "Booking confirmed successfully! Payment transferred to host."
+        "Booking request sent successfully! Status: Pending"
       );
       setShowBookingModal(false);
       navigate("/guest/my-bookings");

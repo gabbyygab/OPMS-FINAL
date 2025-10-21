@@ -25,6 +25,8 @@ import {
   query,
   where,
   collection,
+  addDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import LoadingSpinner from "../../loading/Loading";
 import { useAuth } from "../../context/AuthContext";
@@ -66,8 +68,7 @@ export default function ExperienceDetailPage() {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("2025-10-25");
-  const [selectedTime, setSelectedTime] = useState("");
+  const [selectedDateTime, setSelectedDateTime] = useState(null);
   const [guests, setGuests] = useState(2);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [experienceData, setExperienceData] = useState({});
@@ -98,6 +99,60 @@ export default function ExperienceDetailPage() {
       return;
     }
     action();
+  };
+
+  const handleConfirmBooking = async () => {
+    if (!user) {
+      toast.error("Please log in to book");
+      return;
+    }
+
+    if (!selectedDateTime) {
+      toast.error("Please select a date and time");
+      return;
+    }
+
+    try {
+      const loadingToast = toast.loading("Processing your booking...");
+
+      // Create booking with pending status
+      const bookingData = {
+        listing_id: listing_id,
+        guest_id: user.uid,
+        host_id: experienceData.host_id,
+        selectedDate: selectedDateTime.date,
+        selectedTime: selectedDateTime.time,
+        guests: guests,
+        totalAmount: grandTotal,
+        serviceFee: serviceFee,
+        status: "pending",
+        createdAt: serverTimestamp(),
+      };
+      const bookingRef = await addDoc(collection(db, "bookings"), bookingData);
+
+      // Create notification for host
+      const notificationData = {
+        host_id: experienceData.host_id,
+        type: "booking",
+        title: "New Booking",
+        message: `${user.fullName || "A guest"} has booked your ${experienceData.title} for ${selectedDateTime.date} at ${selectedDateTime.time}`,
+        listing_id: listing_id,
+        booking_id: bookingRef.id,
+        guest_id: user.uid,
+        guest_avatar: null,
+        read: false,
+        createdAt: serverTimestamp(),
+      };
+      await addDoc(collection(db, "notifications"), notificationData);
+
+      toast.dismiss(loadingToast);
+      toast.success("Booking request sent successfully! Status: Pending");
+      setShowBookingModal(false);
+      navigate("/guest/my-bookings");
+    } catch (error) {
+      console.error("Error confirming booking:", error);
+      toast.error("Failed to confirm booking. Please try again.");
+    }
   };
 
   const totalPrice = (experienceData?.price || 0) * guests;
@@ -145,9 +200,9 @@ export default function ExperienceDetailPage() {
 
         setExperienceData({ ...data, reviewCount, host: hostData });
 
-        // Set first available time slot
-        if (data?.availableTimes?.length > 0) {
-          setSelectedTime(data?.availableTimes[0]);
+        // Set first available date-time combination
+        if (data?.availableDates?.length > 0) {
+          setSelectedDateTime(data.availableDates[0]);
         }
       } catch (error) {
         console.error(error);
@@ -454,35 +509,46 @@ export default function ExperienceDetailPage() {
               <div className="space-y-4 mb-6">
                 <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
                   <label className="text-xs font-medium text-slate-300 block mb-1">
-                    SELECT DATE
-                  </label>
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    min={new Date().toISOString().split("T")[0]}
-                    className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white"
-                  />
-                </div>
-
-                <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
-                  <label className="text-xs font-medium text-slate-300 block mb-1">
-                    SELECT TIME
+                    SELECT DATE & TIME
                   </label>
                   <select
-                    value={selectedTime}
-                    onChange={(e) => setSelectedTime(e.target.value)}
-                    className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white relative z-[9999]"
+                    value={selectedDateTime ? JSON.stringify(selectedDateTime) : ""}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setSelectedDateTime(JSON.parse(e.target.value));
+                      }
+                    }}
+                    className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white"
                   >
-                    {experienceData?.availableDates?.map((time, idx) => (
-                      <option
-                        key={idx}
-                        value={time}
-                        className="bg-white text-gray-900"
-                      >
-                        {time}
+                    <option value="" disabled>
+                      Select a date and time
+                    </option>
+                    {experienceData?.availableDates && experienceData.availableDates.length > 0 ? (
+                      experienceData.availableDates.map((dateTime, idx) => {
+                        const dateStr = dateTime.date || "";
+                        const timeStr = dateTime.time || "";
+                        const displayDate = dateStr
+                          ? new Date(dateStr).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })
+                          : "";
+                        return (
+                          <option
+                            key={idx}
+                            value={JSON.stringify(dateTime)}
+                            className="bg-slate-900 text-white"
+                          >
+                            {displayDate} at {timeStr}
+                          </option>
+                        );
+                      })
+                    ) : (
+                      <option value="" disabled>
+                        No dates available
                       </option>
-                    ))}
+                    )}
                   </select>
                 </div>
 
@@ -638,12 +704,16 @@ export default function ExperienceDetailPage() {
 
             <div className="space-y-4 mb-6">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-400">Date</span>
-                <span className="font-medium text-white">{selectedDate}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-400">Time</span>
-                <span className="font-medium text-white">{selectedTime}</span>
+                <span className="text-slate-400">Date & Time</span>
+                <span className="font-medium text-white">
+                  {selectedDateTime
+                    ? `${new Date(selectedDateTime.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })} at ${selectedDateTime.time}`
+                    : "Not selected"}
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-400">Guests</span>
@@ -664,7 +734,10 @@ export default function ExperienceDetailPage() {
             </div>
 
             <div className="flex gap-3">
-              <button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition">
+              <button
+                onClick={handleConfirmBooking}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition"
+              >
                 Confirm booking
               </button>
               <button

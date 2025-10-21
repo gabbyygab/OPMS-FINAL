@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Bell,
   Check,
@@ -13,100 +13,87 @@ import {
   Archive,
   ChevronLeft,
 } from "lucide-react";
+import { db } from "../firebase/firebase";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  deleteDoc,
+  doc,
+  updateDoc,
+  getDoc,
+} from "firebase/firestore";
+import { useAuth } from "../context/AuthContext";
 import NavBar2 from "../components/NavigationBarForPandM";
+import LoadingSpinner from "../loading/Loading";
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "booking",
-      title: "New Booking",
-      message: "Sarah Johnson has booked your Beachfront Villa for Oct 15-18",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100",
-      timestamp: "2 hours ago",
-      read: false,
-      actionUrl: "/host/bookings/1",
-    },
-    {
-      id: 2,
-      type: "review",
-      title: "New Review",
-      message:
-        "Emma Wilson left a 5-star review on your Mountain Cabin property",
-      avatar:
-        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100",
-      timestamp: "5 hours ago",
-      read: false,
-      actionUrl: "/host/reviews/2",
-    },
-    {
-      id: 3,
-      type: "message",
-      title: "New Message",
-      message: "Michael Chen: Is late check-in available for this weekend?",
-      avatar:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100",
-      timestamp: "8 hours ago",
-      read: true,
-      actionUrl: "/host/messages/3",
-    },
-    {
-      id: 4,
-      type: "payment",
-      title: "Payment Received",
-      message: "You've received ₱4,500 from your recent bookings",
-      avatar: null,
-      timestamp: "1 day ago",
-      read: true,
-      actionUrl: "/host/earnings",
-    },
-    {
-      id: 5,
-      type: "booking",
-      title: "Booking Confirmed",
-      message: "John Doe has confirmed the booking for Downtown Loft",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100",
-      timestamp: "1 day ago",
-      read: true,
-      actionUrl: "/host/bookings/5",
-    },
-    {
-      id: 6,
-      type: "alert",
-      title: "Price Update Required",
-      message: "Your Beachfront Villa pricing hasn't been updated in 30 days",
-      avatar: null,
-      timestamp: "2 days ago",
-      read: true,
-      actionUrl: "/host/stays/1",
-    },
-    {
-      id: 7,
-      type: "review",
-      title: "Reservation Cancelled",
-      message: "Guest cancelled booking for Cozy Mountain Cabin (Oct 20-22)",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100",
-      timestamp: "2 days ago",
-      read: true,
-      actionUrl: "/host/bookings",
-    },
-    {
-      id: 8,
-      type: "message",
-      title: "Message from Support",
-      message: "Our team is here to help. Have questions about your listings?",
-      avatar: null,
-      timestamp: "3 days ago",
-      read: true,
-      actionUrl: "/help",
-    },
-  ]);
-
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState([]);
   const [filterType, setFilterType] = useState("all");
   const [selectedNotifications, setSelectedNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch notifications from Firestore
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!user) return;
+
+      try {
+        setLoading(true);
+        const notificationsRef = collection(db, "notifications");
+        const q = query(notificationsRef, where("host_id", "==", user.uid));
+        const querySnapshot = await getDocs(q);
+
+        const notificationsData = await Promise.all(
+          querySnapshot.docs.map(async (doc) => {
+            const data = doc.data();
+            let guestData = null;
+
+            // Fetch guest info if available
+            if (data.guest_id) {
+              try {
+                const guestRef = doc(db, "users", data.guest_id);
+                const guestSnap = await getDoc(guestRef);
+                if (guestSnap.exists()) {
+                  guestData = guestSnap.data();
+                }
+              } catch (error) {
+                console.error("Error fetching guest data:", error);
+              }
+            }
+
+            return {
+              id: doc.id,
+              ...data,
+              avatar: guestData?.photoURL || data.guest_avatar || null,
+              timestamp: data.createdAt
+                ? new Date(data.createdAt.toDate()).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "Recently",
+              actionUrl:
+                data.type === "booking"
+                  ? `/host/bookings/${data.booking_id}`
+                  : `/host/messages/${data.guest_id}`,
+            };
+          })
+        );
+
+        setNotifications(notificationsData);
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotifications();
+  }, [user]);
 
   const filteredNotifications =
     filterType === "all"
@@ -115,28 +102,59 @@ export default function NotificationsPage() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAsRead = (id) => {
-    setNotifications(
-      notifications.map((notif) =>
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
+  const markAsRead = async (id) => {
+    try {
+      const notificationRef = doc(db, "notifications", id);
+      await updateDoc(notificationRef, { read: true });
+      setNotifications(
+        notifications.map((notif) =>
+          notif.id === id ? { ...notif, read: true } : notif
+        )
+      );
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((notif) => ({ ...notif, read: true })));
+  const markAllAsRead = async () => {
+    try {
+      const unreadNotifs = notifications.filter((n) => !n.read);
+      await Promise.all(
+        unreadNotifs.map((notif) =>
+          updateDoc(doc(db, "notifications", notif.id), { read: true })
+        )
+      );
+      setNotifications(notifications.map((notif) => ({ ...notif, read: true })));
+    } catch (error) {
+      console.error("Error marking all as read:", error);
+    }
   };
 
-  const deleteNotification = (id) => {
-    setNotifications(notifications.filter((notif) => notif.id !== id));
-    setSelectedNotifications(selectedNotifications.filter((id_) => id_ !== id));
+  const deleteNotification = async (id) => {
+    try {
+      const notificationRef = doc(db, "notifications", id);
+      await deleteDoc(notificationRef);
+      setNotifications(notifications.filter((notif) => notif.id !== id));
+      setSelectedNotifications(selectedNotifications.filter((id_) => id_ !== id));
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+    }
   };
 
-  const deleteSelected = () => {
-    setNotifications(
-      notifications.filter((notif) => !selectedNotifications.includes(notif.id))
-    );
-    setSelectedNotifications([]);
+  const deleteSelected = async () => {
+    try {
+      await Promise.all(
+        selectedNotifications.map((id) =>
+          deleteDoc(doc(db, "notifications", id))
+        )
+      );
+      setNotifications(
+        notifications.filter((notif) => !selectedNotifications.includes(notif.id))
+      );
+      setSelectedNotifications([]);
+    } catch (error) {
+      console.error("Error deleting selected notifications:", error);
+    }
   };
 
   const toggleSelect = (id) => {
@@ -169,6 +187,8 @@ export default function NotificationsPage() {
         return <Bell className="w-5 h-5 text-slate-400" />;
     }
   };
+
+  if (loading) return <LoadingSpinner />;
 
   return (
     <>

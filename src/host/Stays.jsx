@@ -971,13 +971,13 @@ export default function HostMyStays({ user, userData }) {
                   )}
                 </div>
 
-                <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 z-[998]">
+                <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 relative" style={{ zIndex: 1 }}>
                   <MapContainer
                     center={marker || defaultCenter}
                     zoom={10}
-                    scrollWheelZoom
+                    scrollWheelZoom={false}
                     zoomControl={false}
-                    style={{ height: "350px", width: "100%" }}
+                    style={{ height: "350px", width: "100%", position: "relative" }}
                   >
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -1334,7 +1334,7 @@ export default function HostMyStays({ user, userData }) {
             </div>
 
             {/* Footer */}
-            <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 p-6 flex gap-3">
+            <div className="sticky bottom-0 z-[999] bg-slate-50 border-t border-slate-200 p-6 flex gap-3">
               <button
                 onClick={() => {
                   setShowAddModal(false);
@@ -1434,13 +1434,13 @@ export default function HostMyStays({ user, userData }) {
                   )}
                 </div>
 
-                <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 z-[998]">
+                <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 relative" style={{ zIndex: 1 }}>
                   <MapContainer
                     center={marker || defaultCenter}
                     zoom={10}
-                    scrollWheelZoom
+                    scrollWheelZoom={false}
                     zoomControl={false}
-                    style={{ height: "350px", width: "100%" }}
+                    style={{ height: "350px", width: "100%", position: "relative" }}
                   >
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

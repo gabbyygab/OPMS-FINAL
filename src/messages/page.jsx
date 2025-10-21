@@ -12,7 +12,7 @@ import {
   sendMessage,
   getUserConversations,
 } from "../firebase/messagesService";
-import { Send, Search } from "lucide-react";
+import { Send, Search, ArrowLeft } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { listenToMessages } from "../firebase/messagesService";
 
@@ -25,6 +25,7 @@ export default function MessagesPage() {
   const [conversationId, setConversationId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
+  const [showMobileChat, setShowMobileChat] = useState(false);
   const isDirectChat = user_id && host_id;
   const messagesEndRef = useRef(null);
 
@@ -204,20 +205,20 @@ export default function MessagesPage() {
     }
   }, [messages]);
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-slate-900">
       <NavBar2 />
 
       <div className="flex flex-1 overflow-hidden mt-[70px]">
-        {/* Sidebar */}
-        <div className="w-96 bg-white border-r border-gray-200 flex flex-col">
-          <div className="p-6 border-b border-gray-200">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Messages</h1>
+        {/* Sidebar - Hidden on mobile when viewing chat */}
+        <div className={`absolute sm:relative w-full sm:w-80 lg:w-96 h-full ${showMobileChat ? "hidden" : "flex"} sm:flex bg-slate-800/80 backdrop-blur-lg border-r border-slate-700 flex-col z-40`}>
+          <div className="p-4 lg:p-6 border-b border-slate-700">
+            <h1 className="text-2xl lg:text-3xl font-bold text-white mb-4">Messages</h1>
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Search messages"
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent bg-gray-50"
+                className="w-full pl-12 pr-4 py-2 lg:py-3 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-900/50 text-white placeholder-slate-400"
               />
             </div>
           </div>
@@ -226,32 +227,35 @@ export default function MessagesPage() {
             {conversations.map((conv, index) => (
               <button
                 key={conv.id}
-                onClick={() => setSelectedChat(index)}
-                className={`w-full p-4 flex items-start gap-3 hover:bg-gray-50 transition-all border-b border-gray-100 ${
+                onClick={() => {
+                  setSelectedChat(index);
+                  setShowMobileChat(true);
+                }}
+                className={`w-full p-3 lg:p-4 flex items-start gap-3 hover:bg-slate-700/50 transition-all border-b border-slate-700 ${
                   selectedChat === index
-                    ? "bg-slate-100 border-l-4 border-l-slate-900"
+                    ? "bg-indigo-600/20 border-l-4 border-l-indigo-500"
                     : ""
                 }`}
               >
                 <img
                   src={conv.avatar || null}
                   alt={conv.name || ""}
-                  className="w-14 h-14 rounded-full object-cover"
+                  className="w-12 lg:w-14 h-12 lg:h-14 rounded-full object-cover flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0 text-left">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-bold text-gray-900 truncate">
+                    <h3 className="font-bold text-white truncate text-sm lg:text-base">
                       {conv.name}
                     </h3>
-                    <span className="text-xs text-gray-500 ml-2">
+                    <span className="text-xs text-slate-400 ml-2 flex-shrink-0">
                       {conv.time || ""}
                     </span>
                   </div>
                   <p
-                    className={`text-sm truncate ${
+                    className={`text-xs lg:text-sm truncate ${
                       conv.unread > 0
-                        ? "font-bold text-gray-900"
-                        : "text-gray-600"
+                        ? "font-semibold text-slate-200"
+                        : "text-slate-400"
                     }`}
                   >
                     {conv.lastMessage || ""}
@@ -262,79 +266,120 @@ export default function MessagesPage() {
           </div>
         </div>
 
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col bg-white">
+        {/* Chat Area - Full screen on mobile, flex with sidebar on tablet+ */}
+        <div className={`absolute sm:relative w-full h-full sm:w-auto ${showMobileChat ? "flex" : "hidden"} sm:flex flex-1 flex-col bg-slate-900 z-30`}>
           {/* Header */}
-          <div className="p-6 border-b border-gray-200 flex items-center gap-4 bg-white shadow-sm rounded-t-xl">
+          <div className="p-4 lg:p-6 border-b border-slate-700 flex items-center gap-3 lg:gap-4 bg-slate-800/50 backdrop-blur-lg">
+            {/* Back Button - Mobile only */}
+            <button
+              onClick={() => setShowMobileChat(false)}
+              className="sm:hidden p-2 hover:bg-slate-700 rounded-lg transition-all text-slate-400 hover:text-white flex-shrink-0"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+
             <img
               src={hostData.photoURL}
               alt={hostData.fullName}
-              className="w-14 h-14 rounded-full object-cover ring-2 ring-emerald-500/30"
+              className="w-10 lg:w-14 h-10 lg:h-14 rounded-full object-cover ring-2 ring-indigo-500/30 flex-shrink-0"
             />
-            <div>
-              <h2 className="font-semibold text-gray-900 text-lg tracking-tight">
+            <div className="flex-1 min-w-0">
+              <h2 className="font-semibold text-white text-base lg:text-lg tracking-tight truncate">
                 {hostData.fullName}
               </h2>
-              <p className="text-sm text-gray-500 capitalize">
+              <p className="text-xs lg:text-sm text-slate-400 capitalize">
                 {hostData.role}
               </p>
             </div>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-            <div className="max-w-4xl mx-auto space-y-4">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${
-                    msg.isOwn ? "justify-end" : "justify-start"
-                  }`}
-                  ref={messagesEndRef}
-                >
-                  <div
-                    className={`max-w-lg ${msg.isOwn ? "order-2" : "order-1"}`}
-                  >
-                    <div
-                      className={`px-5 py-4 rounded-2xl shadow-sm ${
-                        msg.isOwn
-                          ? "bg-slate-900 text-white rounded-br-sm"
-                          : "bg-white text-gray-900 border border-gray-200 rounded-bl-sm"
-                      }`}
+          <div className="flex-1 overflow-y-auto p-3 lg:p-6 bg-slate-900 flex flex-col">
+            {messages.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center max-w-sm">
+                  <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg
+                      className="w-10 h-10 text-slate-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
                     >
-                      <p className="text-sm leading-relaxed">{msg.text}</p>
-                    </div>
-                    <p
-                      className={`text-xs mt-1.5 font-medium ${
-                        msg.isOwn
-                          ? "text-right text-gray-500"
-                          : "text-left text-gray-500"
-                      }`}
-                    >
-                      {msg.time}
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg lg:text-xl font-semibold text-white mb-2">
+                    No messages yet
+                  </h3>
+                  <p className="text-slate-400 text-sm lg:text-base mb-6">
+                    Start a conversation with {hostData.fullName || "this user"} by sending your first message!
+                  </p>
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                    <p className="text-xs lg:text-sm text-slate-300">
+                      💡 <span className="font-medium">Tip:</span> Be polite and clear in your message to get a better response.
                     </p>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="max-w-4xl mx-auto space-y-3 lg:space-y-4 w-full">
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${
+                      msg.isOwn ? "justify-end" : "justify-start"
+                    }`}
+                    ref={messagesEndRef}
+                  >
+                    <div
+                      className={`max-w-xs sm:max-w-sm lg:max-w-lg ${msg.isOwn ? "order-2" : "order-1"}`}
+                    >
+                      <div
+                        className={`px-4 lg:px-5 py-3 lg:py-4 rounded-2xl shadow-sm text-sm lg:text-base ${
+                          msg.isOwn
+                            ? "bg-indigo-600 text-white rounded-br-sm"
+                            : "bg-slate-800 text-slate-100 rounded-bl-sm border border-slate-700"
+                        }`}
+                      >
+                        <p className="leading-relaxed break-words">{msg.text}</p>
+                      </div>
+                      <p
+                        className={`text-xs mt-1.5 font-medium ${
+                          msg.isOwn
+                            ? "text-right text-slate-400"
+                            : "text-left text-slate-400"
+                        }`}
+                      >
+                        {msg.time}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Input */}
-          <div className="p-6 border-t border-gray-200 bg-white">
-            <div className="max-w-4xl mx-auto flex items-end gap-3">
+          <div className="p-3 lg:p-6 border-t border-slate-700 bg-slate-800/50 backdrop-blur-lg">
+            <div className="max-w-4xl mx-auto flex items-end gap-2 lg:gap-3">
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Type a message..."
                 rows={1}
-                className="flex-1 px-5 py-3 pr-12 border-2 border-gray-400 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="flex-1 px-3 lg:px-5 py-2 lg:py-3 border-2 border-slate-600 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-900/50 text-white placeholder-slate-500 text-sm lg:text-base"
               />
               <button
                 onClick={handleSend}
-                className="mb-1.5 p-4 bg-slate-900 hover:bg-slate-800 rounded-full transition-all shadow-md"
+                className="mb-1.5 p-2.5 lg:p-4 bg-indigo-600 hover:bg-indigo-700 rounded-full transition-all shadow-md flex-shrink-0"
               >
-                <Send className="w-5 h-5 text-white" />
+                <Send className="w-4 lg:w-5 h-4 lg:h-5 text-white" />
               </button>
             </div>
           </div>

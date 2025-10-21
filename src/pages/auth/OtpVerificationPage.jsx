@@ -12,6 +12,8 @@ export default function OTPVerificationPage({ user, userData }) {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const [expiryTimer, setExpiryTimer] = useState(900); // 15 minutes in seconds
+  const [isExpired, setIsExpired] = useState(false);
   const inputRefs = useRef([]);
   const navigate = useNavigate();
 
@@ -35,6 +37,22 @@ export default function OTPVerificationPage({ user, userData }) {
       return () => clearTimeout(timer);
     }
   }, [resendTimer]);
+
+  // Expiry timer effect
+  useEffect(() => {
+    if (expiryTimer > 0 && !isExpired) {
+      const timer = setTimeout(() => setExpiryTimer(expiryTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (expiryTimer === 0 && !isExpired) {
+      setIsExpired(true);
+    }
+  }, [expiryTimer, isExpired]);
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
 
   const handleChange = (index, value) => {
     if (value.length > 1) {
@@ -219,6 +237,8 @@ export default function OTPVerificationPage({ user, userData }) {
           setOtp(["", "", "", "", "", ""]);
           inputRefs.current[0]?.focus();
           setResendTimer(60);
+          setExpiryTimer(900); // Reset 15 minutes timer
+          setIsExpired(false);
         }
       } else {
         // ACCOUNT VERIFICATION MODE: Resend OTP to existing user
@@ -227,6 +247,8 @@ export default function OTPVerificationPage({ user, userData }) {
         setOtp(["", "", "", "", "", ""]);
         inputRefs.current[0]?.focus();
         setResendTimer(60);
+        setExpiryTimer(900); // Reset 15 minutes timer
+        setIsExpired(false);
       }
     } catch (err) {
       toast.error("Failed to resend code");
@@ -287,7 +309,7 @@ export default function OTPVerificationPage({ user, userData }) {
 
           {/* OTP Input */}
           <div className="mb-8">
-            <div className="flex gap-3 justify-center mb-2">
+            <div className="flex gap-3 justify-center mb-4">
               {otp.map((digit, index) => (
                 <input
                   key={index}
@@ -299,19 +321,45 @@ export default function OTPVerificationPage({ user, userData }) {
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   onPaste={handlePaste}
-                  className="w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-bold bg-slate-900/50 border-2 border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                  disabled={isExpired}
+                  className="w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-bold bg-slate-900/50 border-2 border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               ))}
+            </div>
+
+            {/* Expiry Timer */}
+            <div className={`text-center mb-4 p-3 rounded-lg ${
+              expiryTimer > 300
+                ? "bg-blue-900/20 border border-blue-600/30"
+                : expiryTimer > 60
+                ? "bg-yellow-900/20 border border-yellow-600/30"
+                : "bg-red-900/20 border border-red-600/30"
+            }`}>
+              {!isExpired ? (
+                <p className={`text-sm font-semibold ${
+                  expiryTimer > 300
+                    ? "text-blue-300"
+                    : expiryTimer > 60
+                    ? "text-yellow-300"
+                    : "text-red-300"
+                }`}>
+                  Your code expires in <span className="font-bold">{formatTime(expiryTimer)}</span>
+                </p>
+              ) : (
+                <p className="text-sm font-semibold text-red-300">
+                  Your code has expired. Please request a new one.
+                </p>
+              )}
             </div>
           </div>
 
           {/* Verify Button */}
           <button
             onClick={handleVerify}
-            disabled={isVerifying || otp.join("").length !== 6}
+            disabled={isVerifying || otp.join("").length !== 6 || isExpired}
             className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-colors mb-6"
           >
-            {isVerifying ? "Verifying..." : "Verify Account"}
+            {isExpired ? "Code Expired" : isVerifying ? "Verifying..." : "Verify Account"}
           </button>
 
           {/* Resend Code */}

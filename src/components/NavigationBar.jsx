@@ -198,14 +198,14 @@ const GuestUserActions = ({
     </Link>
 
     {/* Notifications Icon */}
-    <div className="relative group">
+    <div className="relative">
       <button
         type="button"
         onClick={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
         className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-slate-700 transition"
         aria-label="Notifications"
       >
-        <Bell className="w-5 h-5 text-slate-200 group-hover:text-white transition" />
+        <Bell className="w-5 h-5 text-slate-200 hover:text-white transition" />
         {/* Unread badge (optional, can be dynamic) */}
         <span className="absolute top-2 right-2 w-2 h-2 bg-indigo-500 rounded-full"></span>
       </button>
@@ -316,7 +316,7 @@ const HostUserActions = ({
 
     <Link
       to={ROUTES.HOST.NOTIFICATIONS}
-      className="relative text-slate-200 hover:text-white transition-colors"
+      className="relative text-slate-200 hover:text-white transition-colors flex items-center"
     >
       <Bell className="w-5 h-5" />
       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
@@ -348,10 +348,11 @@ const HostUserActions = ({
               : "H"}
           </div>
         )}
+        <span className="hidden xl:inline text-sm font-medium">Profile</span>
         {!profileDropdownOpen ? (
-          <ChevronDown className="w-4 h-4" />
+          <ChevronDown className="w-4 h-4 hidden xl:inline" />
         ) : (
-          <ChevronUp className="w-4 h-4" />
+          <ChevronUp className="w-4 h-4 hidden xl:inline" />
         )}
       </button>
 
@@ -372,35 +373,73 @@ const HostUserActions = ({
             <User className="w-4 h-4" /> My Profile
           </Link>
 
-          <Link
-            to={ROUTES.HOST.SETTINGS}
-            className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
-            onClick={() => setProfileDropdownOpen(false)}
-          >
-            <Settings className="w-4 h-4" /> Account Settings
-          </Link>
-          <Link
-            to={ROUTES.HOST.E_WALLET}
-            className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
-            onClick={() => setProfileDropdownOpen(false)}
-          >
-            <Wallet className="w-4 h-4" /> E-wallet
-          </Link>
+          <div className="border-t border-slate-700">
+            <Link
+              to={ROUTES.HOST.DASHBOARD}
+              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+              onClick={() => setProfileDropdownOpen(false)}
+            >
+              <BarChart3 className="w-4 h-4" /> Dashboard
+            </Link>
 
-          <Link
-            to={ROUTES.HOST.CALENDAR}
-            className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
-            onClick={() => setProfileDropdownOpen(false)}
-          >
-            <Calendar className="w-4 h-4" /> Calendar
-          </Link>
-          <Link
-            to={ROUTES.HOST.DRAFTS}
-            className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
-            onClick={() => setProfileDropdownOpen(false)}
-          >
-            <FileEdit className="w-4 h-4" /> Drafts
-          </Link>
+            <Link
+              to={ROUTES.HOST.STAYS}
+              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+              onClick={() => setProfileDropdownOpen(false)}
+            >
+              <Home className="w-4 h-4" /> My Stays
+            </Link>
+
+            <Link
+              to={ROUTES.HOST.EXPERIENCES}
+              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+              onClick={() => setProfileDropdownOpen(false)}
+            >
+              <Calendar className="w-4 h-4" /> My Experiences
+            </Link>
+
+            <Link
+              to={ROUTES.HOST.SERVICES}
+              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+              onClick={() => setProfileDropdownOpen(false)}
+            >
+              <Briefcase className="w-4 h-4" /> My Services
+            </Link>
+          </div>
+
+          <div className="border-t border-slate-700">
+            <Link
+              to={ROUTES.HOST.SETTINGS}
+              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+              onClick={() => setProfileDropdownOpen(false)}
+            >
+              <Settings className="w-4 h-4" /> Account Settings
+            </Link>
+
+            <Link
+              to={ROUTES.HOST.E_WALLET}
+              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+              onClick={() => setProfileDropdownOpen(false)}
+            >
+              <Wallet className="w-4 h-4" /> E-wallet
+            </Link>
+
+            <Link
+              to={ROUTES.HOST.CALENDAR}
+              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+              onClick={() => setProfileDropdownOpen(false)}
+            >
+              <Calendar className="w-4 h-4" /> Calendar
+            </Link>
+
+            <Link
+              to={ROUTES.HOST.DRAFTS}
+              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+              onClick={() => setProfileDropdownOpen(false)}
+            >
+              <FileEdit className="w-4 h-4" /> Drafts
+            </Link>
+          </div>
 
           <div className="border-t border-slate-700">
             <button
@@ -420,107 +459,198 @@ const HostUserActions = ({
 // Mobile Menu Component
 const MobileMenu = ({
   user,
+  userData,
   isMobileSearchOpen,
   setMobileSearchOpen,
   setMobileMenuOpen,
   handleLogout,
-}) => (
-  <div className="xl:hidden bg-slate-900/95 backdrop-blur-md shadow-lg border-t border-slate-700">
-    <div className="flex flex-col p-4 space-y-3 text-slate-200">
-      {!user ? (
-        <>
-          <Link
-            to={ROUTES.LOGIN}
-            className="flex items-center gap-2 hover:text-white transition"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <User className="w-5 h-5" /> Sign In
-          </Link>
-          <Link
-            to={ROUTES.GUEST.SIGNUP}
-            className="flex items-center gap-2 hover:text-white transition"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <PlusSquare className="w-5 h-5" /> Sign Up
-          </Link>
-          <Link
-            to={ROUTES.HOST.SIGNUP}
-            className="flex items-center gap-2 hover:text-white transition"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <Home className="w-5 h-5" /> Become a Host
-          </Link>
-        </>
-      ) : (
-        <>
-          <button
-            className="flex items-center gap-2 hover:text-white transition"
-            onClick={() => setMobileSearchOpen(!isMobileSearchOpen)}
-          >
-            <Search className="w-5 h-5" /> Search
-          </button>
-          {isMobileSearchOpen && (
-            <div className="flex flex-col gap-3 bg-white text-gray-700 rounded-2xl shadow-md p-4">
-              {/* Where */}
-              <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-                <MapPin className="w-4 h-4 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Where?"
-                  className="outline-none bg-transparent text-sm w-full"
-                />
+}) => {
+  const isGuest = userData?.role === "guest";
+  const isHost = userData?.role === "host";
+
+  return (
+    <div className="xl:hidden bg-slate-900/95 backdrop-blur-md shadow-lg border-t border-slate-700">
+      <div className="flex flex-col p-4 space-y-3 text-slate-200">
+        {!user ? (
+          <>
+            <Link
+              to={ROUTES.LOGIN}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <User className="w-5 h-5" /> Sign In
+            </Link>
+            <Link
+              to={ROUTES.GUEST.SIGNUP}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <PlusSquare className="w-5 h-5" /> Sign Up
+            </Link>
+            <Link
+              to={ROUTES.HOST.SIGNUP}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Home className="w-5 h-5" /> Become a Host
+            </Link>
+          </>
+        ) : isGuest ? (
+          <>
+            <button
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileSearchOpen(!isMobileSearchOpen)}
+            >
+              <Search className="w-5 h-5" /> Search
+            </button>
+            {isMobileSearchOpen && (
+              <div className="flex flex-col gap-3 bg-white text-gray-700 rounded-2xl shadow-md p-4">
+                {/* Where */}
+                <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
+                  <MapPin className="w-4 h-4 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="Where?"
+                    className="outline-none bg-transparent text-sm w-full"
+                  />
+                </div>
+
+                {/* When */}
+                <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
+                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="When?"
+                    className="outline-none bg-transparent text-sm w-full"
+                  />
+                </div>
+
+                {/* Who */}
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="Who?"
+                    className="outline-none bg-transparent text-sm w-full"
+                  />
+                </div>
+
+                {/* Search button */}
+                <button className="bg-indigo-600 text-white flex items-center justify-center gap-2 py-2 rounded-full hover:bg-indigo-700 transition">
+                  <Search className="w-4 h-4" />
+                  <span className="text-sm font-medium">Search</span>
+                </button>
               </div>
+            )}
 
-              {/* When */}
-              <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-                <Calendar className="w-4 h-4 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="When?"
-                  className="outline-none bg-transparent text-sm w-full"
-                />
-              </div>
+            <Link
+              to={ROUTES.GUEST.MY_BOOKINGS}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Calendar className="w-5 h-5" /> My Bookings
+            </Link>
+            <Link
+              to={ROUTES.GUEST.PROFILE}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <User className="w-5 h-5" /> My Profile
+            </Link>
 
-              {/* Who */}
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Who?"
-                  className="outline-none bg-transparent text-sm w-full"
-                />
-              </div>
+            <Link
+              to={ROUTES.GUEST.FAVORITES}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Heart className="w-5 h-5" /> Favorites
+            </Link>
 
-              {/* Search button */}
-              <button className="bg-indigo-600 text-white flex items-center justify-center gap-2 py-2 rounded-full hover:bg-indigo-700 transition">
-                <Search className="w-4 h-4" />
-                <span className="text-sm font-medium">Search</span>
-              </button>
-            </div>
-          )}
+            <Link
+              to={ROUTES.GUEST.MESSAGES}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <MessageSquare className="w-5 h-5" /> Messages
+            </Link>
 
-          <Link
-            to={ROUTES.GUEST.HOME}
-            className="flex items-center gap-2 hover:text-white transition"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <Calendar className="w-5 h-5" /> My Bookings
-          </Link>
-          <Link
-            to={ROUTES.GUEST.PROFILE}
-            className="flex items-center gap-2 hover:text-white transition"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <User className="w-5 h-5" /> My Profile
-          </Link>
+            <Link
+              to={ROUTES.GUEST.E_WALLET}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <LucideWallet className="w-5 h-5" /> E-Wallet
+            </Link>
+          </>
+        ) : isHost ? (
+          <>
+            <Link
+              to={ROUTES.HOST.DASHBOARD}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <BarChart3 className="w-5 h-5" /> Dashboard
+            </Link>
 
-          <Link
-            to={ROUTES.GUEST.FAVORITES}
-            className="flex items-center gap-2 hover:text-white transition"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <Heart className="w-5 h-5" /> Favorites
-          </Link>
+            <Link
+              to={ROUTES.HOST.STAYS}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Home className="w-5 h-5" /> My Stays
+            </Link>
+
+            <Link
+              to={ROUTES.HOST.EXPERIENCES}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Calendar className="w-5 h-5" /> My Experiences
+            </Link>
+
+            <Link
+              to={ROUTES.HOST.SERVICES}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Briefcase className="w-5 h-5" /> My Services
+            </Link>
+
+            <Link
+              to={ROUTES.HOST.MESSAGES}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <MessageSquare className="w-5 h-5" /> Messages
+            </Link>
+
+            <Link
+              to={ROUTES.HOST.NOTIFICATIONS}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Bell className="w-5 h-5" /> Notifications
+            </Link>
+
+            <Link
+              to={ROUTES.HOST.PROFILE}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <User className="w-5 h-5" /> My Profile
+            </Link>
+
+            <Link
+              to={ROUTES.HOST.E_WALLET}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <LucideWallet className="w-5 h-5" /> E-Wallet
+            </Link>
+          </>
+        ) : null}
+
+        <div className="border-t border-slate-700 pt-3">
           <button
             className="flex items-center gap-2 hover:text-white transition text-left"
             onClick={handleLogout}
@@ -528,11 +658,11 @@ const MobileMenu = ({
             <LogOut className="w-5 h-5" />
             Logout
           </button>
-        </>
-      )}
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ========== MAIN COMPONENT ==========
 
@@ -542,7 +672,8 @@ export default function NavigationBar({ userData, user }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isMobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+  const [notificationDropdownOpen, setNotificationDropdownOpen] =
+    useState(false);
 
   const navigate = useNavigate();
 
@@ -624,7 +755,11 @@ export default function NavigationBar({ userData, user }) {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="xl:hidden text-white"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
           </button>
         </div>
       </div>
@@ -633,6 +768,7 @@ export default function NavigationBar({ userData, user }) {
       {mobileMenuOpen && (
         <MobileMenu
           user={user}
+          userData={userData}
           isMobileSearchOpen={isMobileSearchOpen}
           setMobileSearchOpen={setMobileSearchOpen}
           setMobileMenuOpen={setMobileMenuOpen}
