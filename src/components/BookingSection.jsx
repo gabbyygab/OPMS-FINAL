@@ -18,18 +18,26 @@ import { useAuth } from "../context/AuthContext";
 import VerificationBanner from "./Verification";
 import { sendOtpToUser } from "../utils/sendOtpToUser";
 import { point } from "leaflet";
-// Extract city from location string
+// Extract city or province from location string
 function extractCity(location) {
   if (!location) return "Other";
 
-  // Split by comma and get the last or second-to-last part (city is usually before state/province)
+  // Split by comma and get parts
   const parts = location.split(",").map((part) => part.trim());
 
-  // Return the part before the last (which is usually the city)
-  // If only one part, return it
-  if (parts.length > 1) {
-    return parts[parts.length - 2] || parts[0];
+  // Address format is typically: "Street Address, City, Province/State, Country"
+  // or "Street Address, City, Country"
+  // We want to extract the City or Province (second-to-last or third-to-last part)
+
+  if (parts.length >= 3) {
+    // If we have 3+ parts, return the second-to-last (usually City or Province)
+    return parts[parts.length - 2];
+  } else if (parts.length === 2) {
+    // If we have 2 parts, return the first one (City)
+    return parts[0];
   }
+
+  // If only 1 part, return it as is
   return parts[0];
 }
 
@@ -217,43 +225,53 @@ export default function BookingsSection({ userData, isFavoritePage }) {
     }, [userData]);
   } else {
     useEffect(() => {
-      const fetchListingsWithFavorites = async () => {
+      if (!userData?.id) return;
+
+      setLoading(true);
+
+      // 1️⃣ Fetch all listings
+      const listingRef = collection(db, "listings");
+      const listingQuery = query(listingRef, where("isDraft", "==", false));
+
+      const fetchAndCombine = async (favDocIds) => {
         try {
-          setLoading(true);
-          // 1️⃣ Fetch all listings
-          const listingRef = collection(db, "listings");
-          const listingQuery = query(listingRef, where("isDraft", "==", false));
           const listingsSnap = await getDocs(listingQuery);
           const listingsData = listingsSnap.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
           }));
 
-          // 2️⃣ Fetch all favorites of the current user
-          const favRef = collection(db, "favorites");
-          const favQuery = query(favRef, where("guest_id", "==", userData.id));
-          const favSnap = await getDocs(favQuery);
-
-          // Get all favorited listing IDs for this user
-          const favoriteIds = favSnap.docs.map((doc) => doc.data().listing_id);
-
-          // 3️⃣ Combine listings + favorite status
+          // Combine listings with favorite status based on current favorites
           const listingsWithFavs = listingsData.map((listing) => ({
             ...listing,
-            isFavorite: favoriteIds.includes(listing.id),
+            isFavorite: favDocIds.includes(listing.id),
           }));
 
           setListings(listingsWithFavs);
+          setLoading(false);
         } catch (error) {
-          console.error("Error fetching listings or favorites:", error);
-        } finally {
+          console.error("Error fetching listings:", error);
           setLoading(false);
         }
       };
 
-      if (userData?.id) {
-        fetchListingsWithFavorites();
-      }
+      // 2️⃣ Set up real-time listener for user's favorites
+      const favRef = collection(db, "favorites");
+      const favQuery = query(
+        favRef,
+        where("guest_id", "==", userData.id),
+        where("isDraft", "==", false)
+      );
+
+      const unsubscribe = onSnapshot(favQuery, (favSnap) => {
+        // Get all favorited listing IDs for this user from favorites collection
+        const favoriteIds = favSnap.docs.map((doc) => doc.data().listing_id);
+
+        // Update listings with current favorite status
+        fetchAndCombine(favoriteIds);
+      });
+
+      return () => unsubscribe();
     }, [userData]);
   }
   // Helper function to check if listing matches filters
@@ -313,7 +331,12 @@ export default function BookingsSection({ userData, isFavoritePage }) {
           (item) => item.type === activeFilter && matchesSearchFilters(item)
         );
 
-  const toggleFavorite = async (listingId, guestId, setListings) => {
+  const toggleFavorite = async (
+    listingId,
+    guestId,
+    setSetter,
+    isOnFavoritePage = false
+  ) => {
     try {
       // Reference the top-level 'favorites' collection
       const favRef = collection(db, "favorites");
@@ -325,36 +348,72 @@ export default function BookingsSection({ userData, isFavoritePage }) {
         where("listing_id", "==", listingId)
       );
       const snapshot = await getDocs(q);
+      const isFavoritedInDb = !snapshot.empty;
 
-      if (snapshot.empty) {
+      if (isFavoritedInDb) {
+        // Remove from favorites
+        const batch = snapshot.docs.map((docSnap) => deleteDoc(docSnap.ref));
+        await Promise.all(batch);
+        toast.success("Removed from favorites.", { position: "top-right" });
+        console.log("❌ Removed from favorites");
+
+        if (isOnFavoritePage) {
+          // On favorites page, remove the item from the list
+          setSetter((prev) =>
+            prev.filter((listing) => listing.id !== listingId)
+          );
+        } else {
+          // On regular page, update the isFavorite flag based on DB state
+          setSetter((prev) =>
+            prev.map((listing) =>
+              listing.id === listingId
+                ? { ...listing, isFavorite: false }
+                : listing
+            )
+          );
+        }
+      } else {
+        // Add to favorites
         await addDoc(favRef, {
           guest_id: guestId,
           listing_id: listingId,
           createdAt: new Date(),
+          isDraft: false,
         });
         console.log("✅ Added to favorites");
         toast.success("Added to favorites.", { position: "top-right" });
-        setListings((prev) =>
+
+        // Update state - set isFavorite based on whether it's in favorites collection
+        setSetter((prev) =>
           prev.map((listing) =>
             listing.id === listingId
               ? { ...listing, isFavorite: true }
               : listing
           )
         );
-      } else {
-        const batch = snapshot.docs.map((docSnap) => deleteDoc(docSnap.ref));
-        await Promise.all(batch);
-        toast.success("Removed from favorites.", { position: "top-right" });
-        setListings((prev) =>
-          prev.map((listing) =>
-            listing.id === listingId
-              ? { ...listing, isFavorite: false }
-              : listing
-          )
-        );
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
+      toast.error("Failed to update favorite status.", {
+        position: "top-right",
+      });
+    }
+  };
+
+  // Helper function to check if a listing is favorited by querying the favorites collection
+  const checkIsFavorited = async (listingId, guestId) => {
+    try {
+      const favRef = collection(db, "favorites");
+      const q = query(
+        favRef,
+        where("guest_id", "==", guestId),
+        where("listing_id", "==", listingId)
+      );
+      const snapshot = await getDocs(q);
+      return !snapshot.empty;
+    } catch (error) {
+      console.error("Error checking favorite status:", error);
+      return false;
     }
   };
   //pagination
@@ -464,7 +523,9 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                 {/* Center dot */}
                 <div className="absolute w-2 h-2 bg-indigo-500 rounded-full"></div>
               </div>
-              <p className="text-white text-lg font-semibold">Loading Listings</p>
+              <p className="text-white text-lg font-semibold">
+                Loading Listings
+              </p>
               <p className="text-slate-400 text-sm mt-1">Please wait...</p>
             </div>
           </div>
@@ -510,7 +571,8 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                               toggleFavorite(
                                 listing.id,
                                 userData.id,
-                                setListings
+                                isFavoritePage ? setFavorites : setListings,
+                                isFavoritePage
                               )
                             }
                             className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-sm p-2.5 rounded-full hover:bg-slate-900 transition-all hover:scale-110"
