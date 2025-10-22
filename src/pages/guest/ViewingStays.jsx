@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   MapPin,
   Star,
@@ -24,6 +24,9 @@ import {
   Instagram,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { db } from "../../firebase/firebase";
 import {
   doc,
@@ -139,6 +142,8 @@ export default function ListingDetailPage() {
   const [loading, setLoading] = useState(false);
   const [isLoadingVerification, setIsLoadingVerification] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [mapCenter, setMapCenter] = useState([14.5994, 120.9842]);
+  const mapRef = useRef(null);
 
   const { user, isVerified } = useAuth();
   //navigation
@@ -422,6 +427,11 @@ export default function ListingDetailPage() {
         }
 
         setListingData({ ...data, reviewCount, host: hostData });
+
+        // Set map center based on listing coordinates
+        if (data.coordinates?.lat && data.coordinates?.lng) {
+          setMapCenter([data.coordinates.lat, data.coordinates.lng]);
+        }
       } catch (error) {
         console.error(error);
       } finally {
@@ -699,7 +709,7 @@ export default function ListingDetailPage() {
             )}
 
             {/* House Rules */}
-            <div>
+            <div className="pb-8 border-b border-slate-700">
               <h3 className="text-xl font-semibold text-white mb-4">
                 House rules
               </h3>
@@ -710,6 +720,58 @@ export default function ListingDetailPage() {
                     <span className="text-slate-300">{rule}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Location Map */}
+            <div>
+              <h3 className="text-xl font-semibold text-white mb-4">
+                Location
+              </h3>
+              <div className="flex items-center gap-2 mb-4 text-slate-300">
+                <MapPin className="w-5 h-5 text-indigo-400" />
+                <span>{listingData?.location || "Location details"}</span>
+              </div>
+              <div className="rounded-xl overflow-hidden border border-slate-700 h-96">
+                <MapContainer
+                  center={mapCenter}
+                  zoom={15}
+                  scrollWheelZoom={true}
+                  style={{ width: "100%", height: "100%" }}
+                  ref={mapRef}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                  />
+                  {listingData?.coordinates?.lat && (
+                    <Marker
+                      position={[
+                        listingData.coordinates.lat,
+                        listingData.coordinates.lng,
+                      ]}
+                      icon={L.icon({
+                        iconUrl:
+                          "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDMyIDQwIj48cGF0aCBkPSJNMTYgMEM4LjMgMCAxIDcuNyAxIDE2YzAgOC4yIDEyIDI0IDEyIDI0czEyLTE1LjggMTItMjRjMC04LjMtNy4zLTE2LTE2LTE2eiIgZmlsbD0iIzRmNDZlNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSI2IiBmaWxsPSIjZmZmIi8+PC9zdmc+",
+                        iconSize: [32, 40],
+                        iconAnchor: [16, 40],
+                        popupAnchor: [0, -40],
+                      })}
+                    >
+                      <Popup>
+                        <div className="text-sm">
+                          <div className="font-semibold text-gray-900 mb-1">
+                            {listingData?.title}
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-gray-700">
+                            <MapPin className="w-3 h-3" />
+                            {listingData?.location}
+                          </div>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  )}
+                </MapContainer>
               </div>
             </div>
           </div>
