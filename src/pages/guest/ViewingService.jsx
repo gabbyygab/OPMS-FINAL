@@ -169,9 +169,9 @@ export default function ServiceDetailPage() {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div className="min-h-screen bg-slate-900 pt-24 sm:pt-28 lg:pt-32">
+    <div className="min-h-screen bg-slate-900 pt-20 sm:pt-20 lg:pt-20">
       {/* Header */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-24 sm:top-28 lg:top-32 z-40">
+      <header className="bg-slate-800 border-b border-slate-700 fixed top-0 w-full z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <button
@@ -206,7 +206,7 @@ export default function ServiceDetailPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Verification Banner */}
         {!isVerified && (
           <div className="mb-6">
@@ -256,43 +256,78 @@ export default function ServiceDetailPage() {
           </div>
         </div>
 
-        {/* Photo Gallery */}
-        <div className="mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-2 rounded-2xl overflow-hidden">
-            <div
-              className="md:col-span-2 md:row-span-2 relative cursor-pointer group h-96 md:h-auto"
-              onClick={() => setShowAllPhotos(true)}
-            >
-              <img
-                src={
-                  serviceData?.photos?.[0] || "https://via.placeholder.com/800"
-                }
-                alt="Main"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
-            </div>
-            {serviceData?.photos?.slice(1, 5)?.map((photo, idx) => (
+        {/* Photo Gallery and Provider Info Side by Side */}
+        <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Photos Section */}
+          <div className="flex flex-col">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-2xl overflow-hidden flex-1">
               <div
-                key={idx}
-                className="relative cursor-pointer group h-48 hidden md:block"
+                className="md:col-span-2 relative cursor-pointer group h-96"
                 onClick={() => setShowAllPhotos(true)}
               >
                 <img
-                  src={photo}
-                  alt={`Photo ${idx + 2}`}
+                  src={
+                    serviceData?.photos?.[0] || "https://via.placeholder.com/800"
+                  }
+                  alt="Main"
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
               </div>
-            ))}
+              {serviceData?.photos?.slice(1, 3)?.map((photo, idx) => (
+                <div
+                  key={idx}
+                  className="relative cursor-pointer group h-40 hidden md:block"
+                  onClick={() => setShowAllPhotos(true)}
+                >
+                  <img
+                    src={photo}
+                    alt={`Photo ${idx + 2}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowAllPhotos(true)}
+              className="mt-4 px-4 py-2 border border-slate-400 text-slate-200 rounded-lg font-medium hover:bg-slate-700 transition"
+            >
+              Show all {serviceData?.photos?.length || 0} photos
+            </button>
           </div>
-          <button
-            onClick={() => setShowAllPhotos(true)}
-            className="mt-4 px-4 py-2 border border-slate-400 text-slate-200 rounded-lg font-medium hover:bg-slate-700 transition"
-          >
-            Show all {serviceData?.photos?.length || 0} photos
-          </button>
+
+          {/* Provider Info Card */}
+          <div className="flex flex-col">
+            <div className="bg-slate-800 rounded-2xl shadow-lg p-6 border border-slate-700 flex-1">
+              <h3 className="text-xl font-semibold text-white mb-4">Service Provider</h3>
+              <div className="flex items-center gap-4 mb-6">
+                <img
+                  src={
+                    serviceData?.provider?.photoURL ||
+                    "https://via.placeholder.com/100"
+                  }
+                  alt={serviceData?.provider?.fullName || "Provider"}
+                  className="w-16 h-16 rounded-full"
+                />
+                <div>
+                  <h4 className="font-semibold text-white">{serviceData?.provider?.fullName || "Professional"}</h4>
+                  <p className="text-slate-400 text-sm">{serviceData?.experienceYears || 5}+ years experience</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-slate-300">
+                  <Phone className="w-4 h-4 text-indigo-400" />
+                  <span>{serviceData?.provider?.phone || "Available after booking"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <Mail className="w-4 h-4 text-indigo-400" />
+                  <span>{serviceData?.provider?.email || "Available after booking"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

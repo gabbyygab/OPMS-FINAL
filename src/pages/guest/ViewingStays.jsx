@@ -449,7 +449,7 @@ export default function ListingDetailPage() {
 
   if (loading) return <LoadingSpinner />;
   return (
-    <div className="min-h-screen bg-slate-900 pt-24 sm:pt-28 lg:pt-32">
+    <div className="min-h-screen bg-slate-900 pt-20 sm:pt-20 lg:pt-20">
       {/* Header */}
       <header className="bg-slate-800 border-b border-slate-700 fixed top-0 w-full z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -489,7 +489,7 @@ export default function ListingDetailPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Verification Banner */}
         {!isVerified && (
           <div className="mb-6">
@@ -519,43 +519,96 @@ export default function ListingDetailPage() {
           </div>
         </div>
 
-        {/* Photo Gallery */}
-        <div className="mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-2 rounded-2xl overflow-hidden">
-            <div
-              className="md:col-span-2 md:row-span-2 relative cursor-pointer group h-96 md:h-auto"
-              onClick={() => setShowAllPhotos(true)}
-            >
-              <img
-                src={
-                  listingData?.photos?.[0] || "https://via.placeholder.com/800"
-                }
-                alt="Main"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
-            </div>
-            {listingData?.photos?.slice(1, 5)?.map((photo, idx) => (
+        {/* Photo Gallery and Map Side by Side */}
+        <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Photos Section */}
+          <div className="flex flex-col">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-2xl overflow-hidden flex-1">
               <div
-                key={idx}
-                className="relative cursor-pointer group h-48 hidden md:block"
+                className="md:col-span-2 relative cursor-pointer group h-96"
                 onClick={() => setShowAllPhotos(true)}
               >
                 <img
-                  src={photo}
-                  alt={`Photo ${idx + 2}`}
+                  src={
+                    listingData?.photos?.[0] || "https://via.placeholder.com/800"
+                  }
+                  alt="Main"
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
               </div>
-            ))}
+              {listingData?.photos?.slice(1, 3)?.map((photo, idx) => (
+                <div
+                  key={idx}
+                  className="relative cursor-pointer group h-40 hidden md:block"
+                  onClick={() => setShowAllPhotos(true)}
+                >
+                  <img
+                    src={photo}
+                    alt={`Photo ${idx + 2}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowAllPhotos(true)}
+              className="mt-4 px-4 py-2 border border-slate-400 text-slate-200 rounded-lg font-medium hover:bg-slate-700 transition"
+            >
+              Show all {listingData?.photos?.length || 0} photos
+            </button>
           </div>
-          <button
-            onClick={() => setShowAllPhotos(true)}
-            className="mt-4 px-4 py-2 border border-slate-400 text-slate-200 rounded-lg font-medium hover:bg-slate-700 transition"
-          >
-            Show all {listingData?.photos?.length || 0} photos
-          </button>
+
+          {/* Map Section */}
+          <div className="flex flex-col">
+            <h3 className="text-xl font-semibold text-white mb-2">Location</h3>
+            <div className="flex items-center gap-2 mb-4 text-slate-300">
+              <MapPin className="w-5 h-5 text-indigo-400" />
+              <span>{listingData?.location || "Location details"}</span>
+            </div>
+            <div className="rounded-xl overflow-hidden border border-slate-700 flex-1 min-h-96">
+              <MapContainer
+                center={mapCenter}
+                zoom={15}
+                scrollWheelZoom={true}
+                style={{ width: "100%", height: "100%" }}
+                ref={mapRef}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {listingData?.coordinates?.lat && (
+                  <Marker
+                    position={[
+                      listingData.coordinates.lat,
+                      listingData.coordinates.lng,
+                    ]}
+                    icon={L.icon({
+                      iconUrl:
+                        "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDMyIDQwIj48cGF0aCBkPSJNMTYgMEM4LjMgMCAxIDcuNyAxIDE2YzAgOC4yIDEyIDI0IDEyIDI0czEyLTE1LjggMTItMjRjMC04LjMtNy4zLTE2LTE2LTE2eiIgZmlsbD0iIzRmNDZlNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSI2IiBmaWxsPSIjZmZmIi8+PC9zdmc+",
+                      iconSize: [32, 40],
+                      iconAnchor: [16, 40],
+                      popupAnchor: [0, -40],
+                    })}
+                  >
+                    <Popup>
+                      <div className="text-sm">
+                        <div className="font-semibold text-gray-900 mb-1">
+                          {listingData?.title}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-gray-700">
+                          <MapPin className="w-3 h-3" />
+                          {listingData?.location}
+                        </div>
+                      </div>
+                    </Popup>
+                  </Marker>
+                )}
+              </MapContainer>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -723,57 +776,6 @@ export default function ListingDetailPage() {
               </div>
             </div>
 
-            {/* Location Map */}
-            <div>
-              <h3 className="text-xl font-semibold text-white mb-4">
-                Location
-              </h3>
-              <div className="flex items-center gap-2 mb-4 text-slate-300">
-                <MapPin className="w-5 h-5 text-indigo-400" />
-                <span>{listingData?.location || "Location details"}</span>
-              </div>
-              <div className="rounded-xl overflow-hidden border border-slate-700 h-96">
-                <MapContainer
-                  center={mapCenter}
-                  zoom={15}
-                  scrollWheelZoom={true}
-                  style={{ width: "100%", height: "100%" }}
-                  ref={mapRef}
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                  />
-                  {listingData?.coordinates?.lat && (
-                    <Marker
-                      position={[
-                        listingData.coordinates.lat,
-                        listingData.coordinates.lng,
-                      ]}
-                      icon={L.icon({
-                        iconUrl:
-                          "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDMyIDQwIj48cGF0aCBkPSJNMTYgMEM4LjMgMCAxIDcuNyAxIDE2YzAgOC4yIDEyIDI0IDEyIDI0czEyLTE1LjggMTItMjRjMC04LjMtNy4zLTE2LTE2LTE2eiIgZmlsbD0iIzRmNDZlNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSI2IiBmaWxsPSIjZmZmIi8+PC9zdmc+",
-                        iconSize: [32, 40],
-                        iconAnchor: [16, 40],
-                        popupAnchor: [0, -40],
-                      })}
-                    >
-                      <Popup>
-                        <div className="text-sm">
-                          <div className="font-semibold text-gray-900 mb-1">
-                            {listingData?.title}
-                          </div>
-                          <div className="flex items-center gap-1 text-xs text-gray-700">
-                            <MapPin className="w-3 h-3" />
-                            {listingData?.location}
-                          </div>
-                        </div>
-                      </Popup>
-                    </Marker>
-                  )}
-                </MapContainer>
-              </div>
-            </div>
           </div>
 
           {/* Booking Card */}

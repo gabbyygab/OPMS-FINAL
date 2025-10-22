@@ -9,7 +9,12 @@
       "Bash(npx eslint:*)",
       "Bash(npm run build:*)",
       "Bash(npm install:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "WebFetch(domain:www.youtube.com)",
+      "Bash(git checkout:*)",
+      "Bash(findstr:*)",
+      "Bash(del nul)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

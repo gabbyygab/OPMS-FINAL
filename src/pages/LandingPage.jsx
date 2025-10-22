@@ -1,17 +1,20 @@
 import NavigationBar from "../components/NavigationBar";
-
 import Footer from "../components/Footer";
 import { useState } from "react";
 import HeroSection from "../components/HeroSection";
 import FeaturesSection from "../components/FeaturesSection";
-import PopularDestinations from "../components/PopularDest";
-import Pricing from "../components/Pricing";
+import PopularListings from "../components/PopularListings";
+import NewListings from "../components/NewListings";
+import Testimonials from "../components/Testimonials";
+import TestimonialForm from "../components/TestimonialForm";
 
 export default function LandingPage() {
   const [activeCategory, setActiveCategory] = useState("homes");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [testimonialRefresh, setTestimonialRefresh] = useState(0);
+
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Navbar */}
       <NavigationBar
         onCategoryChange={setActiveCategory}
@@ -22,23 +25,14 @@ export default function LandingPage() {
 
       <HeroSection />
       <FeaturesSection />
-      <PopularDestinations />
-      <Pricing />
+      <PopularListings />
+      <NewListings />
+      <Testimonials key={testimonialRefresh} />
+      <TestimonialForm
+        onSubmit={() => setTestimonialRefresh((prev) => prev + 1)}
+      />
 
       <Footer />
-      {/* <section className="pt-[166px]">
-        <LandingPageBody activeCategory={activeCategory} />
-      </section> */}
-      {/* Hero Section */}
-      {/* <HeroSection /> */}
-      {/* Features Section */}
-      {/* <FeaturesSection /> */}
-      {/* Testimonials Section */}
-      {/* <Testimonials /> */}
-      {/* Pricing Section */}
-      {/* <Pricing /> */}
-      {/* Footer */}
-      {/* <Footer /> */}
     </div>
   );
 }

@@ -28,6 +28,7 @@ import FavoritesPage from "./pages/guest/FavoritePage";
 import MyBookingPage from "./pages/guest/MyBookingsPage";
 import ListingDetailPage from "./pages/guest/ViewingStays";
 import ExperienceDetailPage from "./pages/guest/ViewingExperiencePage";
+import ServiceDetailPage from "./pages/guest/ViewingService";
 import GuestProfilePage from "./pages/host/profile/ProfilePage";
 
 // Host Components
@@ -87,6 +88,21 @@ function App() {
 
         {/* Host Signup - Special case, allows access even when logged in */}
         <Route path={ROUTES.HOST.SIGNUP} element={<SignUpPageHost />} />
+
+        {/* ========== PUBLIC LISTING DETAILS ROUTES ========== */}
+        {/* Available to all users (logged in or not) */}
+        <Route
+          path="/guest/listing-details/stays/:listing_id"
+          element={<ListingDetailPage />}
+        />
+        <Route
+          path="/guest/listing-details/experiences/:listing_id"
+          element={<ExperienceDetailPage />}
+        />
+        <Route
+          path="/guest/listing-details/services/:listing_id"
+          element={<ServiceDetailPage />}
+        />
 
         {/* ========== VERIFICATION ROUTES ========== */}
         <Route
@@ -156,20 +172,6 @@ function App() {
             <Route
               path={ROUTES.GUEST.E_WALLET}
               element={<WalletPage user={user} userData={userData} />}
-            />
-
-            {/* Listing Details */}
-            <Route
-              path="/guest/listing-details/stays/:listing_id"
-              element={<ListingDetailPage />}
-            />
-            <Route
-              path="/guest/listing-details/experiences/:listing_id"
-              element={<ExperienceDetailPage />}
-            />
-            <Route
-              path="/guest/listing-details/services/:listing_id"
-              element={<ExperienceDetailPage />}
             />
           </Route>
         </Route>
