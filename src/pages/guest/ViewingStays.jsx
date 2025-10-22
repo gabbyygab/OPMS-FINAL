@@ -981,7 +981,24 @@ export default function ListingDetailPage() {
               <button
                 onClick={() => {
                   const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
+                  const twitterUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(listingData?.title || "Check out this stay")}`;
+                  window.open(twitterUrl, "_blank", "width=600,height=400");
+                  setShowShareModal(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition font-medium"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2s9 5 20 5a9.5 9.5 0 00-9-5.5c4.75 2.25 9 0 11-4s1-8.5 0-11.5a4.5 4.5 0 00-.5-.5z" />
+                </svg>
+                Share on Twitter
+              </button>
+
+              <button
+                onClick={() => {
+                  const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
                   const instagramUrl = `https://www.instagram.com/?url=${encodeURIComponent(shareUrl)}`;
+                  navigator.clipboard.writeText(shareUrl);
+                  toast.success("Link copied! You can paste it in Instagram DM");
                   window.open(instagramUrl, "_blank", "width=600,height=400");
                   setShowShareModal(false);
                 }}
@@ -989,6 +1006,19 @@ export default function ListingDetailPage() {
               >
                 <Instagram className="w-5 h-5" />
                 Share on Instagram
+              </button>
+
+              <button
+                onClick={() => {
+                  const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
+                  const messengerUrl = `https://www.facebook.com/dialog/send?app_id=YOUR_APP_ID&link=${encodeURIComponent(shareUrl)}&redirect_uri=${encodeURIComponent(shareUrl)}`;
+                  window.open(messengerUrl, "_blank", "width=600,height=400");
+                  setShowShareModal(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition font-medium"
+              >
+                <MessageCircle className="w-5 h-5" />
+                Share via Messenger
               </button>
 
               <button

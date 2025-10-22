@@ -404,7 +404,7 @@ export default function HostDashboard({ isVerified, user }) {
                 Upcoming Bookings
               </h2>
               <a
-                href="/host/bookings"
+                href="/host/my-bookings"
                 className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
               >
                 View All
