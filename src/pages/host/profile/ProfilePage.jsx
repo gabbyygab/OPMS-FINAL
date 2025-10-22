@@ -16,11 +16,11 @@ import {
   DollarSign,
   X,
 } from "lucide-react";
-import { useAuth } from "../../context/AuthContext";
-import { db } from "../../firebase/firebase";
+import { useAuth } from "../../../context/AuthContext";
+import { db } from "../../../firebase/firebase";
 import { updateDoc, doc } from "firebase/firestore";
 import { toast } from "react-toastify";
-import { uploadToCloudinary } from "../../cloudinary/uploadFunction";
+import { uploadToCloudinary } from "../../../cloudinary/uploadFunction";
 import {
   getAuth,
   updatePassword,
@@ -28,9 +28,9 @@ import {
   EmailAuthProvider,
   deleteUser,
 } from "firebase/auth";
-import { auth } from "../../firebase/firebase";
+
 import { useNavigate } from "react-router-dom";
-import NavBar2 from "../../components/NavigationBarForPandM";
+import NavBar2 from "../../../components/NavigationBarForPandM";
 
 export default function ProfilePage() {
   //coupons

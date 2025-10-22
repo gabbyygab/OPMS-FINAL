@@ -34,6 +34,7 @@ export const ROUTES = {
     STAYS: "/host/stays",
     EXPERIENCES: "/host/experiences",
     SERVICES: "/host/services",
+    MY_BOOKINGS: "/host/my-bookings",
     MESSAGES: "/host/messages",
     NOTIFICATIONS: "/host/notifications",
     SETTINGS: "/host/settings",

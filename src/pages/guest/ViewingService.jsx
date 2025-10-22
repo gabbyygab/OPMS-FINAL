@@ -179,7 +179,7 @@ export default function ServiceDetailPage() {
               className="flex items-center gap-2 text-slate-300 hover:text-indigo-400 font-medium transition"
             >
               <ChevronLeft className="w-5 h-5" />
-              Back to services
+              Back
             </button>
             <div className="flex items-center gap-3">
               <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-700 transition text-slate-300">

@@ -15,6 +15,8 @@ import {
   Info,
   AlertCircle,
   Users,
+  Facebook,
+  Instagram,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { db } from "../../firebase/firebase";
@@ -26,6 +28,7 @@ import {
   where,
   collection,
   addDoc,
+  deleteDoc,
   serverTimestamp,
 } from "firebase/firestore";
 import LoadingSpinner from "../../loading/Loading";
@@ -68,12 +71,15 @@ export default function ExperienceDetailPage() {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteId, setFavoriteId] = useState(null);
   const [selectedDateTime, setSelectedDateTime] = useState(null);
   const [guests, setGuests] = useState(2);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [experienceData, setExperienceData] = useState({});
   const [loading, setLoading] = useState(false);
   const [isLoadingVerification, setIsLoadingVerification] = useState(false);
+  const [userData, setUserData] = useState(null);
 
   const { user, isVerified } = useAuth();
   const navigate = useNavigate();
@@ -101,6 +107,37 @@ export default function ExperienceDetailPage() {
     action();
   };
 
+  const toggleFavorite = async () => {
+    if (!user || !userData) {
+      toast.error("Please log in to save favorites");
+      return;
+    }
+
+    try {
+      if (isFavorite && favoriteId) {
+        // Remove from favorites
+        await deleteDoc(doc(db, "favorites", favoriteId));
+        setIsFavorite(false);
+        setFavoriteId(null);
+        toast.success("Removed from favorites");
+      } else {
+        // Add to favorites
+        const favoriteData = {
+          guest_id: userData.id,
+          listing_id: listing_id,
+          createdAt: serverTimestamp(),
+        };
+        const docRef = await addDoc(collection(db, "favorites"), favoriteData);
+        setIsFavorite(true);
+        setFavoriteId(docRef.id);
+        toast.success("Added to favorites");
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      toast.error("Failed to update favorites");
+    }
+  };
+
   const handleConfirmBooking = async () => {
     if (!user) {
       toast.error("Please log in to book");
@@ -116,6 +153,7 @@ export default function ExperienceDetailPage() {
       const loadingToast = toast.loading("Processing your booking...");
 
       // Create booking with pending status
+      // Payment will be processed only when host confirms the booking
       const bookingData = {
         listing_id: listing_id,
         guest_id: user.uid,
@@ -145,8 +183,11 @@ export default function ExperienceDetailPage() {
       };
       await addDoc(collection(db, "notifications"), notificationData);
 
+      // DO NOT process payment here - payment will be processed when host confirms the booking
+      // This allows the host to accept or reject the booking before payment is taken
+
       toast.dismiss(loadingToast);
-      toast.success("Booking request sent successfully! Status: Pending");
+      toast.success("Booking request sent successfully! Awaiting host confirmation...");
       setShowBookingModal(false);
       navigate("/guest/my-bookings");
     } catch (error) {
@@ -204,6 +245,27 @@ export default function ExperienceDetailPage() {
         if (data?.availableDates?.length > 0) {
           setSelectedDateTime(data.availableDates[0]);
         }
+
+        // Check if user has favorited this experience
+        if (user) {
+          const userRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            setUserData({ id: userSnap.id, ...userSnap.data() });
+          }
+
+          const favoritesRef = collection(db, "favorites");
+          const favQuery = query(
+            favoritesRef,
+            where("guest_id", "==", user.uid),
+            where("listing_id", "==", listing_id)
+          );
+          const favSnap = await getDocs(favQuery);
+          if (favSnap.size > 0) {
+            setIsFavorite(true);
+            setFavoriteId(favSnap.docs[0].id);
+          }
+        }
       } catch (error) {
         console.error(error);
       } finally {
@@ -211,7 +273,7 @@ export default function ExperienceDetailPage() {
       }
     };
     getSelectedExperience();
-  }, [listing_id]);
+  }, [listing_id, user]);
   //   console.log(experienceData);
 
   if (loading) return <LoadingSpinner />;
@@ -219,7 +281,7 @@ export default function ExperienceDetailPage() {
   return (
     <div className="min-h-screen bg-slate-900 pt-24 sm:pt-28 lg:pt-32">
       {/* Header */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-24 sm:top-28 lg:top-32 z-40">
+      <header className="bg-slate-800 border-b border-slate-700 fixed top-0 w-full z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <button
@@ -227,16 +289,19 @@ export default function ExperienceDetailPage() {
               className="flex items-center gap-2 text-slate-300 hover:text-indigo-400 font-medium transition"
             >
               <ChevronLeft className="w-5 h-5" />
-              Back to experiences
+              Back
             </button>
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-700 transition text-slate-300">
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-700 transition text-slate-300"
+              >
                 <Share2 className="w-4 h-4" />
                 <span className="hidden sm:inline text-sm">Share</span>
               </button>
               <button
                 onClick={() =>
-                  handleActionWithVerification(() => setIsFavorite(!isFavorite))
+                  handleActionWithVerification(() => toggleFavorite())
                 }
                 className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-700 transition text-slate-300"
               >
@@ -733,6 +798,12 @@ export default function ExperienceDetailPage() {
               </p>
             </div>
 
+            <div className="mb-4 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+              <p className="text-xs text-blue-300">
+                Payment will be processed only when the host confirms your booking. No charges will be made now.
+              </p>
+            </div>
+
             <div className="flex gap-3">
               <button
                 onClick={handleConfirmBooking}
@@ -745,6 +816,63 @@ export default function ExperienceDetailPage() {
                 className="flex-1 border border-slate-600 text-slate-300 py-3 rounded-lg hover:bg-slate-700 transition"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-slate-800 rounded-2xl shadow-lg w-full max-w-sm p-6 relative border border-slate-700">
+            <button
+              onClick={() => setShowShareModal(false)}
+              className="absolute top-3 right-3 text-slate-400 hover:text-slate-200 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h2 className="text-2xl font-bold text-white mb-6">Share this experience</h2>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
+                  const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(experienceData?.title || "Check out this experience")}`;
+                  window.open(facebookUrl, "_blank", "width=600,height=400");
+                  setShowShareModal(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium"
+              >
+                <Facebook className="w-5 h-5" />
+                Share on Facebook
+              </button>
+
+              <button
+                onClick={() => {
+                  const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
+                  const instagramUrl = `https://www.instagram.com/?url=${encodeURIComponent(shareUrl)}`;
+                  window.open(instagramUrl, "_blank", "width=600,height=400");
+                  setShowShareModal(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-pink-600 hover:bg-pink-700 text-white rounded-lg transition font-medium"
+              >
+                <Instagram className="w-5 h-5" />
+                Share on Instagram
+              </button>
+
+              <button
+                onClick={() => {
+                  const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
+                  navigator.clipboard.writeText(shareUrl);
+                  toast.success("Link copied to clipboard!");
+                  setShowShareModal(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition font-medium"
+              >
+                <Share2 className="w-5 h-5" />
+                Copy link
               </button>
             </div>
           </div>

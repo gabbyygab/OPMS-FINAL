@@ -27,7 +27,7 @@ export default function MyBookingPage({ userData, user }) {
   return (
     <>
       <NavigationBar userData={userData} user={user} />
-      <div className="pt-24 sm:pt-28 lg:pt-32">
+      <div className="">
         {!isVerified && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
             <VerificationBanner handleVerification={handleVerification} />

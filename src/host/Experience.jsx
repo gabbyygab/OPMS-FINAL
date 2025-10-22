@@ -206,6 +206,7 @@ export default function HostMyExperiences() {
     //   ageMin: 16,
     // },
   ]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -255,6 +256,7 @@ export default function HostMyExperiences() {
       if (!userData?.id) return;
 
       try {
+        setIsLoading(true);
         const experiencesRef = collection(db, "listings");
         const q = query(
           experiencesRef,
@@ -263,14 +265,33 @@ export default function HostMyExperiences() {
           where("isDraft", "==", false)
         );
         const querySnapshot = await getDocs(q);
-        const data = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const data = await Promise.all(
+          querySnapshot.docs.map(async (doc) => {
+            const experienceData = { id: doc.id, ...doc.data() };
+
+            // Fetch booking count for this experience
+            const bookingsRef = collection(db, "bookings");
+            const bookingQuery = query(
+              bookingsRef,
+              where("listing_id", "==", doc.id)
+            );
+            const bookingSnapshot = await getDocs(bookingQuery);
+            const revenue = experienceData.price * bookingSnapshot.size;
+
+            return {
+              id: experienceData.id,
+              ...experienceData,
+              bookingCount: bookingSnapshot.size,
+              revenue: revenue,
+            };
+          })
+        );
         setExperiences(data);
       } catch (error) {
         console.error("Error fetching experiences:", error);
         toast.error("Failed to load experiences");
+      } finally {
+        setIsLoading(false);
       }
     };
     getHostExperiences();
@@ -829,7 +850,7 @@ export default function HostMyExperiences() {
               <div>
                 <p className="text-orange-300/70 text-sm">Total Bookings</p>
                 <h3 className="text-2xl font-bold text-orange-100 mt-1">
-                  {experiences.reduce((sum, exp) => sum + exp.bookings, 0)}
+                  {experiences.reduce((sum, exp) => sum + (exp.bookingCount || 0), 0)}
                 </h3>
               </div>
               <div className="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center border border-orange-500/30">
@@ -844,9 +865,9 @@ export default function HostMyExperiences() {
                 <p className="text-pink-300/70 text-sm">Total Revenue</p>
                 <h3 className="text-2xl font-bold text-pink-100 mt-1">
                   ₱
-                  {/* {experiences
-                    .reduce((sum, exp) => sum + exp.revenue, 0)
-                    .toLocaleString()} */}
+                  {experiences
+                    .reduce((sum, exp) => sum + (exp.revenue || 0), 0)
+                    .toLocaleString()}
                 </h3>
               </div>
               <div className="w-12 h-12 bg-pink-500/20 rounded-lg flex items-center justify-center border border-pink-500/30">
@@ -897,7 +918,19 @@ export default function HostMyExperiences() {
         </div>
 
         {/* Experiences Grid */}
-        {filteredExperiences.length === 0 ? (
+        {isLoading ? (
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-12 text-center">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
+            </div>
+            <h3 className="text-xl font-semibold text-indigo-100 mb-2">
+              Loading your experiences...
+            </h3>
+            <p className="text-indigo-300/60">
+              Please wait while we fetch your listings
+            </p>
+          </div>
+        ) : filteredExperiences.length === 0 ? (
           <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-12 text-center">
             <Compass className="w-16 h-16 text-indigo-300/50 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-indigo-100 mb-2">
@@ -1004,13 +1037,13 @@ export default function HostMyExperiences() {
                     <div className="bg-indigo-500/20 border border-indigo-500/30 rounded-lg p-2">
                       <p className="text-xs text-indigo-300/70">Bookings</p>
                       <p className="font-semibold text-indigo-300">
-                        {exp.bookings}
+                        {exp.bookingCount || 0}
                       </p>
                     </div>
                     <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-lg p-2">
                       <p className="text-xs text-green-300/70">Revenue</p>
                       <p className="font-semibold text-green-300">
-                        {/* ₱{exp.revenue.toLocaleString()} */}
+                        ₱{(exp.revenue || 0).toLocaleString()}
                       </p>
                     </div>
                   </div>

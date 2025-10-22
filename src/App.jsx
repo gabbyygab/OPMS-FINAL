@@ -28,7 +28,7 @@ import FavoritesPage from "./pages/guest/FavoritePage";
 import MyBookingPage from "./pages/guest/MyBookingsPage";
 import ListingDetailPage from "./pages/guest/ViewingStays";
 import ExperienceDetailPage from "./pages/guest/ViewingExperiencePage";
-import GuestProfilePage from "./pages/profile/ProfilePage";
+import GuestProfilePage from "./pages/host/profile/ProfilePage";
 
 // Host Components
 import HostLayout from "./pages/host/HostLayout";
@@ -36,7 +36,8 @@ import HostPage from "./pages/host/page";
 import StaysPage from "./pages/host/MyStays";
 import ExperiencePage from "./pages/host/MyExperience";
 import ServicesPage from "./pages/host/MyService";
-import HostProfilePage from "./pages/profile/ProfilePage";
+import HostMyBookings from "./pages/host/MyBookings";
+import HostProfilePage from "./pages/host/profile/ProfilePage";
 
 // Shared Components
 import MessagesPage from "./messages/page";
@@ -212,6 +213,12 @@ function App() {
             <Route
               path={ROUTES.HOST.SERVICES}
               element={<ServicesPage userData={userData} user={user} />}
+            />
+
+            {/* Host Bookings Management */}
+            <Route
+              path={ROUTES.HOST.MY_BOOKINGS}
+              element={<HostMyBookings userData={userData} user={user} />}
             />
 
             {/* Host Communication */}

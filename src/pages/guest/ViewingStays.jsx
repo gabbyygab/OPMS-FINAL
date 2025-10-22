@@ -20,6 +20,8 @@ import {
   MessageCircle,
   Award,
   User,
+  Facebook,
+  Instagram,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { db } from "../../firebase/firebase";
@@ -130,6 +132,7 @@ export default function ListingDetailPage() {
   const [checkOut, setCheckOut] = useState("2025-11-30");
   const [guests, setGuests] = useState(2);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [listingData, setListingData] = useState({});
   const [reviewsData, setReviewsData] = useState([]);
   const [walletBalance, setWalletBalance] = useState(0);
@@ -251,18 +254,14 @@ export default function ListingDetailPage() {
       return;
     }
 
-    // Check wallet balance
-    if (walletBalance < grandTotal) {
-      toast.error(
-        `Insufficient balance. You need ₱${grandTotal.toLocaleString()} but have ₱${walletBalance.toLocaleString()}`
-      );
-      return;
-    }
+    // NOTE: No wallet balance check needed here
+    // Payment will be processed when the host confirms the booking
 
     try {
       const loadingToast = toast.loading("Processing your booking...");
 
       // Create booking with pending status
+      // Payment will be processed only when host confirms the booking
       const bookingData = {
         listing_id: listing_id,
         guest_id: userData.id,
@@ -292,85 +291,12 @@ export default function ListingDetailPage() {
       };
       await addDoc(collection(db, "notifications"), notificationData);
 
-      // Update bookedDates in listing
-      const listingRef = doc(db, "listings", listing_id);
-      await updateDoc(listingRef, {
-        bookedDates: arrayUnion(...stayDates),
-      });
-
-      // Update guest wallet balance (deduct)
-      const guestWalletQuery = query(
-        collection(db, "wallets"),
-        where("user_id", "==", userData.id)
-      );
-      const guestWalletSnap = await getDocs(guestWalletQuery);
-      let guestWalletId = null;
-
-      if (!guestWalletSnap.empty) {
-        const guestWalletDoc = guestWalletSnap.docs[0];
-        guestWalletId = guestWalletDoc.id;
-        const currentBalance = guestWalletDoc.data().balance || 0;
-        const currentTotalSpent = guestWalletDoc.data().total_spent || 0;
-
-        await updateDoc(doc(db, "wallets", guestWalletDoc.id), {
-          balance: currentBalance - grandTotal,
-          total_spent: currentTotalSpent + grandTotal,
-        });
-
-        setWalletBalance(currentBalance - grandTotal);
-      }
-
-      // Update host wallet balance (add)
-      const hostWalletQuery = query(
-        collection(db, "wallets"),
-        where("user_id", "==", listingData.host_id)
-      );
-      const hostWalletSnap = await getDocs(hostWalletQuery);
-      let hostWalletId = null;
-
-      if (!hostWalletSnap.empty) {
-        const hostWalletDoc = hostWalletSnap.docs[0];
-        hostWalletId = hostWalletDoc.id;
-        const hostCurrentBalance = hostWalletDoc.data().balance || 0;
-        const hostTotalCashIn = hostWalletDoc.data().total_cash_in || 0;
-
-        await updateDoc(doc(db, "wallets", hostWalletDoc.id), {
-          balance: hostCurrentBalance + grandTotal,
-          total_cash_in: hostTotalCashIn + grandTotal,
-        });
-      }
-
-      // Create guest transaction (payment - deducted)
-      if (guestWalletId) {
-        await addDoc(collection(db, "transactions"), {
-          amount: -grandTotal,
-          created_at: serverTimestamp(),
-          paypal_batch_id: null,
-          paypal_email: null,
-          status: "completed",
-          type: "payment",
-          user_id: userData.id,
-          wallet_id: guestWalletId,
-        });
-      }
-
-      // Create host transaction (payment - added)
-      if (hostWalletId) {
-        await addDoc(collection(db, "transactions"), {
-          amount: grandTotal,
-          created_at: serverTimestamp(),
-          paypal_batch_id: null,
-          paypal_email: null,
-          status: "completed",
-          type: "payment",
-          user_id: listingData.host_id,
-          wallet_id: hostWalletId,
-        });
-      }
+      // DO NOT process payment here - payment will be processed when host confirms the booking
+      // This allows the host to accept or reject the booking before payment is taken
 
       toast.dismiss(loadingToast);
       toast.success(
-        "Booking request sent successfully! Status: Pending"
+        "Booking request sent successfully! Awaiting host confirmation..."
       );
       setShowBookingModal(false);
       navigate("/guest/my-bookings");
@@ -515,7 +441,7 @@ export default function ListingDetailPage() {
   return (
     <div className="min-h-screen bg-slate-900 pt-24 sm:pt-28 lg:pt-32">
       {/* Header */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-24 sm:top-28 lg:top-32 z-40">
+      <header className="bg-slate-800 border-b border-slate-700 fixed top-0 w-full z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <button
@@ -523,10 +449,13 @@ export default function ListingDetailPage() {
               className="flex items-center gap-2 text-slate-300 hover:text-indigo-400 font-medium transition"
             >
               <ChevronLeft className="w-5 h-5" />
-              Back to listings
+              Back
             </button>
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-700 transition text-slate-300">
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-700 transition text-slate-300"
+              >
                 <Share2 className="w-4 h-4" />
                 <span className="hidden sm:inline text-sm">Share</span>
               </button>
@@ -998,25 +927,16 @@ export default function ListingDetailPage() {
               </p>
             </div>
 
-            <div className="mb-4 p-3 bg-slate-700 rounded-lg">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-400">Wallet Balance</span>
-                <span className="font-semibold text-white">
-                  ₱{walletBalance.toLocaleString()}
-                </span>
-              </div>
-              {walletBalance < grandTotal && (
-                <p className="text-xs text-red-400 mt-2">
-                  Insufficient balance. Please add funds to your wallet.
-                </p>
-              )}
+            <div className="mb-4 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+              <p className="text-xs text-blue-300">
+                Payment will be processed only when the host confirms your booking. No charges will be made now.
+              </p>
             </div>
 
             <div className="flex gap-3">
               <button
                 onClick={handleConfirmBooking}
-                disabled={walletBalance < grandTotal}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition"
               >
                 Confirm booking
               </button>
@@ -1025,6 +945,63 @@ export default function ListingDetailPage() {
                 className="flex-1 border border-slate-600 text-slate-300 py-3 rounded-lg hover:bg-slate-700 transition"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-slate-800 rounded-2xl shadow-lg w-full max-w-sm p-6 relative border border-slate-700">
+            <button
+              onClick={() => setShowShareModal(false)}
+              className="absolute top-3 right-3 text-slate-400 hover:text-slate-200 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h2 className="text-2xl font-bold text-white mb-6">Share this stay</h2>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
+                  const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(listingData?.title || "Check out this stay")}`;
+                  window.open(facebookUrl, "_blank", "width=600,height=400");
+                  setShowShareModal(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium"
+              >
+                <Facebook className="w-5 h-5" />
+                Share on Facebook
+              </button>
+
+              <button
+                onClick={() => {
+                  const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
+                  const instagramUrl = `https://www.instagram.com/?url=${encodeURIComponent(shareUrl)}`;
+                  window.open(instagramUrl, "_blank", "width=600,height=400");
+                  setShowShareModal(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-pink-600 hover:bg-pink-700 text-white rounded-lg transition font-medium"
+              >
+                <Instagram className="w-5 h-5" />
+                Share on Instagram
+              </button>
+
+              <button
+                onClick={() => {
+                  const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
+                  navigator.clipboard.writeText(shareUrl);
+                  toast.success("Link copied to clipboard!");
+                  setShowShareModal(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition font-medium"
+              >
+                <Share2 className="w-5 h-5" />
+                Copy link
               </button>
             </div>
           </div>

@@ -332,7 +332,11 @@ export default function MyBookingsSection() {
   };
 
   const selectDate = (day) => {
-    const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    const newDate = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth(),
+      day
+    );
     setSelectedDate(newDate);
     // Reset to first page when selecting a date
     setCurrentPage(1);
@@ -342,9 +346,10 @@ export default function MyBookingsSection() {
   const selectedDateBookings = getBookingsForDate(selectedDate);
 
   // Filter bookings by type
-  let filteredBookings = activeFilter === "all"
-    ? bookings
-    : bookings.filter((b) => b.type === activeFilter);
+  let filteredBookings =
+    activeFilter === "all"
+      ? bookings
+      : bookings.filter((b) => b.type === activeFilter);
 
   // Further filter by selected date if bookings exist for that date
   // Only apply date filter if a date with bookings is selected
@@ -407,7 +412,12 @@ export default function MyBookingsSection() {
             {hasBookingsOnSelectedDate && (
               <div className="flex items-center gap-2 ml-auto">
                 <span className="text-sm text-slate-400">
-                  Showing bookings for {selectedDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  Showing bookings for{" "}
+                  {selectedDate.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
                 </span>
                 <button
                   onClick={() => {

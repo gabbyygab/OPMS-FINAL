@@ -20,6 +20,7 @@ import {
   ChevronUp,
   Wallet,
   LucideWallet,
+  ClipboardList,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -192,6 +193,7 @@ const HostNavLinks = () => {
     { to: ROUTES.HOST.STAYS, icon: Home, label: "My Stays" },
     { to: ROUTES.HOST.EXPERIENCES, icon: Calendar, label: "My Experiences" },
     { to: ROUTES.HOST.SERVICES, icon: Briefcase, label: "My Services" },
+    { to: ROUTES.HOST.MY_BOOKINGS, icon: ClipboardList, label: "My Bookings" },
   ];
 
   return (
@@ -493,6 +495,14 @@ const HostUserActions = ({
             >
               <Briefcase className="w-4 h-4" /> My Services
             </Link>
+
+            <Link
+              to={ROUTES.HOST.MY_BOOKINGS}
+              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+              onClick={() => setProfileDropdownOpen(false)}
+            >
+              <ClipboardList className="w-4 h-4" /> My Bookings
+            </Link>
           </div>
 
           <div className="border-t border-slate-700">
@@ -766,6 +776,14 @@ const MobileMenu = ({
               onClick={() => setMobileMenuOpen(false)}
             >
               <Briefcase className="w-5 h-5" /> My Services
+            </Link>
+
+            <Link
+              to={ROUTES.HOST.MY_BOOKINGS}
+              className="flex items-center gap-2 hover:text-white transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <ClipboardList className="w-5 h-5" /> My Bookings
             </Link>
 
             <Link

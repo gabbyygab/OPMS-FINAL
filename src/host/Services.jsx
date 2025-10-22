@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Briefcase,
   Plus,
@@ -27,6 +27,9 @@ import {
   Heart,
   GraduationCap,
   Scissors,
+  Check,
+  Info,
+  Shield,
 } from "lucide-react";
 import {
   MapContainer,
@@ -39,6 +42,19 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
+import { uploadToCloudinary } from "../cloudinary/uploadFunction";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  getDocs,
+  doc,
+  query,
+  where,
+  deleteDoc,
+  updateDoc,
+} from "firebase/firestore";
+import { db } from "../firebase/firebase";
 
 // Fix Leaflet default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -83,7 +99,6 @@ function parseNominatimAddress(addressData) {
 }
 
 // LocationPicker Component
-
 function LocationPicker({ marker, setMarker, setFormData, formData }) {
   useMapEvents({
     click: async (e) => {
@@ -91,17 +106,13 @@ function LocationPicker({ marker, setMarker, setFormData, formData }) {
       setMarker([lat, lng]);
 
       try {
-        // Reverse geocode using Nominatim with proper headers and delay
-        await new Promise((resolve) => setTimeout(resolve, 300)); // Rate limiting
-
+        await new Promise((resolve) => setTimeout(resolve, 300));
         const res = await fetch(
           `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
         );
         if (!res.ok) throw new Error("Geocoding failed");
 
         const data = await res.json();
-
-        // Extract only street, city, and province from the address
         const parsedAddress = parseNominatimAddress(data);
         const placeName = parsedAddress || data.display_name || `${lat}, ${lng}`;
 
@@ -125,7 +136,7 @@ function LocationPicker({ marker, setMarker, setFormData, formData }) {
 const defaultCenter = [14.5995, 120.9842];
 
 export default function HostMyServices() {
-  const { isVerified } = useAuth();
+  const { isVerified, userData } = useAuth();
 
   const handleActionWithVerification = (action) => {
     if (!isVerified) {
@@ -137,59 +148,11 @@ export default function HostMyServices() {
     action();
   };
 
-  const [services, setServices] = useState([
-    {
-      id: 1,
-      title: "Professional House Cleaning",
-      location: "Los Angeles, CA",
-      price: 120,
-      duration: 3,
-      category: "Home Services",
-      rating: 4.9,
-      reviews: 134,
-      status: "active",
-      image:
-        "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400",
-      bookings: 67,
-      revenue: 8040,
-      availability: "Mon-Sat",
-      responseTime: "1 hour",
-    },
-    {
-      id: 2,
-      title: "Mobile Car Detailing",
-      location: "San Diego, CA",
-      price: 85,
-      duration: 2,
-      category: "Automotive",
-      rating: 4.8,
-      reviews: 89,
-      status: "active",
-      image:
-        "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=400",
-      bookings: 52,
-      revenue: 4420,
-      availability: "7 days",
-      responseTime: "2 hours",
-    },
-    {
-      id: 3,
-      title: "Personal Training Sessions",
-      location: "Miami, FL",
-      price: 75,
-      duration: 1,
-      category: "Health & Wellness",
-      rating: 5.0,
-      reviews: 156,
-      status: "inactive",
-      image:
-        "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400",
-      bookings: 94,
-      revenue: 7050,
-      availability: "Mon-Fri",
-      responseTime: "30 min",
-    },
-  ]);
+  // State management
+  const [services, setServices] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [previewImages, setPreviewImages] = useState([]);
+  const [imageFiles, setImageFiles] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -198,22 +161,114 @@ export default function HostMyServices() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
+
   const [formData, setFormData] = useState({
     title: "",
     location: "",
-    price: "",
+    basePrice: "",
     duration: "",
     category: "Home Services",
     description: "",
-    availability: "",
+    availableDates: [],
     responseTime: "",
+    photos: [],
+    serviceTypes: [],
+    highlights: [],
+    serviceAreas: [],
+    certifications: [],
+    terms: [],
+    experienceYears: "",
+    completedJobs: "",
+    isVerified: false,
   });
+
+  const [newServiceType, setNewServiceType] = useState("");
+  const [newHighlight, setNewHighlight] = useState("");
+  const [newServiceArea, setNewServiceArea] = useState("");
+  const [newCertification, setNewCertification] = useState("");
+  const [newTerm, setNewTerm] = useState("");
+
+  // Date range state
+  const [newDateRangeStart, setNewDateRangeStart] = useState("");
+  const [newDateRangeEnd, setNewDateRangeEnd] = useState("");
 
   // Map-related state
   const [marker, setMarker] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [loading, setLoading] = useState(false);
+
+  // Fetch services from Firebase
+  useEffect(() => {
+    if (!userData?.id) return;
+    fetchHostServices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData]);
+
+  // Fetch services from Firebase
+  const fetchHostServices = async () => {
+    try {
+      setIsLoading(true);
+      const servicesRef = collection(db, "listings");
+      const q = query(
+        servicesRef,
+        where("host_id", "==", userData.id),
+        where("isDraft", "==", false),
+        where("type", "==", "services")
+      );
+      const querySnapshot = await getDocs(q);
+      const data = await Promise.all(
+        querySnapshot.docs.map(async (doc) => {
+          const serviceData = { id: doc.id, ...doc.data() };
+
+          // Fetch booking count
+          const bookingsRef = collection(db, "bookings");
+          const bookingQuery = query(
+            bookingsRef,
+            where("listing_id", "==", doc.id)
+          );
+          const bookingSnapshot = await getDocs(bookingQuery);
+          const revenue = (serviceData.price || serviceData.basePrice || 0) * bookingSnapshot.size;
+
+          return {
+            id: serviceData.id,
+            ...serviceData,
+            bookingCount: bookingSnapshot.size,
+            revenue: revenue,
+          };
+        })
+      );
+
+      setServices(data);
+    } catch (error) {
+      console.error("Error fetching services:", error);
+      toast.error("Failed to load services");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Image upload handler
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    const newPreviews = files.map((file) => URL.createObjectURL(file));
+
+    setPreviewImages((prev) => [...prev, ...newPreviews]);
+    setImageFiles((prev) => [...prev, ...files]);
+
+    setFormData((prev) => ({
+      ...prev,
+      photos: [...(prev.photos || []), ...files],
+    }));
+  };
+
+  const removeImage = (index) => {
+    setPreviewImages((prev) => prev.filter((_, i) => i !== index));
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setFormData((prev) => ({
+      ...prev,
+      photos: (prev.photos || []).filter((_, i) => i !== index),
+    }));
+  };
 
   // Map search handler
   const handleSearch = async (query) => {
@@ -223,7 +278,6 @@ export default function HostMyServices() {
       return;
     }
 
-    setLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 300));
 
@@ -246,8 +300,6 @@ export default function HostMyServices() {
     } catch (err) {
       console.error("Error fetching locations:", err);
       setSuggestions([]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -255,6 +307,92 @@ export default function HostMyServices() {
     setFormData({ ...formData, location: place.display_name });
     setMarker([parseFloat(place.lat), parseFloat(place.lon)]);
     setShowSuggestions(false);
+  };
+
+  // Array handlers
+  const addServiceType = () => {
+    if (newServiceType.trim()) {
+      setFormData({
+        ...formData,
+        serviceTypes: [...formData.serviceTypes, newServiceType.trim()],
+      });
+      setNewServiceType("");
+    }
+  };
+
+  const removeServiceType = (index) => {
+    setFormData({
+      ...formData,
+      serviceTypes: formData.serviceTypes.filter((_, i) => i !== index),
+    });
+  };
+
+  const addHighlight = () => {
+    if (newHighlight.trim()) {
+      setFormData({
+        ...formData,
+        highlights: [...formData.highlights, newHighlight.trim()],
+      });
+      setNewHighlight("");
+    }
+  };
+
+  const removeHighlight = (index) => {
+    setFormData({
+      ...formData,
+      highlights: formData.highlights.filter((_, i) => i !== index),
+    });
+  };
+
+  const addServiceArea = () => {
+    if (newServiceArea.trim()) {
+      setFormData({
+        ...formData,
+        serviceAreas: [...formData.serviceAreas, newServiceArea.trim()],
+      });
+      setNewServiceArea("");
+    }
+  };
+
+  const removeServiceArea = (index) => {
+    setFormData({
+      ...formData,
+      serviceAreas: formData.serviceAreas.filter((_, i) => i !== index),
+    });
+  };
+
+  const addCertification = () => {
+    if (newCertification.trim()) {
+      setFormData({
+        ...formData,
+        certifications: [...formData.certifications, newCertification.trim()],
+      });
+      setNewCertification("");
+    }
+  };
+
+  const removeCertification = (index) => {
+    setFormData({
+      ...formData,
+      certifications: formData.certifications.filter((_, i) => i !== index),
+    });
+  };
+
+  const addTerm = () => {
+    if (newTerm.trim()) {
+      setFormData({
+        ...formData,
+        terms: [...formData.terms, newTerm.trim()],
+      });
+      setNewTerm("");
+    }
+  };
+
+  const removeTerm = (index) => {
+    setFormData({
+      ...formData,
+      terms: formData.terms.filter((_, i) => i !== index),
+    });
   };
 
   const categories = [
@@ -281,84 +419,302 @@ export default function HostMyServices() {
   });
 
   // Handle Add Service
-  const handleAddService = () => {
-    const newService = {
-      id: services.length + 1,
-      title: formData.title,
-      location: formData.location,
-      price: parseFloat(formData.price),
-      duration: parseFloat(formData.duration),
-      category: formData.category,
-      rating: 0,
-      reviews: 0,
-      status: "active",
-      image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400",
-      bookings: 0,
-      revenue: 0,
-      availability: formData.availability,
-      responseTime: formData.responseTime,
-    };
-    setServices([...services, newService]);
-    setShowAddModal(false);
-    resetForm();
+  const handleAddService = async (isDraft = false) => {
+    try {
+      if (!formData.title || !formData.location) {
+        toast.error("Please fill in Title and Location first.");
+        return;
+      }
+
+      const loadingToast = toast.loading(
+        "Uploading images and creating service..."
+      );
+
+      // Upload images to Cloudinary
+      let imageUrls = [];
+      if (imageFiles.length > 0) {
+        try {
+          const uploadPromises = imageFiles.map((file) =>
+            uploadToCloudinary(file)
+          );
+          imageUrls = await Promise.all(uploadPromises);
+        } catch {
+          toast.dismiss(loadingToast);
+          toast.error("Failed to upload images. Please try again.");
+          return;
+        }
+      }
+
+      // Prepare data
+      const newService = {
+        title: formData.title || "",
+        description: formData.description || "",
+        location: formData.location || "",
+        price: Number(formData.basePrice) || 0,
+        duration: Number(formData.duration) || 0,
+        category: formData.category || "Home Services",
+        availableDates: Array.isArray(formData.availableDates)
+          ? formData.availableDates
+          : [],
+        responseTime: formData.responseTime || "",
+        photos: imageUrls && imageUrls.length > 0 ? imageUrls : [],
+        serviceTypes: Array.isArray(formData.serviceTypes)
+          ? formData.serviceTypes
+          : [],
+        highlights: Array.isArray(formData.highlights)
+          ? formData.highlights
+          : [],
+        serviceAreas: Array.isArray(formData.serviceAreas)
+          ? formData.serviceAreas
+          : [],
+        certifications: Array.isArray(formData.certifications)
+          ? formData.certifications
+          : [],
+        terms: Array.isArray(formData.terms) ? formData.terms : [],
+        experienceYears: Number(formData.experienceYears) || 0,
+        completedJobs: Number(formData.completedJobs) || 0,
+        isVerified: isVerified,
+        isDraft: !!isDraft,
+        status: "active",
+        type: "services",
+        host_id: userData.id || "unknown",
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp(),
+      };
+
+      // Sanitize data
+      const sanitizeData = (obj) =>
+        Object.entries(obj).reduce((acc, [key, value]) => {
+          if (value !== undefined) acc[key] = value;
+          return acc;
+        }, {});
+
+      const cleanService = sanitizeData(newService);
+
+      // Add to Firestore
+      const docRef = await addDoc(collection(db, "listings"), cleanService);
+
+      // Add to local state ONLY if not a draft
+      if (!isDraft) {
+        setServices((prev) => [{ id: docRef.id, ...cleanService }, ...prev]);
+      }
+
+      toast.dismiss(loadingToast);
+      toast.success(
+        isDraft
+          ? "Draft saved successfully!"
+          : "Service added successfully!"
+      );
+
+      resetForm();
+      setShowAddModal(false);
+      setPreviewImages([]);
+      setImageFiles([]);
+      setMarker(null);
+    } catch (error) {
+      console.error("Error adding service:", error);
+      toast.dismiss();
+      toast.error("Failed to add service. Please try again.");
+    }
   };
 
   // Handle Edit Service
-  const handleEditService = () => {
-    const updatedServices = services.map((service) =>
-      service.id === selectedService.id
-        ? {
-            ...service,
-            title: formData.title,
-            location: formData.location,
-            price: parseFloat(formData.price),
-            duration: parseFloat(formData.duration),
-            category: formData.category,
-            availability: formData.availability,
-            responseTime: formData.responseTime,
-          }
-        : service
-    );
-    setServices(updatedServices);
-    setShowEditModal(false);
-    resetForm();
+  const handleEditService = async () => {
+    try {
+      if (!formData.title || !formData.location) {
+        toast.error("Please fill in required fields.");
+        return;
+      }
+
+      const loadingToast = toast.loading("Saving changes...");
+
+      // Separate existing URLs from new File objects
+      const existingUrls = previewImages.filter(
+        (img) => typeof img === "string" && img.startsWith("http")
+      );
+
+      // Find corresponding File objects for new images
+      const filesToUpload =
+        formData.photos?.filter((photo) => photo instanceof File) || [];
+
+      // Upload new images to Cloudinary
+      let newImageUrls = [];
+      if (filesToUpload.length > 0) {
+        try {
+          const uploadPromises = filesToUpload.map((file) =>
+            uploadToCloudinary(file)
+          );
+          newImageUrls = await Promise.all(uploadPromises);
+        } catch {
+          toast.dismiss(loadingToast);
+          toast.error("Failed to upload images. Please try again.");
+          return;
+        }
+      }
+
+      // Combine existing URLs with newly uploaded URLs
+      const allPhotos = [...existingUrls, ...newImageUrls];
+
+      // Prepare data
+      const updatedService = {
+        title: formData.title || "",
+        description: formData.description || "",
+        location: formData.location || "",
+        price: Number(formData.basePrice) || 0,
+        duration: Number(formData.duration) || 0,
+        category: formData.category || "Home Services",
+        availableDates: Array.isArray(formData.availableDates)
+          ? formData.availableDates
+          : [],
+        responseTime: formData.responseTime || "",
+        photos: allPhotos.length > 0 ? allPhotos : selectedService.photos,
+        serviceTypes: Array.isArray(formData.serviceTypes)
+          ? formData.serviceTypes
+          : [],
+        highlights: Array.isArray(formData.highlights)
+          ? formData.highlights
+          : [],
+        serviceAreas: Array.isArray(formData.serviceAreas)
+          ? formData.serviceAreas
+          : [],
+        certifications: Array.isArray(formData.certifications)
+          ? formData.certifications
+          : [],
+        terms: Array.isArray(formData.terms) ? formData.terms : [],
+        experienceYears: Number(formData.experienceYears) || 0,
+        completedJobs: Number(formData.completedJobs) || 0,
+        isVerified: isVerified,
+        isDraft: false,
+        status: "active",
+        type: "services",
+        updated_at: serverTimestamp(),
+      };
+
+      // Sanitize data
+      const sanitizeData = (obj) =>
+        Object.entries(obj).reduce((acc, [key, value]) => {
+          if (value !== undefined) acc[key] = value;
+          return acc;
+        }, {});
+
+      const cleanService = sanitizeData(updatedService);
+
+      const selectedId = selectedService.id;
+      const serviceRef = doc(db, "listings", selectedId);
+      await updateDoc(serviceRef, cleanService);
+
+      // Update local state
+      setServices((prev) =>
+        prev.map((service) =>
+          service.id === selectedId ? { id: selectedId, ...cleanService } : service
+        )
+      );
+
+      toast.dismiss(loadingToast);
+      toast.success("Service edited successfully!");
+
+      resetForm();
+      setShowEditModal(false);
+      setPreviewImages([]);
+      setImageFiles([]);
+      setMarker(null);
+    } catch (error) {
+      console.error("Error editing service:", error);
+      toast.dismiss();
+      toast.error("Failed to edit service. Please try again.");
+    }
   };
 
   // Handle Delete Service
-  const handleDeleteService = () => {
-    setServices(
-      services.filter((service) => service.id !== selectedService.id)
-    );
-    setShowDeleteModal(false);
-    setSelectedService(null);
+  const handleDeleteService = async () => {
+    try {
+      const toastId = toast.loading("Deleting your service...", {
+        position: "top-center",
+      });
+
+      const id = selectedService.id;
+      await deleteDoc(doc(db, "listings", id));
+      setServices((prev) => prev.filter((s) => s.id !== id));
+      toast.update(toastId, {
+        render: "Service deleted successfully.",
+        type: "success",
+        isLoading: false,
+        autoClose: 2000,
+        closeOnClick: true,
+        draggable: true,
+      });
+      setShowDeleteModal(false);
+    } catch (error) {
+      toast.error("Failed to delete service. Please try again.", {
+        position: "top-center",
+      });
+      console.error(error);
+    }
   };
 
   // Toggle Service Status
-  const toggleStatus = (id) => {
-    setServices(
-      services.map((service) =>
-        service.id === id
-          ? {
-              ...service,
-              status: service.status === "active" ? "inactive" : "active",
-            }
-          : service
-      )
-    );
+  const toggleStatus = async (id) => {
+    try {
+      const service = services.find((s) => s.id === id);
+      const newStatus = service.status === "active" ? "inactive" : "active";
+
+      await updateDoc(doc(db, "listings", id), {
+        status: newStatus,
+        updated_at: serverTimestamp(),
+      });
+
+      setServices(
+        services.map((s) =>
+          s.id === id ? { ...s, status: newStatus } : s
+        )
+      );
+      toast.success(
+        `Service ${newStatus === "active" ? "activated" : "deactivated"} successfully!`
+      );
+    } catch (error) {
+      console.error("Error toggling status:", error);
+      toast.error("Failed to update status");
+    }
   };
 
   // Open Edit Modal
   const openEditModal = (service) => {
     setSelectedService(service);
+
     setFormData({
-      title: service.title,
-      location: service.location,
-      price: service.price,
-      duration: service.duration,
-      category: service.category,
-      availability: service.availability,
-      responseTime: service.responseTime,
+      title: service.title || "",
+      location: service.location || "",
+      basePrice: service.basePrice || "",
+      duration: service.duration || "",
+      category: service.category || "Home Services",
+      description: service.description || "",
+      availableDates: Array.isArray(service.availableDates)
+        ? service.availableDates
+        : [],
+      responseTime: service.responseTime || "",
+      photos: service.photos || [],
+      serviceTypes: Array.isArray(service.serviceTypes)
+        ? service.serviceTypes
+        : [],
+      highlights: Array.isArray(service.highlights) ? service.highlights : [],
+      serviceAreas: Array.isArray(service.serviceAreas)
+        ? service.serviceAreas
+        : [],
+      certifications: Array.isArray(service.certifications)
+        ? service.certifications
+        : [],
+      terms: Array.isArray(service.terms) ? service.terms : [],
+      experienceYears: service.experienceYears || "",
+      completedJobs: service.completedJobs || "",
     });
+
+    if (service.photos && service.photos.length > 0) {
+      setPreviewImages(service.photos);
+      setImageFiles(service.photos);
+    } else {
+      setPreviewImages([]);
+      setImageFiles([]);
+    }
     setShowEditModal(true);
   };
 
@@ -369,17 +725,72 @@ export default function HostMyServices() {
   };
 
   // Reset Form
+  const addAvailableDate = () => {
+    if (!newDateRangeStart || !newDateRangeEnd) {
+      toast.error("Please select both start and end dates");
+      return;
+    }
+
+    const startDate = new Date(newDateRangeStart);
+    const endDate = new Date(newDateRangeEnd);
+
+    if (startDate >= endDate) {
+      toast.error("End date must be after start date");
+      return;
+    }
+
+    const dateRangeObj = {
+      startDate: newDateRangeStart,
+      endDate: newDateRangeEnd,
+    };
+
+    setFormData({
+      ...formData,
+      availableDates: [...formData.availableDates, dateRangeObj],
+    });
+
+    setNewDateRangeStart("");
+    setNewDateRangeEnd("");
+    toast.success("Date range added");
+  };
+
+  const removeAvailableDate = (index) => {
+    setFormData({
+      ...formData,
+      availableDates: formData.availableDates.filter((_, i) => i !== index),
+    });
+  };
+
   const resetForm = () => {
     setFormData({
       title: "",
       location: "",
-      price: "",
+      basePrice: "",
       duration: "",
       category: "Home Services",
       description: "",
-      availability: "",
+      availableDates: [],
       responseTime: "",
+      photos: [],
+      serviceTypes: [],
+      highlights: [],
+      serviceAreas: [],
+      certifications: [],
+      terms: [],
+      experienceYears: "",
+      completedJobs: "",
+      isVerified: false,
     });
+    setPreviewImages([]);
+    setImageFiles([]);
+    setMarker(null);
+    setNewServiceType("");
+    setNewHighlight("");
+    setNewServiceArea("");
+    setNewCertification("");
+    setNewTerm("");
+    setNewDateRangeStart("");
+    setNewDateRangeEnd("");
   };
 
   return (
@@ -408,60 +819,60 @@ export default function HostMyServices() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 p-6 border border-indigo-500/20 backdrop-blur-sm hover:border-indigo-500/40 transition">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-indigo-300/60 text-sm">Total Services</p>
+                <p className="text-indigo-300/70 text-sm">Total Services</p>
                 <h3 className="text-2xl font-bold text-indigo-100 mt-1">
                   {services.length}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg flex items-center justify-center border border-blue-500/30">
-                <Briefcase className="w-6 h-6 text-blue-400" />
+              <div className="w-12 h-12 bg-indigo-500/20 rounded-lg flex items-center justify-center border border-indigo-500/30">
+                <Briefcase className="w-6 h-6 text-indigo-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-green-500/10 p-6 border border-green-500/20 backdrop-blur-sm hover:border-green-500/40 transition">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-indigo-300/60 text-sm">Active Services</p>
-                <h3 className="text-2xl font-bold text-indigo-100 mt-1">
+                <p className="text-green-300/70 text-sm">Active Services</p>
+                <h3 className="text-2xl font-bold text-green-100 mt-1">
                   {services.filter((s) => s.status === "active").length}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-lg flex items-center justify-center border border-green-500/30">
+              <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center border border-green-500/30">
                 <Eye className="w-6 h-6 text-green-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-orange-500/10 p-6 border border-orange-500/20 backdrop-blur-sm hover:border-orange-500/40 transition">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-indigo-300/60 text-sm">Total Bookings</p>
-                <h3 className="text-2xl font-bold text-indigo-100 mt-1">
-                  {services.reduce((sum, service) => sum + service.bookings, 0)}
+                <p className="text-orange-300/70 text-sm">Total Bookings</p>
+                <h3 className="text-2xl font-bold text-orange-100 mt-1">
+                  {services.reduce((sum, service) => sum + (service.bookingCount || 0), 0)}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-lg flex items-center justify-center border border-orange-500/30">
+              <div className="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center border border-orange-500/30">
                 <Calendar className="w-6 h-6 text-orange-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-pink-500/10 p-6 border border-pink-500/20 backdrop-blur-sm hover:border-pink-500/40 transition">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-indigo-300/60 text-sm">Total Revenue</p>
-                <h3 className="text-2xl font-bold text-indigo-100 mt-1">
-                  $
+                <p className="text-pink-300/70 text-sm">Total Revenue</p>
+                <h3 className="text-2xl font-bold text-pink-100 mt-1">
+                  ₱
                   {services
-                    .reduce((sum, service) => sum + service.revenue, 0)
+                    .reduce((sum, service) => sum + (service.revenue || 0), 0)
                     .toLocaleString()}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-pink-500/20 to-pink-600/20 rounded-lg flex items-center justify-center border border-pink-500/30">
+              <div className="w-12 h-12 bg-pink-500/20 rounded-lg flex items-center justify-center border border-pink-500/30">
                 <DollarSign className="w-6 h-6 text-pink-400" />
               </div>
             </div>
@@ -509,7 +920,19 @@ export default function HostMyServices() {
         </div>
 
         {/* Services Grid */}
-        {filteredServices.length === 0 ? (
+        {isLoading ? (
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-12 text-center">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
+            </div>
+            <h3 className="text-xl font-semibold text-indigo-100 mb-2">
+              Loading your services...
+            </h3>
+            <p className="text-indigo-300/60">
+              Please wait while we fetch your listings
+            </p>
+          </div>
+        ) : filteredServices.length === 0 ? (
           <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-12 text-center">
             <Briefcase className="w-16 h-16 text-indigo-300/30 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-indigo-100 mb-2">
@@ -542,12 +965,18 @@ export default function HostMyServices() {
                 className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm overflow-hidden hover:shadow-indigo-500/20 transition"
               >
                 {/* Image */}
-                <div className="relative h-48 overflow-hidden">
-                  <img
-                    src={service.image}
-                    alt={service.title}
-                    className="w-full h-full object-cover"
-                  />
+                <div className="relative h-48 overflow-hidden bg-slate-700">
+                  {service.photos && service.photos.length > 0 ? (
+                    <img
+                      src={service.photos[0]}
+                      alt={service.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Briefcase className="w-12 h-12 text-indigo-400/30" />
+                    </div>
+                  )}
                   <div className="absolute top-3 left-3">
                     <span className="px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/20">
                       {service.category}
@@ -588,20 +1017,17 @@ export default function HostMyServices() {
                     </span>
                   </div>
 
-                  {/* Stats */}
+                  {/* Price & Experience */}
                   <div className="flex items-center justify-between mb-4 pb-4 border-b border-indigo-500/20">
                     <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                      <span className="font-semibold text-indigo-100">
-                        {service.rating}
-                      </span>
-                      <span className="text-indigo-300/70 text-sm">
-                        ({service.reviews})
+                      <Award className="w-4 h-4 text-blue-400" />
+                      <span className="font-semibold text-indigo-100 text-sm">
+                        {service.experienceYears} yrs exp
                       </span>
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-indigo-100">
-                        ${service.price}
+                        ₱{Number(service.basePrice).toLocaleString()}
                       </p>
                       <p className="text-xs text-indigo-300/60">per service</p>
                     </div>
@@ -612,13 +1038,13 @@ export default function HostMyServices() {
                     <div className="bg-slate-700/50 border border-indigo-500/20 rounded-lg p-2">
                       <p className="text-xs text-indigo-300/60">Bookings</p>
                       <p className="font-semibold text-blue-400">
-                        {service.bookings}
+                        {service.bookingCount || 0}
                       </p>
                     </div>
                     <div className="bg-slate-700/50 border border-indigo-500/20 rounded-lg p-2">
                       <p className="text-xs text-indigo-300/60">Revenue</p>
                       <p className="font-semibold text-green-400">
-                        ${service.revenue.toLocaleString()}
+                        ₱{Number(service.revenue || 0).toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -675,10 +1101,11 @@ export default function HostMyServices() {
 
       {/* Add Service Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-indigo-500/30 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-indigo-500/30 p-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-indigo-100">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
+            {/* Header */}
+            <div className="sticky top-0 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-indigo-500/30 p-6 flex items-center justify-between z-[1000]">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent">
                 Add New Service
               </h2>
               <button
@@ -686,13 +1113,15 @@ export default function HostMyServices() {
                   setShowAddModal(false);
                   resetForm();
                 }}
-                className="text-indigo-300/50 hover:text-indigo-300"
+                className="text-indigo-400/60 hover:text-indigo-400 transition"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            {/* Body */}
+            <div className="p-6 space-y-6">
+              {/* Title */}
               <div>
                 <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Service Title *
@@ -704,30 +1133,33 @@ export default function HostMyServices() {
                     setFormData({ ...formData, title: e.target.value })
                   }
                   placeholder="e.g., Professional House Cleaning"
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
                 />
               </div>
 
+              {/* Location + Map */}
               <div>
                 <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Location *
                 </label>
                 <div className="relative">
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    placeholder="Type a location or click on map"
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formData.location}
+                      onChange={(e) => handleSearch(e.target.value)}
+                      placeholder="Type a location or click on map"
+                      className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                    />
+                  </div>
 
                   {showSuggestions && suggestions.length > 0 && (
-                    <ul className="absolute w-full bg-slate-800 border border-indigo-500/30 rounded-lg mt-1 shadow-lg max-h-60 overflow-y-auto z-[999]">
+                    <ul className="absolute w-full bg-slate-800/95 border border-indigo-500/30 rounded-lg mt-1 shadow-lg shadow-indigo-500/10 max-h-60 overflow-y-auto z-[999] backdrop-blur-sm">
                       {suggestions.map((place) => (
                         <li
                           key={place.place_id}
                           onClick={() => handleSelect(place)}
-                          className="px-4 py-2 hover:bg-indigo-500/20 cursor-pointer text-sm text-indigo-100"
+                          className="px-4 py-2 hover:bg-indigo-600/30 cursor-pointer text-sm text-indigo-200 border-b border-indigo-500/10 last:border-b-0 transition"
                         >
                           {place.display_name}
                         </li>
@@ -736,13 +1168,13 @@ export default function HostMyServices() {
                   )}
                 </div>
 
-                <div className="mt-4 rounded-xl overflow-hidden border border-indigo-500/30 z-[998]">
+                <div className="mt-4 rounded-xl overflow-hidden border border-indigo-500/30 relative" style={{ zIndex: 1 }}>
                   <MapContainer
                     center={marker || defaultCenter}
                     zoom={10}
-                    scrollWheelZoom
+                    scrollWheelZoom={false}
                     zoomControl={false}
-                    style={{ height: "350px", width: "100%" }}
+                    style={{ height: "350px", width: "100%", position: "relative" }}
                   >
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -759,42 +1191,40 @@ export default function HostMyServices() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-indigo-300 mb-2">
-                  Category *
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category: e.target.value })
-                  }
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100"
-                >
-                  {categories.map((cat) => (
-                    <option key={cat.name} value={cat.name}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              {/* Category & Price & Duration */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-indigo-300 mb-2">
-                    Price per Service *
+                    Category *
                   </label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-indigo-300/50" />
-                    <input
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) =>
-                        setFormData({ ...formData, price: e.target.value })
-                      }
-                      placeholder="120"
-                      className="w-full pl-10 pr-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
-                    />
-                  </div>
+                  <select
+                    value={formData.category}
+                    onChange={(e) =>
+                      setFormData({ ...formData, category: e.target.value })
+                    }
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 transition"
+                  >
+                    {categories.map((cat) => (
+                      <option key={cat.name} value={cat.name}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
+                    Base Price (₱) *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.basePrice}
+                    onChange={(e) =>
+                      setFormData({ ...formData, basePrice: e.target.value })
+                    }
+                    placeholder="120"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
                 </div>
 
                 <div>
@@ -809,213 +1239,13 @@ export default function HostMyServices() {
                       setFormData({ ...formData, duration: e.target.value })
                     }
                     placeholder="3"
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-indigo-300 mb-2">
-                    Availability *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.availability}
-                    onChange={(e) =>
-                      setFormData({ ...formData, availability: e.target.value })
-                    }
-                    placeholder="e.g., Mon-Sat"
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-indigo-300 mb-2">
-                    Response Time *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.responseTime}
-                    onChange={(e) =>
-                      setFormData({ ...formData, responseTime: e.target.value })
-                    }
-                    placeholder="e.g., 1 hour"
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-indigo-300 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="Describe your service..."
-                  rows="4"
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 resize-none"
-                ></textarea>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-indigo-300 mb-2">
-                  Photos
-                </label>
-                <div className="border-2 border-dashed border-indigo-500/30 rounded-lg p-8 text-center hover:border-indigo-500/50 transition cursor-pointer bg-slate-700/30">
-                  <Upload className="w-12 h-12 text-indigo-300/50 mx-auto mb-3" />
-                  <p className="text-indigo-300/70 text-sm">
-                    Click to upload or drag and drop
-                  </p>
-                  <p className="text-indigo-300/50 text-xs mt-1">
-                    PNG, JPG up to 10MB
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="sticky bottom-0 bg-gradient-to-r from-slate-800 to-slate-900 border-t border-indigo-500/30 p-6 flex gap-3">
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  resetForm();
-                }}
-                className="flex-1 px-6 py-3 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 transition font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddService}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 shadow-lg shadow-indigo-500/20 text-white rounded-lg transition font-medium flex items-center justify-center gap-2"
-              >
-                <Save className="w-5 h-5" />
-                Add Service
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Service Modal */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-indigo-500/30 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-indigo-500/30 p-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-indigo-100">
-                Edit Service
-              </h2>
-              <button
-                onClick={() => {
-                  setShowEditModal(false);
-                  resetForm();
-                }}
-                className="text-indigo-300/50 hover:text-indigo-300"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-indigo-300 mb-2">
-                  Service Title *
-                </label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-indigo-300 mb-2">
-                  Location *
-                </label>
-                <input
-                  type="text"
-                  value={formData.location}
-                  onChange={(e) =>
-                    setFormData({ ...formData, location: e.target.value })
-                  }
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-indigo-300 mb-2">
-                  Category *
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category: e.target.value })
-                  }
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100"
-                >
-                  {categories.map((cat) => (
-                    <option key={cat.name} value={cat.name}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-indigo-300 mb-2">
-                    Price per Service *
-                  </label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-indigo-300/50" />
-                    <input
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) =>
-                        setFormData({ ...formData, price: e.target.value })
-                      }
-                      className="w-full pl-10 pr-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-indigo-300 mb-2">
-                    Duration (hours) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={formData.duration}
-                    onChange={(e) =>
-                      setFormData({ ...formData, duration: e.target.value })
-                    }
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-indigo-300 mb-2">
-                    Availability *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.availability}
-                    onChange={(e) =>
-                      setFormData({ ...formData, availability: e.target.value })
-                    }
-                    placeholder="e.g., Mon-Sat"
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
-                  />
-                </div>
-
+              {/* Response Time & Experience */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-indigo-300 mb-2">
                     Response Time *
@@ -1030,11 +1260,93 @@ export default function HostMyServices() {
                       })
                     }
                     placeholder="e.g., 1 hour"
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
+                    Experience (years)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.experienceYears}
+                    onChange={(e) =>
+                      setFormData({ ...formData, experienceYears: e.target.value })
+                    }
+                    placeholder="5"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
                   />
                 </div>
               </div>
 
+              {/* Available Dates */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-3">
+                  Available Dates
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="date"
+                    value={newDateRangeStart}
+                    onChange={(e) => setNewDateRangeStart(e.target.value)}
+                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 transition"
+                  />
+                  <input
+                    type="date"
+                    value={newDateRangeEnd}
+                    onChange={(e) => setNewDateRangeEnd(e.target.value)}
+                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={addAvailableDate}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.availableDates.length > 0 && (
+                  <div className="space-y-2">
+                    {formData.availableDates.map((range, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between gap-2 bg-slate-700/50 border border-indigo-500/20 rounded-lg px-4 py-2 text-sm text-indigo-200"
+                      >
+                        <span>
+                          {new Date(range.startDate).toLocaleDateString()} to{" "}
+                          {new Date(range.endDate).toLocaleDateString()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeAvailableDate(i)}
+                          className="hover:text-rose-400"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Completed Jobs */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
+                  Completed Jobs
+                </label>
+                <input
+                  type="number"
+                  value={formData.completedJobs}
+                  onChange={(e) =>
+                    setFormData({ ...formData, completedJobs: e.target.value })
+                  }
+                  placeholder="100"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                />
+              </div>
+
+              {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Description
@@ -1046,39 +1358,847 @@ export default function HostMyServices() {
                   }
                   placeholder="Describe your service..."
                   rows="4"
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 resize-none"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition resize-none"
                 ></textarea>
               </div>
 
+              {/* Service Types */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-3">
+                  Service Types Offered
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newServiceType}
+                    onChange={(e) => setNewServiceType(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && addServiceType()}
+                    placeholder="e.g., Deep Cleaning"
+                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={addServiceType}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.serviceTypes.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.serviceTypes.map((type, i) => (
+                      <div
+                        key={i}
+                        className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
+                      >
+                        {type}
+                        <button
+                          type="button"
+                          onClick={() => removeServiceType(i)}
+                          className="hover:text-indigo-900"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Highlights */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-3">
+                  Highlights
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newHighlight}
+                    onChange={(e) => setNewHighlight(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && addHighlight()}
+                    placeholder="e.g., Eco-friendly products"
+                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={addHighlight}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.highlights.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.highlights.map((highlight, i) => (
+                      <div
+                        key={i}
+                        className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
+                      >
+                        <Check className="w-4 h-4" />
+                        {highlight}
+                        <button
+                          type="button"
+                          onClick={() => removeHighlight(i)}
+                          className="hover:text-indigo-900"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Service Areas */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-3">
+                  Service Areas
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newServiceArea}
+                    onChange={(e) => setNewServiceArea(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && addServiceArea()}
+                    placeholder="e.g., Manila, Makati"
+                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={addServiceArea}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.serviceAreas.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.serviceAreas.map((area, i) => (
+                      <div
+                        key={i}
+                        className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
+                      >
+                        <MapPin className="w-4 h-4" />
+                        {area}
+                        <button
+                          type="button"
+                          onClick={() => removeServiceArea(i)}
+                          className="hover:text-indigo-900"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Certifications */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-3">
+                  Certifications & Licenses
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newCertification}
+                    onChange={(e) => setNewCertification(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && addCertification()}
+                    placeholder="e.g., Certified Professional"
+                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={addCertification}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.certifications.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.certifications.map((cert, i) => (
+                      <div
+                        key={i}
+                        className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
+                      >
+                        <Award className="w-4 h-4" />
+                        {cert}
+                        <button
+                          type="button"
+                          onClick={() => removeCertification(i)}
+                          className="hover:text-indigo-900"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Terms & Conditions */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-3">
+                  Terms & Conditions
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newTerm}
+                    onChange={(e) => setNewTerm(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && addTerm()}
+                    placeholder="e.g., Cancellation policy"
+                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={addTerm}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.terms.length > 0 && (
+                  <div className="space-y-2">
+                    {formData.terms.map((term, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-2 bg-slate-700/50 border border-indigo-500/20 rounded-lg px-4 py-2 text-sm text-indigo-200"
+                      >
+                        <Info className="w-4 h-4" />
+                        {term}
+                        <button
+                          type="button"
+                          onClick={() => removeTerm(i)}
+                          className="ml-auto hover:text-rose-400"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Photos */}
               <div>
                 <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Photos
                 </label>
-                <div className="border-2 border-dashed border-indigo-500/30 rounded-lg p-8 text-center hover:border-indigo-500/50 transition cursor-pointer bg-slate-700/30">
-                  <Upload className="w-12 h-12 text-indigo-300/50 mx-auto mb-3" />
+                <div
+                  onClick={() => document.getElementById("photoInput").click()}
+                  className="border-2 border-dashed border-indigo-500/30 rounded-lg p-8 text-center hover:border-indigo-500/60 hover:bg-slate-700/30 transition cursor-pointer bg-slate-700/20"
+                >
+                  <Upload className="w-12 h-12 text-indigo-400/50 mx-auto mb-3" />
                   <p className="text-indigo-300/70 text-sm">
                     Click to upload or drag and drop
                   </p>
-                  <p className="text-indigo-300/50 text-xs mt-1">
-                    PNG, JPG up to 10MB
-                  </p>
+                  <input
+                    id="photoInput"
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
                 </div>
+
+                {previewImages.length > 0 && (
+                  <div className="grid grid-cols-3 gap-4 mt-4">
+                    {previewImages.map((src, i) => (
+                      <div key={i} className="relative">
+                        <img
+                          src={src}
+                          alt={`Preview ${i}`}
+                          className="rounded-lg object-cover w-full h-32 border border-indigo-500/20"
+                        />
+                        <button
+                          onClick={() => removeImage(i)}
+                          className="absolute top-2 right-2 bg-slate-800/80 rounded-full p-1 shadow hover:bg-slate-800 transition border border-indigo-500/30"
+                        >
+                          <X className="w-4 h-4 text-indigo-400" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-gradient-to-r from-slate-800 to-slate-900 border-t border-indigo-500/30 p-6 flex gap-3">
+            {/* Footer */}
+            <div className="sticky bottom-0 z-[999] bg-gradient-to-r from-slate-800 to-slate-900 border-t border-indigo-500/30 p-6 flex gap-3 backdrop-blur-sm">
+              <button
+                onClick={() => {
+                  setShowAddModal(false);
+                  resetForm();
+                }}
+                className="flex-1 px-6 py-3 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 hover:border-indigo-500/50 transition font-medium"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={() => handleAddService(true)}
+                className="flex-1 px-6 py-3 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 hover:border-indigo-500/50 transition font-medium"
+              >
+                Save Draft
+              </button>
+
+              <button
+                onClick={() => handleAddService(false)}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition flex items-center justify-center gap-2 font-medium shadow-lg shadow-indigo-500/20"
+              >
+                <Save className="w-5 h-5" />
+                Add Service
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Service Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
+            {/* Header */}
+            <div className="sticky top-0 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-indigo-500/30 p-6 flex items-center justify-between z-[1000]">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent">
+                Edit Service
+              </h2>
               <button
                 onClick={() => {
                   setShowEditModal(false);
                   resetForm();
                 }}
-                className="flex-1 px-6 py-3 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 transition font-medium"
+                className="text-indigo-400/60 hover:text-indigo-400 transition"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-6">
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
+                  Service Title *
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
+                  placeholder="e.g., Professional House Cleaning"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                />
+              </div>
+
+              {/* Location + Map */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
+                  Location *
+                </label>
+                <div className="relative">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formData.location}
+                      onChange={(e) => handleSearch(e.target.value)}
+                      placeholder="Type a location or click on map"
+                      className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                    />
+                  </div>
+
+                  {showSuggestions && suggestions.length > 0 && (
+                    <ul className="absolute w-full bg-slate-800/95 border border-indigo-500/30 rounded-lg mt-1 shadow-lg shadow-indigo-500/10 max-h-60 overflow-y-auto z-[999] backdrop-blur-sm">
+                      {suggestions.map((place) => (
+                        <li
+                          key={place.place_id}
+                          onClick={() => handleSelect(place)}
+                          className="px-4 py-2 hover:bg-indigo-600/30 cursor-pointer text-sm text-indigo-200 border-b border-indigo-500/10 last:border-b-0 transition"
+                        >
+                          {place.display_name}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="mt-4 rounded-xl overflow-hidden border border-indigo-500/30 relative" style={{ zIndex: 1 }}>
+                  <MapContainer
+                    center={marker || defaultCenter}
+                    zoom={10}
+                    scrollWheelZoom={false}
+                    zoomControl={false}
+                    style={{ height: "350px", width: "100%", position: "relative" }}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <ZoomControl position="bottomright" />
+                    <LocationPicker
+                      marker={marker}
+                      setMarker={setMarker}
+                      setFormData={setFormData}
+                      formData={formData}
+                    />
+                  </MapContainer>
+                </div>
+              </div>
+
+              {/* Category & Price & Duration */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
+                    Category *
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) =>
+                      setFormData({ ...formData, category: e.target.value })
+                    }
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 transition"
+                  >
+                    {categories.map((cat) => (
+                      <option key={cat.name} value={cat.name}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
+                    Base Price (₱) *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.basePrice}
+                    onChange={(e) =>
+                      setFormData({ ...formData, basePrice: e.target.value })
+                    }
+                    placeholder="120"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
+                    Duration (hours) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.duration}
+                    onChange={(e) =>
+                      setFormData({ ...formData, duration: e.target.value })
+                    }
+                    placeholder="3"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                </div>
+              </div>
+
+              {/* Response Time & Experience */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
+                    Response Time *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.responseTime}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        responseTime: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., 1 hour"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
+                    Experience (years)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.experienceYears}
+                    onChange={(e) =>
+                      setFormData({ ...formData, experienceYears: e.target.value })
+                    }
+                    placeholder="5"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                </div>
+              </div>
+
+              {/* Available Dates */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-3">
+                  Available Dates
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="date"
+                    value={newDateRangeStart}
+                    onChange={(e) => setNewDateRangeStart(e.target.value)}
+                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 transition"
+                  />
+                  <input
+                    type="date"
+                    value={newDateRangeEnd}
+                    onChange={(e) => setNewDateRangeEnd(e.target.value)}
+                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={addAvailableDate}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.availableDates.length > 0 && (
+                  <div className="space-y-2">
+                    {formData.availableDates.map((range, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between gap-2 bg-slate-700/50 border border-indigo-500/20 rounded-lg px-4 py-2 text-sm text-indigo-200"
+                      >
+                        <span>
+                          {new Date(range.startDate).toLocaleDateString()} to{" "}
+                          {new Date(range.endDate).toLocaleDateString()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeAvailableDate(i)}
+                          className="hover:text-rose-400"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Completed Jobs */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
+                  Completed Jobs
+                </label>
+                <input
+                  type="number"
+                  value={formData.completedJobs}
+                  onChange={(e) =>
+                    setFormData({ ...formData, completedJobs: e.target.value })
+                  }
+                  placeholder="100"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  placeholder="Describe your service..."
+                  rows="4"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition resize-none"
+                ></textarea>
+              </div>
+
+              {/* Service Types */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-3">
+                  Service Types Offered
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newServiceType}
+                    onChange={(e) => setNewServiceType(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && addServiceType()}
+                    placeholder="e.g., Deep Cleaning"
+                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={addServiceType}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.serviceTypes.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.serviceTypes.map((type, i) => (
+                      <div
+                        key={i}
+                        className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
+                      >
+                        {type}
+                        <button
+                          type="button"
+                          onClick={() => removeServiceType(i)}
+                          className="hover:text-indigo-900"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Highlights */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-3">
+                  Highlights
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newHighlight}
+                    onChange={(e) => setNewHighlight(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && addHighlight()}
+                    placeholder="e.g., Eco-friendly products"
+                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={addHighlight}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.highlights.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.highlights.map((highlight, i) => (
+                      <div
+                        key={i}
+                        className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
+                      >
+                        <Check className="w-4 h-4" />
+                        {highlight}
+                        <button
+                          type="button"
+                          onClick={() => removeHighlight(i)}
+                          className="hover:text-indigo-900"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Service Areas */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-3">
+                  Service Areas
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newServiceArea}
+                    onChange={(e) => setNewServiceArea(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && addServiceArea()}
+                    placeholder="e.g., Manila, Makati"
+                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={addServiceArea}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.serviceAreas.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.serviceAreas.map((area, i) => (
+                      <div
+                        key={i}
+                        className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
+                      >
+                        <MapPin className="w-4 h-4" />
+                        {area}
+                        <button
+                          type="button"
+                          onClick={() => removeServiceArea(i)}
+                          className="hover:text-indigo-900"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Certifications */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-3">
+                  Certifications & Licenses
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newCertification}
+                    onChange={(e) => setNewCertification(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && addCertification()}
+                    placeholder="e.g., Certified Professional"
+                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={addCertification}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.certifications.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.certifications.map((cert, i) => (
+                      <div
+                        key={i}
+                        className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
+                      >
+                        <Award className="w-4 h-4" />
+                        {cert}
+                        <button
+                          type="button"
+                          onClick={() => removeCertification(i)}
+                          className="hover:text-indigo-900"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Terms & Conditions */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-3">
+                  Terms & Conditions
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newTerm}
+                    onChange={(e) => setNewTerm(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && addTerm()}
+                    placeholder="e.g., Cancellation policy"
+                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={addTerm}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {formData.terms.length > 0 && (
+                  <div className="space-y-2">
+                    {formData.terms.map((term, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-2 bg-slate-700/50 border border-indigo-500/20 rounded-lg px-4 py-2 text-sm text-indigo-200"
+                      >
+                        <Info className="w-4 h-4" />
+                        {term}
+                        <button
+                          type="button"
+                          onClick={() => removeTerm(i)}
+                          className="ml-auto hover:text-rose-400"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Photos */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
+                  Photos
+                </label>
+                <div
+                  onClick={() => document.getElementById("editPhotoInput").click()}
+                  className="border-2 border-dashed border-indigo-500/30 rounded-lg p-8 text-center hover:border-indigo-500/60 hover:bg-slate-700/30 transition cursor-pointer bg-slate-700/20"
+                >
+                  <Upload className="w-12 h-12 text-indigo-400/50 mx-auto mb-3" />
+                  <p className="text-indigo-300/70 text-sm">
+                    Click to upload or drag and drop
+                  </p>
+                  <input
+                    id="editPhotoInput"
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </div>
+
+                {previewImages.length > 0 && (
+                  <div className="grid grid-cols-3 gap-4 mt-4">
+                    {previewImages.map((src, i) => (
+                      <div key={i} className="relative">
+                        <img
+                          src={src}
+                          alt={`Preview ${i}`}
+                          className="rounded-lg object-cover w-full h-32 border border-indigo-500/20"
+                        />
+                        <button
+                          onClick={() => removeImage(i)}
+                          className="absolute top-2 right-2 bg-slate-800/80 rounded-full p-1 shadow hover:bg-slate-800 transition border border-indigo-500/30"
+                        >
+                          <X className="w-4 h-4 text-indigo-400" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="sticky bottom-0 z-[999] bg-gradient-to-r from-slate-800 to-slate-900 border-t border-indigo-500/30 p-6 flex gap-3 backdrop-blur-sm">
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  resetForm();
+                }}
+                className="flex-1 px-6 py-3 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 hover:border-indigo-500/50 transition font-medium"
               >
                 Cancel
               </button>
+
               <button
                 onClick={handleEditService}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 shadow-lg shadow-indigo-500/20 text-white rounded-lg transition font-medium flex items-center justify-center gap-2"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition flex items-center justify-center gap-2 font-medium shadow-lg shadow-indigo-500/20"
               >
                 <Save className="w-5 h-5" />
                 Save Changes

@@ -17,7 +17,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import VerificationBanner from "./Verification";
 import { sendOtpToUser } from "../utils/sendOtpToUser";
-import LoadingSpinner from "../loading/Loading";
 import { point } from "leaflet";
 // Extract city from location string
 function extractCity(location) {
@@ -171,11 +170,16 @@ export default function BookingsSection({ userData, isFavoritePage }) {
 
       // Reference to favorites collection filtered by current user
       const favRef = collection(db, "favorites");
-      const q = query(favRef, where("guest_id", "==", userData.id));
+      const q = query(
+        favRef,
+        where("guest_id", "==", userData.id),
+        where("isDraft", "==", false)
+      );
 
       // Realtime listener for user's favorites
       const unsubscribe = onSnapshot(q, async (snapshot) => {
         try {
+          setLoading(true);
           if (snapshot.empty) {
             setFavorites([]);
             setLoading(false);
@@ -215,8 +219,11 @@ export default function BookingsSection({ userData, isFavoritePage }) {
     useEffect(() => {
       const fetchListingsWithFavorites = async () => {
         try {
+          setLoading(true);
           // 1️⃣ Fetch all listings
-          const listingsSnap = await getDocs(collection(db, "listings"));
+          const listingRef = collection(db, "listings");
+          const listingQuery = query(listingRef, where("isDraft", "==", false));
+          const listingsSnap = await getDocs(listingQuery);
           const listingsData = listingsSnap.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
@@ -239,6 +246,8 @@ export default function BookingsSection({ userData, isFavoritePage }) {
           setListings(listingsWithFavs);
         } catch (error) {
           console.error("Error fetching listings or favorites:", error);
+        } finally {
+          setLoading(false);
         }
       };
 
@@ -250,7 +259,12 @@ export default function BookingsSection({ userData, isFavoritePage }) {
   // Helper function to check if listing matches filters
   const matchesSearchFilters = (listing) => {
     // Check location
-    if (searchFilters.location && !listing.location?.toLowerCase().includes(searchFilters.location.toLowerCase())) {
+    if (
+      searchFilters.location &&
+      !listing.location
+        ?.toLowerCase()
+        .includes(searchFilters.location.toLowerCase())
+    ) {
       return false;
     }
 
@@ -265,11 +279,19 @@ export default function BookingsSection({ userData, isFavoritePage }) {
       const fromDate = parseToDate(listingAvail.from);
       const toDate = parseToDate(listingAvail.to);
 
-      if (searchFilters.checkIn && fromDate && new Date(searchFilters.checkIn) < fromDate) {
+      if (
+        searchFilters.checkIn &&
+        fromDate &&
+        new Date(searchFilters.checkIn) < fromDate
+      ) {
         return false;
       }
 
-      if (searchFilters.checkOut && toDate && new Date(searchFilters.checkOut) > toDate) {
+      if (
+        searchFilters.checkOut &&
+        toDate &&
+        new Date(searchFilters.checkOut) > toDate
+      ) {
         return false;
       }
     }
@@ -280,12 +302,16 @@ export default function BookingsSection({ userData, isFavoritePage }) {
   const filteredFavoriteItems =
     activeFilter === "all"
       ? favorites.filter(matchesSearchFilters)
-      : favorites.filter((item) => item.type === activeFilter && matchesSearchFilters(item));
+      : favorites.filter(
+          (item) => item.type === activeFilter && matchesSearchFilters(item)
+        );
 
   const filteredItems =
     activeFilter === "all"
       ? listings.filter(matchesSearchFilters)
-      : listings.filter((item) => item.type === activeFilter && matchesSearchFilters(item));
+      : listings.filter(
+          (item) => item.type === activeFilter && matchesSearchFilters(item)
+        );
 
   const toggleFavorite = async (listingId, guestId, setListings) => {
     try {
@@ -342,7 +368,6 @@ export default function BookingsSection({ userData, isFavoritePage }) {
   const indexOfLast = currentPage * itemsPerPage;
   const indexOfFirst = indexOfLast - itemsPerPage;
   const currentListings = activeList.slice(indexOfFirst, indexOfLast);
-  if (loading) return <LoadingSpinner />;
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -383,7 +408,10 @@ export default function BookingsSection({ userData, isFavoritePage }) {
         </div>
 
         {/* Active Filters Display */}
-        {(searchFilters.location || searchFilters.checkIn || searchFilters.checkOut || searchFilters.guests > 1) && (
+        {(searchFilters.location ||
+          searchFilters.checkIn ||
+          searchFilters.checkOut ||
+          searchFilters.guests > 1) && (
           <div className="mb-6 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-3 flex-wrap">
@@ -396,13 +424,15 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                 {searchFilters.checkIn && (
                   <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-600/20 border border-emerald-500/50 rounded-full text-sm text-emerald-300">
                     <Calendar className="w-3 h-3" />
-                    Check-in: {new Date(searchFilters.checkIn).toLocaleDateString()}
+                    Check-in:{" "}
+                    {new Date(searchFilters.checkIn).toLocaleDateString()}
                   </span>
                 )}
                 {searchFilters.checkOut && (
                   <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600/20 border border-blue-500/50 rounded-full text-sm text-blue-300">
                     <Calendar className="w-3 h-3" />
-                    Check-out: {new Date(searchFilters.checkOut).toLocaleDateString()}
+                    Check-out:{" "}
+                    {new Date(searchFilters.checkOut).toLocaleDateString()}
                   </span>
                 )}
                 {searchFilters.guests > 1 && (
@@ -423,7 +453,22 @@ export default function BookingsSection({ userData, isFavoritePage }) {
         )}
 
         {/* Group listings by city */}
-        {currentListings.length > 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-24">
+            <div className="text-center">
+              <div className="relative w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                {/* Outer ring */}
+                <div className="absolute inset-0 rounded-full border-4 border-slate-700"></div>
+                {/* Rotating border */}
+                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-500 border-r-indigo-500 animate-spin"></div>
+                {/* Center dot */}
+                <div className="absolute w-2 h-2 bg-indigo-500 rounded-full"></div>
+              </div>
+              <p className="text-white text-lg font-semibold">Loading Listings</p>
+              <p className="text-slate-400 text-sm mt-1">Please wait...</p>
+            </div>
+          </div>
+        ) : currentListings.length > 0 ? (
           Object.entries(groupListingsByCity(currentListings)).map(
             ([city, cityListings]) => (
               <div key={city} className="mb-12">
@@ -462,7 +507,11 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                           <button
                             onClick={() =>
-                              toggleFavorite(listing.id, userData.id, setListings)
+                              toggleFavorite(
+                                listing.id,
+                                userData.id,
+                                setListings
+                              )
                             }
                             className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-sm p-2.5 rounded-full hover:bg-slate-900 transition-all hover:scale-110"
                           >

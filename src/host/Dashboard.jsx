@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Home,
   Calendar,
@@ -17,6 +17,17 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { db } from "../firebase/firebase";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+  orderBy,
+  limit,
+} from "firebase/firestore";
 
 import { sendOtpToUser } from "../utils/sendOtpToUser";
 import LoadingSpinner from "../loading/Loading";
@@ -24,7 +35,21 @@ import VerificationBanner from "../components/Verification";
 import { useAuth } from "../context/AuthContext";
 export default function HostDashboard({ isVerified, user }) {
   const [selectedPeriod, setSelectedPeriod] = useState("week");
-  const [isLoading, setLoading] = useState(false);
+  const [isLoading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalEarnings: 0,
+    earningsChange: 0,
+    totalBookings: 0,
+    bookingsChange: 0,
+    activeListings: 0,
+    listingsChange: 0,
+    avgRating: 0,
+    ratingChange: 0,
+  });
+  const [upcomingBookings, setUpcomingBookings] = useState([]);
+  const [recentMessages, setRecentMessages] = useState([]);
+  const [listingPerformance, setListingPerformance] = useState([]);
+  const { userData } = useAuth();
   const navigate = useNavigate();
   console.log(isVerified);
 
@@ -40,101 +65,172 @@ export default function HostDashboard({ isVerified, user }) {
     }
   };
 
-  // Sample data
-  const stats = {
-    totalEarnings: 12450,
-    earningsChange: 12.5,
-    totalBookings: 24,
-    bookingsChange: 8.3,
-    activeListings: 8,
-    listingsChange: 2,
-    avgRating: 4.8,
-    ratingChange: 0.2,
-  };
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        if (!userData?.id) return;
 
-  const upcomingBookings = [
-    {
-      id: 1,
-      guest: "John Doe",
-      property: "Beachfront Villa",
-      type: "Stay",
-      checkIn: "Oct 15, 2025",
-      checkOut: "Oct 18, 2025",
-      amount: 450,
-      status: "confirmed",
-    },
-    {
-      id: 2,
-      guest: "Sarah Smith",
-      property: "Mountain Hiking Tour",
-      type: "Experience",
-      checkIn: "Oct 16, 2025",
-      checkOut: "Oct 16, 2025",
-      amount: 120,
-      status: "confirmed",
-    },
-    {
-      id: 3,
-      guest: "Mike Johnson",
-      property: "City Photography Service",
-      type: "Service",
-      checkIn: "Oct 17, 2025",
-      checkOut: "Oct 17, 2025",
-      amount: 200,
-      status: "pending",
-    },
-  ];
+        // Get all listings for this host (exclude drafts)
+        const listingsRef = collection(db, "listings");
+        const listingsQuery = query(
+          listingsRef,
+          where("host_id", "==", userData.id),
+          where("isDraft", "==", false)
+        );
+        const listingsSnap = await getDocs(listingsQuery);
+        const listings = listingsSnap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
 
-  const recentMessages = [
-    {
-      id: 1,
-      guest: "Emily Chen",
-      message: "Is late check-in available?",
-      time: "2 hours ago",
-      unread: true,
-    },
-    {
-      id: 2,
-      guest: "David Lee",
-      message: "Thank you for the wonderful stay!",
-      time: "5 hours ago",
-      unread: false,
-    },
-    {
-      id: 3,
-      guest: "Anna Park",
-      message: "Can I book for an extra day?",
-      time: "1 day ago",
-      unread: true,
-    },
-  ];
+        // Get all bookings for host's listings
+        const bookingsRef = collection(db, "bookings");
+        const listingIds = listings.map((l) => l.id);
 
-  const listingPerformance = [
-    {
-      name: "Beachfront Villa",
-      type: "Stay",
-      views: 342,
-      bookings: 8,
-      revenue: 3600,
-      rating: 4.9,
-    },
-    {
-      name: "Mountain Hiking Tour",
-      type: "Experience",
-      views: 218,
-      bookings: 12,
-      revenue: 1440,
-      rating: 4.7,
-    },
-    {
-      name: "Photography Service",
-      type: "Service",
-      views: 156,
-      bookings: 4,
-      revenue: 800,
-      rating: 5.0,
-    },
-  ];
+        let allBookings = [];
+        if (listingIds.length > 0) {
+          const bookingsQuery = query(
+            bookingsRef,
+            where("listing_id", "in", listingIds)
+          );
+          const bookingsSnap = await getDocs(bookingsQuery);
+          allBookings = bookingsSnap.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+        }
+
+        // Get conversations for this host
+        const conversationsRef = collection(db, "conversations");
+        const conversationsQuery = query(conversationsRef);
+        const conversationsSnap = await getDocs(conversationsQuery);
+        const userConversations = conversationsSnap.docs
+          .filter((doc) => doc.data().participants?.includes(userData.id))
+          .map((doc) => ({ id: doc.id, ...doc.data() }));
+
+        // Get recent messages
+        const messagesWithDetails = await Promise.all(
+          userConversations.map(async (conv) => {
+            const guestId = conv.participants?.find((id) => id !== userData.id);
+            const guestRef = doc(db, "users", guestId);
+            const guestSnap = await getDoc(guestRef);
+            const guestData = guestSnap.data();
+
+            return {
+              id: conv.id,
+              guest: guestData?.fullName || "Unknown",
+              message: conv.lastMessage || "No messages",
+              time: conv.updatedAt
+                ? new Date(conv.updatedAt.toDate()).toLocaleString()
+                : "Just now",
+              unread: false,
+            };
+          })
+        );
+
+        // Calculate stats
+        const confirmedBookings = allBookings.filter(
+          (b) => b.status === "confirmed"
+        );
+        const totalEarnings = confirmedBookings.reduce(
+          (sum, b) => sum + (b.totalAmount || 0),
+          0
+        );
+        const avgRating =
+          listings.length > 0
+            ? (
+                listings.reduce((sum, l) => sum + (l.rating || 0), 0) /
+                listings.length
+              ).toFixed(1)
+            : 0;
+
+        // Get upcoming bookings (next 5 confirmed bookings)
+        const upcomingBookingsData = await Promise.all(
+          confirmedBookings.slice(0, 5).map(async (booking) => {
+            const listingRef = doc(db, "listings", booking.listing_id);
+            const listingSnap = await getDoc(listingRef);
+            const listingData = listingSnap.data();
+
+            const guestRef = doc(db, "users", booking.guest_id);
+            const guestSnap = await getDoc(guestRef);
+            const guestData = guestSnap.data();
+
+            const getTypeLabel = (type) => {
+              if (type === "stays") return "Stay";
+              if (type === "experiences") return "Experience";
+              if (type === "services") return "Service";
+              return "Booking";
+            };
+
+            return {
+              id: booking.id,
+              guest: guestData?.fullName || "Unknown",
+              property: listingData?.title || "Unknown",
+              type: getTypeLabel(listingData?.type),
+              checkIn: booking.checkIn
+                ? new Date(booking.checkIn.toDate()).toLocaleDateString()
+                : booking.selectedDate || "N/A",
+              checkOut: booking.checkOut
+                ? new Date(booking.checkOut.toDate()).toLocaleDateString()
+                : booking.selectedDate || "N/A",
+              amount: booking.totalAmount || 0,
+              status: booking.status,
+            };
+          })
+        );
+
+        // Get listing performance
+        const listingPerformanceData = listings.slice(0, 5).map((listing) => {
+          const listingBookings = allBookings.filter(
+            (b) => b.listing_id === listing.id && b.status === "confirmed"
+          );
+          const revenue = listingBookings.reduce(
+            (sum, b) => sum + (b.totalAmount || 0),
+            0
+          );
+
+          const getTypeLabel = (type) => {
+            if (type === "stays") return "Stay";
+            if (type === "experiences") return "Experience";
+            if (type === "services") return "Service";
+            return "Listing";
+          };
+
+          return {
+            name: listing.title,
+            type: getTypeLabel(listing.type),
+            views: listing.views || 0,
+            bookings: listingBookings.length,
+            revenue: revenue,
+            rating: listing.rating || 0,
+          };
+        });
+
+        setStats({
+          totalEarnings,
+          earningsChange: 12.5,
+          totalBookings: allBookings.length,
+          bookingsChange: 8.3,
+          activeListings: listings.length,
+          listingsChange: 2,
+          avgRating: parseFloat(avgRating),
+          ratingChange: 0.2,
+        });
+
+        setUpcomingBookings(upcomingBookingsData);
+        setRecentMessages(messagesWithDetails);
+        setListingPerformance(listingPerformanceData);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [userData]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -219,7 +315,7 @@ export default function HostDashboard({ isVerified, user }) {
               </span>
             </div>
             <h3 className="text-2xl font-bold text-indigo-100">
-              ${stats.totalEarnings.toLocaleString()}
+              ₱{stats.totalEarnings.toLocaleString()}
             </h3>
             <p className="text-indigo-300/70 text-sm mt-1">Total Earnings</p>
           </div>
@@ -347,7 +443,7 @@ export default function HostDashboard({ isVerified, user }) {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-indigo-100">
-                      ${booking.amount}
+                      ₱{booking.amount.toLocaleString()}
                     </p>
                     <p className="text-xs text-indigo-300/50">{booking.type}</p>
                   </div>
@@ -454,7 +550,7 @@ export default function HostDashboard({ isVerified, user }) {
                     </td>
                     <td className="py-4 px-4">
                       <span className="text-sm font-semibold text-green-400">
-                        ${listing.revenue.toLocaleString()}
+                        ₱{listing.revenue.toLocaleString()}
                       </span>
                     </td>
                     <td className="py-4 px-4">

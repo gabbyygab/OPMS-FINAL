@@ -133,6 +133,7 @@ const defaultCenter = [14.5995, 120.9842];
 export default function HostMyStays({ user, userData }) {
   const { isVerified } = useAuth();
   const [listings, setListings] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [marker, setMarker] = useState(null);
 
   const handleActionWithVerification = (action) => {
@@ -185,6 +186,7 @@ export default function HostMyStays({ user, userData }) {
   //rendering of data
   const getHostListing = async () => {
     try {
+      setIsLoading(true);
       const listingRef = collection(db, "listings");
       const q = query(
         listingRef,
@@ -218,6 +220,8 @@ export default function HostMyStays({ user, userData }) {
       setListings(data);
     } catch (error) {
       console.error(error);
+    } finally {
+      setIsLoading(false);
     }
   };
   useEffect(() => {
@@ -710,66 +714,66 @@ export default function HostMyStays({ user, userData }) {
         </div>
 
         {/* Stats Cards */}
-        <div className="flex flex-wrap md:flex-nowrap gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {/* Total Stays */}
-          <div className="flex-1 bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 p-6 border border-indigo-500/20 backdrop-blur-sm hover:border-indigo-500/40 transition">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 p-6 border border-indigo-500/20 backdrop-blur-sm hover:border-indigo-500/40 transition">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-indigo-300/70 text-sm font-medium">Total Stays</p>
+                <p className="text-indigo-300/70 text-sm">Total Stays</p>
                 <h3 className="text-2xl font-bold text-indigo-100 mt-1">
                   {listings.length}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-600/30 to-indigo-500/20 rounded-lg flex items-center justify-center border border-indigo-500/30">
+              <div className="w-12 h-12 bg-indigo-500/20 rounded-lg flex items-center justify-center border border-indigo-500/30">
                 <Home className="w-6 h-6 text-indigo-400" />
               </div>
             </div>
           </div>
 
-          {/* Total Bookings */}
-          <div className="flex-1 bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 p-6 border border-indigo-500/20 backdrop-blur-sm hover:border-indigo-500/40 transition">
+          {/* Active Listings */}
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-green-500/10 p-6 border border-green-500/20 backdrop-blur-sm hover:border-green-500/40 transition">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-indigo-300/70 text-sm font-medium">Total Bookings</p>
-                <h3 className="text-2xl font-bold text-indigo-100 mt-1">
-                  {listings.length}
+                <p className="text-green-300/70 text-sm">Active Listings</p>
+                <h3 className="text-2xl font-bold text-green-100 mt-1">
+                  {listings.filter((s) => s.status === "active").length}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-orange-600/30 to-orange-500/20 rounded-lg flex items-center justify-center border border-orange-500/30">
+              <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center border border-green-500/30">
+                <Eye className="w-6 h-6 text-green-400" />
+              </div>
+            </div>
+          </div>
+
+          {/* Total Bookings */}
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-orange-500/10 p-6 border border-orange-500/20 backdrop-blur-sm hover:border-orange-500/40 transition">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-orange-300/70 text-sm">Total Bookings</p>
+                <h3 className="text-2xl font-bold text-orange-100 mt-1">
+                  {listings.reduce((sum, stay) => sum + (stay.bookingCount || 0), 0)}
+                </h3>
+              </div>
+              <div className="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center border border-orange-500/30">
                 <Calendar className="w-6 h-6 text-orange-400" />
               </div>
             </div>
           </div>
 
-          {/* Active Listings */}
-          <div className="flex-1 bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 p-6 border border-indigo-500/20 backdrop-blur-sm hover:border-indigo-500/40 transition">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-indigo-300/70 text-sm font-medium">Active Listings</p>
-                <h3 className="text-2xl font-bold text-indigo-100 mt-1">
-                  {listings.filter((s) => s.status === "active").length}
-                </h3>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-emerald-600/30 to-emerald-500/20 rounded-lg flex items-center justify-center border border-emerald-500/30">
-                <Eye className="w-6 h-6 text-emerald-400" />
-              </div>
-            </div>
-          </div>
-
           {/* Total Revenue */}
-          <div className="flex-1 bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 p-6 border border-indigo-500/20 backdrop-blur-sm hover:border-indigo-500/40 transition">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-pink-500/10 p-6 border border-pink-500/20 backdrop-blur-sm hover:border-pink-500/40 transition">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-indigo-300/70 text-sm font-medium">Total Revenue</p>
-                <h3 className="text-2xl font-bold text-indigo-100 mt-1">
+                <p className="text-pink-300/70 text-sm">Total Revenue</p>
+                <h3 className="text-2xl font-bold text-pink-100 mt-1">
                   ₱
                   {listings
                     .reduce((sum, stay) => sum + (stay.revenue || 0), 0)
                     .toLocaleString()}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-rose-600/30 to-rose-500/20 rounded-lg flex items-center justify-center border border-rose-500/30">
-                <DollarSign className="w-6 h-6 text-rose-400" />
+              <div className="w-12 h-12 bg-pink-500/20 rounded-lg flex items-center justify-center border border-pink-500/30">
+                <DollarSign className="w-6 h-6 text-pink-400" />
               </div>
             </div>
           </div>
@@ -804,7 +808,19 @@ export default function HostMyStays({ user, userData }) {
         </div>
 
         {/* Stays Grid */}
-        {filteredStays.length === 0 ? (
+        {isLoading ? (
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 p-12 border border-indigo-500/20 backdrop-blur-sm text-center">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
+            </div>
+            <h3 className="text-xl font-semibold text-indigo-100 mb-2">
+              Loading your stays...
+            </h3>
+            <p className="text-indigo-300/60">
+              Please wait while we fetch your listings
+            </p>
+          </div>
+        ) : filteredStays.length === 0 ? (
           <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 p-12 border border-indigo-500/20 backdrop-blur-sm text-center">
             <Home className="w-16 h-16 text-indigo-400/30 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-indigo-100 mb-2">
