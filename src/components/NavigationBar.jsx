@@ -1585,7 +1585,7 @@ const GuestSimpleNavBar = ({ user, userData, handleLogout }) => {
 
 // ========== MAIN COMPONENT ==========
 
-export default function NavigationBar({ userData, user }) {
+export default function NavigationBar({ userData, user, forceSimpleNavBar = false }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -1598,7 +1598,7 @@ export default function NavigationBar({ userData, user }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isGuest = userData?.role === "guest";
+  const isGuest = userData?.role === "guest" || forceSimpleNavBar;
   const isHost = userData?.role === "host";
 
   const handleLogout = async () => {
@@ -1959,8 +1959,8 @@ export default function NavigationBar({ userData, user }) {
     return <GuestTabNavigation user={user} userData={userData} handleLogout={handleLogout} />;
   }
 
-  // ========== GUEST SIMPLE NAVBAR (for guest users on non-home pages) ==========
-  if (isGuest && user && location.pathname !== ROUTES.GUEST.HOME && location.pathname.startsWith("/guest")) {
+  // ========== SIMPLE NAVBAR (for profile and messages pages, or guest non-home pages) ==========
+  if (user && (location.pathname.includes("/profile") || location.pathname.includes("/messages")) || forceSimpleNavBar) {
     return <GuestSimpleNavBar user={user} userData={userData} handleLogout={handleLogout} />;
   }
 

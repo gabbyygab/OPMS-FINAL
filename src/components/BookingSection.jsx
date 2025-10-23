@@ -130,10 +130,67 @@ function formatRange(fromDate, toDate) {
 
   return "Availability not specified";
 }
+
+// Format availability based on listing type - returns array of formatted strings
+function formatAvailability(listing) {
+  if (!listing) return [];
+
+  // Handle stays - availableDates is array of { startDate, endDate }
+  if (listing.type === "stays" && Array.isArray(listing.availableDates) && listing.availableDates.length > 0) {
+    return listing.availableDates
+      .map((range) => {
+        const startDate = parseToDate(range.startDate);
+        const endDate = parseToDate(range.endDate);
+        if (startDate && endDate) {
+          return formatRange(startDate, endDate);
+        }
+        return null;
+      })
+      .filter((item) => item !== null);
+  }
+
+  // Handle experiences - availableDates is array of { date, time }
+  if (listing.type === "experiences" && Array.isArray(listing.availableDates) && listing.availableDates.length > 0) {
+    return listing.availableDates
+      .map((dateItem) => {
+        if (dateItem.date) {
+          const dateObj = parseToDate(dateItem.date);
+          if (dateObj) {
+            const dateStr = dateObj.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            });
+            const timeStr = dateItem.time ? ` at ${dateItem.time}` : "";
+            return `${dateStr}${timeStr}`;
+          }
+        }
+        return null;
+      })
+      .filter((item) => item !== null);
+  }
+
+  // Handle services - availableDates is array of { startDate, endDate }
+  if (listing.type === "services" && Array.isArray(listing.availableDates) && listing.availableDates.length > 0) {
+    return listing.availableDates
+      .map((range) => {
+        const startDate = parseToDate(range.startDate);
+        const endDate = parseToDate(range.endDate);
+        if (startDate && endDate) {
+          return formatRange(startDate, endDate);
+        }
+        return null;
+      })
+      .filter((item) => item !== null);
+  }
+
+  return [];
+}
 export default function BookingsSection({ userData, isFavoritePage }) {
   const [listings, setListings] = useState([]);
   const [selectedListing, setSelectedListing] = useState(null); // for modal
   const [searchParams] = useSearchParams();
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   // Get active filter from URL params (set by navbar tabs)
   const activeFilter = searchParams.get("type") || "stays";
@@ -156,6 +213,19 @@ export default function BookingsSection({ userData, isFavoritePage }) {
     checkOut: searchParams.get("checkOut") || "",
     guests: parseInt(searchParams.get("guests") || "1"),
   };
+
+  // Track mouse position for interactive gradient background
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      setMousePosition({
+        x: (e.clientX / window.innerWidth) * 100,
+        y: (e.clientY / window.innerHeight) * 100,
+      });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
 
   // Clear filters function
   const clearFilters = () => {
@@ -424,269 +494,306 @@ export default function BookingsSection({ userData, isFavoritePage }) {
   const currentListings = activeList.slice(indexOfFirst, indexOfLast);
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="absolute inset-0 bg-[url('/guestBg.png')] bg-cover bg-center opacity-5"></div>
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 lg:pt-32 pb-8">
-        {!isVerified && (
-          <VerificationBanner
-            handleVerification={handleVerification}
-            userData={userData}
-          />
-        )}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            {isFavoritePage
-              ? "My Favorites"
-              : activeFilter === "stays"
-              ? "Explore Homes"
-              : activeFilter === "experiences"
-              ? "Explore Experiences"
-              : "Explore Services"}
-          </h1>
-          <p className="text-slate-300">
-            {!isFavoritePage
-              ? "Browse all available listings from hosts and providers"
-              : ""}
-          </p>
-        </div>
+    <div className="relative w-screen min-h-screen bg-slate-900 overflow-x-hidden -ml-[calc((100vw-100%)/2)] -mt-32">
+      {/* Interactive Mouse-Following Gradient Background */}
+      <div
+        className="absolute inset-0 transition-all duration-100 ease-out"
+        style={{
+          background: `radial-gradient(
+            circle at ${mousePosition.x}% ${mousePosition.y}%,
+            rgba(99, 102, 241, 0.15) 0%,
+            rgba(168, 85, 247, 0.10) 25%,
+            rgba(59, 130, 246, 0.05) 50%,
+            rgba(15, 23, 42, 0) 100%
+          ),
+          linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)`,
+        }}
+      ></div>
 
-        {/* Active Filters Display */}
-        {(searchFilters.location ||
-          searchFilters.checkIn ||
-          searchFilters.checkOut ||
-          searchFilters.guests > 1) && (
-          <div className="mb-6 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3 flex-wrap">
-                {searchFilters.location && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-600/20 border border-indigo-500/50 rounded-full text-sm text-indigo-300">
-                    <MapPin className="w-3 h-3" />
-                    {searchFilters.location}
-                  </span>
-                )}
-                {searchFilters.checkIn && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-600/20 border border-emerald-500/50 rounded-full text-sm text-emerald-300">
-                    <Calendar className="w-3 h-3" />
-                    Check-in:{" "}
-                    {new Date(searchFilters.checkIn).toLocaleDateString()}
-                  </span>
-                )}
-                {searchFilters.checkOut && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600/20 border border-blue-500/50 rounded-full text-sm text-blue-300">
-                    <Calendar className="w-3 h-3" />
-                    Check-out:{" "}
-                    {new Date(searchFilters.checkOut).toLocaleDateString()}
-                  </span>
-                )}
-                {searchFilters.guests > 1 && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-600/20 border border-amber-500/50 rounded-full text-sm text-amber-300">
-                    <Users className="w-3 h-3" />
-                    {searchFilters.guests} guests
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={clearFilters}
-                className="text-sm text-slate-400 hover:text-slate-200 underline transition"
-              >
-                Clear Filters
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Group listings by city */}
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <div className="text-center">
-              <div className="relative w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                {/* Outer ring */}
-                <div className="absolute inset-0 rounded-full border-4 border-slate-700"></div>
-                {/* Rotating border */}
-                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-500 border-r-indigo-500 animate-spin"></div>
-                {/* Center dot */}
-                <div className="absolute w-2 h-2 bg-indigo-500 rounded-full"></div>
-              </div>
-              <p className="text-white text-lg font-semibold">
-                Loading Listings
+      {/* Static gradient overlay for depth */}
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-transparent to-slate-900/30"></div>
+      <div className="mt-28">
+        <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="pt-20 sm:pt-24 lg:pt-28 pb-12">
+            {!isVerified && (
+              <VerificationBanner
+                handleVerification={handleVerification}
+                userData={userData}
+              />
+            )}
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-white mb-2">
+                {isFavoritePage
+                  ? "My Favorites"
+                  : activeFilter === "stays"
+                  ? "Explore Homes"
+                  : activeFilter === "experiences"
+                  ? "Explore Experiences"
+                  : "Explore Services"}
+              </h1>
+              <p className="text-slate-300">
+                {!isFavoritePage
+                  ? "Browse all available listings from hosts and providers"
+                  : ""}
               </p>
-              <p className="text-slate-400 text-sm mt-1">Please wait...</p>
             </div>
-          </div>
-        ) : currentListings.length > 0 ? (
-          Object.entries(groupListingsByCity(currentListings)).map(
-            ([city, cityListings]) => (
-              <div key={city} className="mb-12">
-                <div className="flex items-center gap-3 mb-6">
-                  <MapPin className="w-6 h-6 text-indigo-400" />
-                  <h2 className="text-2xl font-bold text-white">{city}</h2>
-                  <span className="ml-auto text-sm text-slate-400">
-                    {cityListings.length}{" "}
-                    {cityListings.length === 1 ? "listing" : "listings"}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {cityListings.map((listing) => {
-                    const raw = listing.availableDate || {};
-                    const fromDate = parseToDate(raw.from);
-                    const toDate = parseToDate(raw.to);
-                    const availabilityText = formatRange(fromDate, toDate);
 
-                    return (
-                      <div
-                        key={listing.id}
-                        className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 overflow-hidden hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 flex flex-col h-full group"
-                      >
-                        <div className="relative overflow-hidden">
-                          {listing.photos && listing.photos.length > 0 ? (
-                            <img
-                              src={listing.photos[0]}
-                              alt={listing.title || "Listing"}
-                              className="w-full h-60 object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          ) : (
-                            <div className="w-full h-60 bg-slate-900 flex items-center justify-center text-slate-500">
-                              No Image
-                            </div>
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          <button
-                            onClick={() =>
-                              toggleFavorite(
-                                listing.id,
-                                userData.id,
-                                isFavoritePage ? setFavorites : setListings,
-                                isFavoritePage
-                              )
-                            }
-                            className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-sm p-2.5 rounded-full hover:bg-slate-900 transition-all hover:scale-110"
+            {/* Active Filters Display */}
+            {(searchFilters.location ||
+              searchFilters.checkIn ||
+              searchFilters.checkOut ||
+              searchFilters.guests > 1) && (
+              <div className="mb-6 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {searchFilters.location && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-600/20 border border-indigo-500/50 rounded-full text-sm text-indigo-300">
+                        <MapPin className="w-3 h-3" />
+                        {searchFilters.location}
+                      </span>
+                    )}
+                    {searchFilters.checkIn && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-600/20 border border-emerald-500/50 rounded-full text-sm text-emerald-300">
+                        <Calendar className="w-3 h-3" />
+                        Check-in:{" "}
+                        {new Date(searchFilters.checkIn).toLocaleDateString()}
+                      </span>
+                    )}
+                    {searchFilters.checkOut && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600/20 border border-blue-500/50 rounded-full text-sm text-blue-300">
+                        <Calendar className="w-3 h-3" />
+                        Check-out:{" "}
+                        {new Date(searchFilters.checkOut).toLocaleDateString()}
+                      </span>
+                    )}
+                    {searchFilters.guests > 1 && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-600/20 border border-amber-500/50 rounded-full text-sm text-amber-300">
+                        <Users className="w-3 h-3" />
+                        {searchFilters.guests} guests
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={clearFilters}
+                    className="text-sm text-slate-400 hover:text-slate-200 underline transition"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Group listings by city */}
+            {loading ? (
+              <div className="flex items-center justify-center py-24">
+                <div className="text-center">
+                  <div className="relative w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                    {/* Outer ring */}
+                    <div className="absolute inset-0 rounded-full border-4 border-slate-700"></div>
+                    {/* Rotating border */}
+                    <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-500 border-r-indigo-500 animate-spin"></div>
+                    {/* Center dot */}
+                    <div className="absolute w-2 h-2 bg-indigo-500 rounded-full"></div>
+                  </div>
+                  <p className="text-white text-lg font-semibold">
+                    Loading Listings
+                  </p>
+                  <p className="text-slate-400 text-sm mt-1">Please wait...</p>
+                </div>
+              </div>
+            ) : currentListings.length > 0 ? (
+              Object.entries(groupListingsByCity(currentListings)).map(
+                ([city, cityListings]) => (
+                  <div key={city} className="mb-12">
+                    <div className="flex items-center gap-3 mb-6">
+                      <MapPin className="w-6 h-6 text-indigo-400" />
+                      <h2 className="text-2xl font-bold text-white">{city}</h2>
+                      <span className="ml-auto text-sm text-slate-400">
+                        {cityListings.length}{" "}
+                        {cityListings.length === 1 ? "listing" : "listings"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {cityListings.map((listing) => {
+                        const availabilityText = formatAvailability(listing);
+
+                        return (
+                          <div
+                            key={listing.id}
+                            className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 overflow-hidden hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 flex flex-col h-full group"
                           >
-                            <Heart
-                              className={`w-5 h-5 transition-all ${
-                                listing.isFavorite
-                                  ? "fill-red-500 text-red-500"
-                                  : "text-slate-300 hover:text-red-400"
-                              }`}
-                            />
-                          </button>
-                        </div>
-
-                        <div className="p-5 flex flex-col h-full">
-                          <div className="flex-1">
-                            <h3 className="text-lg font-bold text-white truncate mb-2">
-                              {listing.title || "Untitled Listing"}
-                            </h3>
-                            <div className="flex items-center text-slate-300 text-sm mt-2">
-                              <MapPin className="w-4 h-4 mr-1.5 text-indigo-400" />
-                              {listing.location || "Unknown Location"}
-                            </div>
-                            <div className="flex items-center text-slate-400 text-sm mt-2">
-                              <Calendar className="w-4 h-4 mr-1.5 text-emerald-400" />
-                              {availabilityText}
-                            </div>
-                            <div className="flex items-center text-slate-400 text-sm mt-2">
-                              <Users className="w-4 h-4 mr-1.5 text-amber-400" />
-                              Max Guests: {listing.numberOfGuests || 1}
-                            </div>
-                          </div>
-
-                          <div className="mt-4 pt-4 border-t border-slate-700">
-                            <div className="flex items-center justify-between mb-4">
-                              <div>
-                                <span className="text-xs text-slate-400 block">
-                                  Starting at
-                                </span>
-                                <span className="text-2xl font-bold text-white">
-                                  ₱{(parseFloat(listing.price) || 0).toFixed(2)}
-                                </span>
-                              </div>
-                              <div className="flex items-center bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">
-                                <Star className="w-4 h-4 mr-1 fill-amber-400 text-amber-400" />
-                                <span className="text-amber-400 font-semibold text-sm">
-                                  {listing.rating || "New"}
-                                </span>
-                              </div>
-                            </div>
-
-                            <button
-                              onClick={() => {
-                                if (!isVerified) {
-                                  return toast.warning(
-                                    "Please verify to use this feature!",
-                                    { position: "top-right" }
-                                  );
+                            <div className="relative overflow-hidden">
+                              {listing.photos && listing.photos.length > 0 ? (
+                                <img
+                                  src={listing.photos[0]}
+                                  alt={listing.title || "Listing"}
+                                  className="w-full h-60 object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                              ) : (
+                                <div className="w-full h-60 bg-slate-900 flex items-center justify-center text-slate-500">
+                                  No Image
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                              <button
+                                onClick={() =>
+                                  toggleFavorite(
+                                    listing.id,
+                                    userData.id,
+                                    isFavoritePage ? setFavorites : setListings,
+                                    isFavoritePage
+                                  )
                                 }
-                                navigate(
-                                  `/guest/listing-details/${listing.type}/${listing.id}`
-                                );
-                              }}
-                              className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40"
-                            >
-                              Book Now
-                            </button>
+                                className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-sm p-2.5 rounded-full hover:bg-slate-900 transition-all hover:scale-110"
+                              >
+                                <Heart
+                                  className={`w-5 h-5 transition-all ${
+                                    listing.isFavorite
+                                      ? "fill-red-500 text-red-500"
+                                      : "text-slate-300 hover:text-red-400"
+                                  }`}
+                                />
+                              </button>
+                            </div>
+
+                            <div className="p-5 flex flex-col h-full">
+                              <div className="flex-1">
+                                <h3 className="text-lg font-bold text-white truncate mb-2">
+                                  {listing.title || "Untitled Listing"}
+                                </h3>
+                                <div className="flex items-center text-slate-300 text-sm mt-2">
+                                  <MapPin className="w-4 h-4 mr-1.5 text-indigo-400" />
+                                  {listing.location || "Unknown Location"}
+                                </div>
+                                <div className="text-slate-400 text-sm mt-2">
+                                  <div className="flex items-center mb-1">
+                                    <Calendar className="w-4 h-4 mr-1.5 text-emerald-400" />
+                                    <span className="font-medium">Available Dates</span>
+                                  </div>
+                                  {availabilityText.length > 0 ? (
+                                    <div className="space-y-1 ml-5">
+                                      {availabilityText.map((date, idx) => (
+                                        <div key={idx} className="text-slate-300 text-xs">
+                                          • {date}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="text-slate-500 text-xs ml-5">
+                                      No availability
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex items-center text-slate-400 text-sm mt-2">
+                                  <Users className="w-4 h-4 mr-1.5 text-amber-400" />
+                                  Max Guests: {listing.numberOfGuests || 1}
+                                </div>
+                              </div>
+
+                              <div className="mt-4 pt-4 border-t border-slate-700">
+                                <div className="flex items-center justify-between mb-4">
+                                  <div>
+                                    <span className="text-xs text-slate-400 block">
+                                      Starting at
+                                    </span>
+                                    <span className="text-2xl font-bold text-white">
+                                      ₱
+                                      {(parseFloat(listing.price) || 0).toFixed(
+                                        2
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">
+                                    <Star className="w-4 h-4 mr-1 fill-amber-400 text-amber-400" />
+                                    <span className="text-amber-400 font-semibold text-sm">
+                                      {listing.rating || "New"}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <button
+                                  onClick={() => {
+                                    if (!isVerified) {
+                                      return toast.warning(
+                                        "Please verify to use this feature!",
+                                        { position: "top-right" }
+                                      );
+                                    }
+                                    navigate(
+                                      `/guest/listing-details/${listing.type}/${listing.id}`
+                                    );
+                                  }}
+                                  className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40"
+                                >
+                                  Book Now
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  </div>
+                )
+              )
+            ) : (
+              <div className="flex items-center justify-center py-24">
+                <div className="text-center">
+                  <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-12">
+                    <p className="text-slate-300 text-lg font-medium">
+                      {isFavoritePage
+                        ? "No Favorites Available"
+                        : "No listings available."}
+                    </p>
+                    <p className="text-slate-500 text-sm mt-2">
+                      {isFavoritePage
+                        ? "Start adding listings to your favorites"
+                        : "Check back later for new listings"}
+                    </p>
+                  </div>
                 </div>
               </div>
-            )
-          )
-        ) : (
-          <div className="flex items-center justify-center py-24">
-            <div className="text-center">
-              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-12">
-                <p className="text-slate-300 text-lg font-medium">
-                  {isFavoritePage
-                    ? "No Favorites Available"
-                    : "No listings available."}
-                </p>
-                <p className="text-slate-500 text-sm mt-2">
-                  {isFavoritePage
-                    ? "Start adding listings to your favorites"
-                    : "Check back later for new listings"}
-                </p>
+            )}
+
+            {/* ✅ Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-8">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-800 hover:border-slate-600 transition-all font-medium"
+                >
+                  Prev
+                </button>
+
+                {[...Array(totalPages)].map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentPage(idx + 1)}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      currentPage === idx + 1
+                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30"
+                        : "bg-slate-800/50 border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-slate-600"
+                    }`}
+                  >
+                    {idx + 1}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(p + 1, totalPages))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-800 hover:border-slate-600 transition-all font-medium"
+                >
+                  Next
+                </button>
               </div>
-            </div>
+            )}
           </div>
-        )}
-
-        {/* ✅ Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2 mt-8">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-800 hover:border-slate-600 transition-all font-medium"
-            >
-              Prev
-            </button>
-
-            {[...Array(totalPages)].map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setCurrentPage(idx + 1)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  currentPage === idx + 1
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30"
-                    : "bg-slate-800/50 border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-slate-600"
-                }`}
-              >
-                {idx + 1}
-              </button>
-            ))}
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-800 hover:border-slate-600 transition-all font-medium"
-            >
-              Next
-            </button>
-          </div>
-        )}
-      </main>
+        </main>
+      </div>
       {selectedListing && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
           <div className="bg-slate-800/90 backdrop-blur-lg border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
@@ -715,18 +822,28 @@ export default function BookingsSection({ userData, isFavoritePage }) {
               <Users className="w-4 h-4 mr-1.5 text-amber-400" />
               Max Guests: {selectedListing.numberOfGuests || 1}
             </div>
-            {selectedListing.availableDate && (
-              <div className="flex items-center text-slate-400 text-sm mt-2">
+            <div className="text-slate-400 text-sm mt-2">
+              <div className="flex items-center mb-2">
                 <Calendar className="w-4 h-4 mr-1.5 text-emerald-400" />
-                Available:{" "}
-                <span className="font-medium text-slate-300 ml-1">
-                  {formatRange(
-                    parseToDate(selectedListing.availableDate.from),
-                    parseToDate(selectedListing.availableDate.to)
-                  )}
-                </span>
+                <span className="font-medium">Available Dates</span>
               </div>
-            )}
+              {(() => {
+                const dates = formatAvailability(selectedListing);
+                return dates.length > 0 ? (
+                  <div className="space-y-1 ml-5">
+                    {dates.map((date, idx) => (
+                      <div key={idx} className="text-slate-300 text-xs">
+                        • {date}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-slate-500 text-xs ml-5">
+                    No availability
+                  </div>
+                );
+              })()}
+            </div>
             <div className="flex flex-col gap-4 mt-6">
               <div>
                 <label className="text-sm text-slate-300 font-medium block mb-2">

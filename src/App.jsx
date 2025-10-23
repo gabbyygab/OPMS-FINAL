@@ -1,6 +1,7 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import { useAuth } from "./context/AuthContext";
+import { useEffect } from "react";
 import {
   ProtectedRoute,
   PublicRoute,
@@ -56,6 +57,17 @@ import {
 } from "./pages/admin";
 import DraftsPage from "./pages/host/DraftsPage";
 
+// Scroll to top on route change
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
 function App() {
   const { user, userData, loading } = useAuth();
 
@@ -63,6 +75,7 @@ function App() {
 
   return (
     <div>
+      <ScrollToTop />
       <Routes>
         {/* ========== ROOT / LANDING ========== */}
         <Route

@@ -17,6 +17,7 @@ import {
   Upload,
   Bed,
   Bath,
+  Gift,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -162,6 +163,14 @@ export default function HostMyStays({ user, userData }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDateRangeModal, setShowDateRangeModal] = useState(false);
+  const [dateRangeState, setDateRangeState] = useState([
+    {
+      startDate: new Date(),
+      endDate: new Date(),
+      key: "selection",
+    },
+  ]);
   const [selectedListing, setSelectedListing] = useState(null);
   const [formData, setFormData] = useState({
     title: "",
@@ -177,6 +186,7 @@ export default function HostMyStays({ user, userData }) {
     discount: { type: "percentage", value: "" },
     description: "",
     houseRules: [], // ✅ added
+    promoCode: "", // ✅ added
   });
 
   const [suggestions, setSuggestions] = useState([]);
@@ -344,6 +354,47 @@ export default function HostMyStays({ user, userData }) {
     toast.success("Date range added");
   };
 
+  // Handler for adding date range from modal picker
+  const addDateRangeFromModal = () => {
+    const startDate = dateRangeState[0]?.startDate;
+    const endDate = dateRangeState[0]?.endDate;
+
+    if (!startDate || !endDate) {
+      toast.warning("Please select both start and end dates");
+      return;
+    }
+
+    if (startDate > endDate) {
+      toast.warning("Start date must be before end date");
+      return;
+    }
+
+    // Convert dates to YYYY-MM-DD format for storage
+    const startStr = startDate.toISOString().split("T")[0];
+    const endStr = endDate.toISOString().split("T")[0];
+
+    const dateRangeObj = {
+      startDate: startStr,
+      endDate: endStr,
+    };
+
+    setFormData({
+      ...formData,
+      availableDates: [...formData.availableDates, dateRangeObj],
+    });
+
+    // Reset the modal state
+    setDateRangeState([
+      {
+        startDate: new Date(),
+        endDate: new Date(),
+        key: "selection",
+      },
+    ]);
+    setShowDateRangeModal(false);
+    toast.success("Date range added");
+  };
+
   const removeAvailableDate = (index) => {
     setFormData({
       ...formData,
@@ -406,6 +457,7 @@ export default function HostMyStays({ user, userData }) {
         photos: imageUrls && imageUrls.length > 0 ? imageUrls : [],
         availableDates: Array.isArray(formData.availableDates) ? formData.availableDates : [],
         bookedDates: [],
+        promoCode: formData.promoCode || null,
         discount: {
           type: formData.discount?.type || "percentage",
           value: Number(formData.discount?.value) || 0,
@@ -472,6 +524,7 @@ export default function HostMyStays({ user, userData }) {
       discount: { type: "percentage", value: "" },
       description: "",
       houseRules: [],
+      promoCode: "",
     });
     setPreviewImages([]);
     setImageFiles([]);
@@ -543,6 +596,7 @@ export default function HostMyStays({ user, userData }) {
         bookedDates: Array.isArray(formData.bookedDates)
           ? formData.bookedDates
           : (selectedListing.bookedDates || []),
+        promoCode: formData.promoCode || null,
         discount: {
           type: formData.discount?.type || "percentage",
           value: Number(formData.discount?.value) || 0,
@@ -642,6 +696,7 @@ export default function HostMyStays({ user, userData }) {
       amenities: selectedListing.amenities || [],
       description: selectedListing.description || "",
       photos: selectedListing.photos || [],
+      promoCode: selectedListing.promoCode || "",
     });
 
     // Optional: Set markers for map if you have location coordinates
@@ -1062,36 +1117,15 @@ export default function HostMyStays({ user, userData }) {
                   Available Date Ranges
                 </label>
 
-                {/* Add Date Range Section */}
-                <div className="mb-4 bg-slate-700/30 border border-indigo-500/20 rounded-lg p-4">
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                      <label className="text-xs font-medium text-indigo-300 block mb-2">Start Date</label>
-                      <input
-                        type="date"
-                        value={newDateRangeStart}
-                        onChange={(e) => setNewDateRangeStart(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-indigo-300 block mb-2">End Date</label>
-                      <input
-                        type="date"
-                        value={newDateRangeEnd}
-                        onChange={(e) => setNewDateRangeEnd(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addDateRange}
-                    className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition font-medium text-sm"
-                  >
-                    Add Date Range
-                  </button>
-                </div>
+                {/* Open Date Range Picker Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowDateRangeModal(true)}
+                  className="w-full mb-4 px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white rounded-lg transition font-medium flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Select Date Range
+                </button>
 
                 {/* Display Date Ranges List */}
                 {formData.availableDates && formData.availableDates.length > 0 ? (
@@ -1251,6 +1285,26 @@ export default function HostMyStays({ user, userData }) {
                     className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
                   />
                 </div>
+              </div>
+
+              {/* Promo Code */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
+                  <Gift className="w-4 h-4 inline mr-1" />
+                  Promo Code (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.promoCode}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      promoCode: e.target.value.toUpperCase(),
+                    })
+                  }
+                  placeholder="e.g., SUMMER20"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                />
               </div>
 
               {/* Amenities */}
@@ -1546,36 +1600,15 @@ export default function HostMyStays({ user, userData }) {
                   Available Date Ranges
                 </label>
 
-                {/* Add Date Range Section */}
-                <div className="mb-4 bg-slate-700/30 border border-indigo-500/20 rounded-lg p-4">
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                      <label className="text-xs font-medium text-indigo-300 block mb-2">Start Date</label>
-                      <input
-                        type="date"
-                        value={newDateRangeStart}
-                        onChange={(e) => setNewDateRangeStart(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-indigo-300 block mb-2">End Date</label>
-                      <input
-                        type="date"
-                        value={newDateRangeEnd}
-                        onChange={(e) => setNewDateRangeEnd(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addDateRange}
-                    className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition font-medium text-sm"
-                  >
-                    Add Date Range
-                  </button>
-                </div>
+                {/* Open Date Range Picker Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowDateRangeModal(true)}
+                  className="w-full mb-4 px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white rounded-lg transition font-medium flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Select Date Range
+                </button>
 
                 {/* Display Date Ranges List */}
                 {formData.availableDates && formData.availableDates.length > 0 ? (
@@ -1736,6 +1769,26 @@ export default function HostMyStays({ user, userData }) {
                 </div>
               </div>
 
+              {/* Promo Code */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
+                  <Gift className="w-4 h-4 inline mr-1" />
+                  Promo Code (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.promoCode}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      promoCode: e.target.value.toUpperCase(),
+                    })
+                  }
+                  placeholder="e.g., SUMMER20"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                />
+              </div>
+
               {/* Amenities */}
               <div>
                 <label className="block text-sm font-medium text-indigo-300 mb-3">
@@ -1788,6 +1841,7 @@ export default function HostMyStays({ user, userData }) {
                   className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition resize-none"
                 ></textarea>
               </div>
+
               {/* House Rules */}
               <div>
                 <label className="block text-sm font-medium text-indigo-300 mb-3">
@@ -1915,6 +1969,214 @@ export default function HostMyStays({ user, userData }) {
               >
                 <Save className="w-5 h-5" />
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Date Range Picker Modal */}
+      {showDateRangeModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-xl p-5 border border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-indigo-400" />
+                Select Date Range
+              </h3>
+              <button
+                onClick={() => setShowDateRangeModal(false)}
+                className="text-indigo-400/60 hover:text-indigo-400 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Date Range Picker */}
+            <div className="mb-4 w-full flex justify-center">
+              <style>{`
+                .rdrCalendarWrapper {
+                  background-color: rgba(15, 23, 42, 0.8);
+                  border-radius: 12px;
+                  width: 100%;
+                  padding: 16px;
+                }
+                .rdrCalendarContainer {
+                  width: 100%;
+                }
+                .rdrMonth {
+                  width: 100%;
+                  padding: 0 10px;
+                }
+                .rdrMonths {
+                  width: 100%;
+                  display: flex;
+                  gap: 20px;
+                }
+                .rdrMonthAndYearWrapper {
+                  background-color: rgba(30, 41, 59, 0.5);
+                  border-radius: 8px;
+                  padding: 10px;
+                  margin-bottom: 12px;
+                  text-align: center;
+                  color: #a5b4fc;
+                  font-weight: 600;
+                  font-size: 14px;
+                }
+                .rdrMonthAndYearPickers button {
+                  color: #a5b4fc;
+                  padding: 2px 6px;
+                }
+                .rdrMonthAndYearPickers button:hover {
+                  background-color: rgba(79, 70, 229, 0.2);
+                }
+                .rdrDayNames {
+                  margin-bottom: 10px;
+                  display: grid;
+                  grid-template-columns: repeat(7, 1fr);
+                  gap: 3px;
+                }
+                .rdrDayName {
+                  color: #c7d2fe;
+                  font-size: 11px;
+                  font-weight: 600;
+                  text-align: center;
+                  padding: 6px 0;
+                }
+                .rdrDays {
+                  display: grid;
+                  grid-template-columns: repeat(7, 1fr);
+                  gap: 3px;
+                }
+                .rdrDayDisabled {
+                  background-color: transparent;
+                }
+                .rdrDay {
+                  height: 42px;
+                  display: flex !important;
+                  align-items: center !important;
+                  justify-content: center !important;
+                  border-radius: 6px;
+                  border: 1px solid transparent !important;
+                  cursor: pointer;
+                  position: relative;
+                  width: 100%;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                }
+                .rdrDayNumber {
+                  color: #cbd5e1;
+                  font-size: 13px;
+                  font-weight: 500;
+                  position: relative;
+                  z-index: 1;
+                  text-decoration: none !important;
+                  border: none !important;
+                  outline: none !important;
+                }
+                .rdrDayNumber span {
+                  color: #cbd5e1;
+                  text-decoration: none !important;
+                  border: none !important;
+                }
+                .rdrDayNumber::before,
+                .rdrDayNumber::after {
+                  content: none !important;
+                }
+                .rdrStartEdge {
+                  border-radius: 6px 0 0 6px !important;
+                  border: 1px solid #818cf8 !important;
+                  border-right: none !important;
+                  background-color: #6366f1 !important;
+                  width: 100% !important;
+                }
+                .rdrStartEdge::after {
+                  content: none !important;
+                }
+                .rdrEndEdge {
+                  border-radius: 0 6px 6px 0 !important;
+                  border: 1px solid #818cf8 !important;
+                  border-left: none !important;
+                  background-color: #6366f1 !important;
+                  width: 100% !important;
+                }
+                .rdrEndEdge::before {
+                  content: none !important;
+                }
+                .rdrDayStartPreview {
+                  background-color: #6366f1 !important;
+                  border-radius: 6px !important;
+                  border: 1px solid #818cf8 !important;
+                  width: 100% !important;
+                }
+                .rdrDayInPreview {
+                  background-color: rgba(99, 102, 241, 0.2) !important;
+                  border: none !important;
+                  width: 100% !important;
+                }
+                .rdrDayInPreview::before,
+                .rdrDayInPreview::after {
+                  content: none !important;
+                }
+                .rdrDayEndPreview {
+                  background-color: #6366f1 !important;
+                  border-radius: 6px !important;
+                  border: 1px solid #818cf8 !important;
+                  width: 100% !important;
+                }
+                .rdrDayInRange {
+                  background-color: rgba(99, 102, 241, 0.2) !important;
+                  border: none !important;
+                  width: 100% !important;
+                }
+                .rdrDayInRange::before,
+                .rdrDayInRange::after {
+                  content: none !important;
+                }
+                .rdrDayStartOfMonth,
+                .rdrDayEndOfMonth {
+                  background-color: transparent;
+                }
+                .rdrDaySelected {
+                  background-color: #6366f1 !important;
+                  color: #ffffff !important;
+                  border-radius: 6px !important;
+                  border: 1px solid #818cf8 !important;
+                }
+                .rdrDaySelected .rdrDayNumber {
+                  color: #ffffff !important;
+                }
+                .rdrDayStartOfWeek,
+                .rdrDayEndOfWeek {
+                  border-radius: 6px;
+                }
+              `}</style>
+              <DateRange
+                editableDateInputs={false}
+                onChange={(item) => setDateRangeState([item.selection])}
+                moveRangeOnFirstSelection={false}
+                ranges={dateRangeState}
+                months={2}
+                direction="horizontal"
+                showMonthAndYearPickers={false}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDateRangeModal(false)}
+                className="flex-1 px-4 py-2 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 hover:border-indigo-500/50 transition font-medium text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addDateRangeFromModal}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition flex items-center justify-center gap-2 font-medium text-sm shadow-lg shadow-indigo-500/20"
+              >
+                <Calendar className="w-4 h-4" />
+                Add Date Range
               </button>
             </div>
           </div>

@@ -25,7 +25,7 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
-import NavBar2 from "../components/NavigationBar";
+import NavigationBar from "../components/NavigationBar";
 import LoadingSpinner from "../loading/Loading";
 
 export default function NotificationsPage() {
@@ -192,7 +192,7 @@ export default function NotificationsPage() {
 
   return (
     <>
-      <NavBar2 user={user} userData={userData} />
+      <NavigationBar user={user} userData={userData} />
       <div className="min-h-screen bg-slate-900 pt-24 pb-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}

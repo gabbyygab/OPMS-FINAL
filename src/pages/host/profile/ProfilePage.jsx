@@ -30,7 +30,7 @@ import {
 } from "firebase/auth";
 
 import { useNavigate } from "react-router-dom";
-import NavBar2 from "../../../components/NavigationBar";
+import NavigationBar from "../../../components/NavigationBar";
 
 export default function ProfilePage() {
   //coupons
@@ -252,16 +252,21 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Top Navigation */}
 
-      <NavBar2 user={user} userData={userData} />
+      <NavigationBar user={user} userData={userData} />
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 mt-[70px]">
-        <div className="max-w-7xl mx-auto px-8 py-8">
-          <h1 className="text-4xl font-bold text-gray-900">Account</h1>
-          <p className="text-gray-600 mt-2 text-lg">
-            <span className="font-semibold">{userData.fullName}</span> ·
+      <div className="bg-gradient-to-r from-indigo-600/10 to-purple-600/10 border-b border-indigo-500/30 mt-[70px] backdrop-blur-sm relative overflow-hidden">
+        {/* Interactive Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-20 -left-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+        </div>
+        <div className="max-w-7xl mx-auto px-8 py-8 relative z-10">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Account</h1>
+          <p className="text-indigo-300/80 mt-2 text-lg">
+            <span className="font-semibold text-indigo-200">{userData.fullName}</span> ·
             {userData.email}
           </p>
         </div>
@@ -271,13 +276,13 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <nav className="space-y-2 bg-white rounded-xl p-2 shadow-sm">
+            <nav className="space-y-2 bg-slate-800/50 backdrop-blur-xl rounded-xl p-2 shadow-lg border border-indigo-500/20">
               <button
                 onClick={() => setActiveTab("personal")}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
                   activeTab === "personal"
-                    ? "bg-slate-900 text-white shadow-md"
-                    : "hover:bg-gray-100 text-gray-700"
+                    ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg"
+                    : "hover:bg-indigo-500/10 text-indigo-200 hover:text-white"
                 }`}
               >
                 <User className="w-5 h-5" />
@@ -288,8 +293,8 @@ export default function ProfilePage() {
                 onClick={() => setActiveTab("security")}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
                   activeTab === "security"
-                    ? "bg-slate-900 text-white shadow-md"
-                    : "hover:bg-gray-100 text-gray-700"
+                    ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg"
+                    : "hover:bg-indigo-500/10 text-indigo-200 hover:text-white"
                 }`}
               >
                 <Shield className="w-5 h-5" />
@@ -301,8 +306,8 @@ export default function ProfilePage() {
                   onClick={() => setActiveTab("bookings")}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
                     activeTab === "bookings"
-                      ? "bg-slate-900 text-white shadow-md"
-                      : "hover:bg-gray-100 text-gray-700"
+                      ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg"
+                      : "hover:bg-indigo-500/10 text-indigo-200 hover:text-white"
                   }`}
                 >
                   <Calendar className="w-5 h-5" />
@@ -312,9 +317,9 @@ export default function ProfilePage() {
                 <button
                   onClick={() => setActiveTab("coupons")}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
-                    activeTab === "bookings"
-                      ? "bg-slate-900 text-white shadow-md"
-                      : "hover:bg-gray-100 text-gray-700"
+                    activeTab === "coupons"
+                      ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg"
+                      : "hover:bg-indigo-500/10 text-indigo-200 hover:text-white"
                   }`}
                 >
                   <Ticket className="w-5 h-5" />
@@ -327,18 +332,24 @@ export default function ProfilePage() {
           {/* Main Content */}
           <div className="lg:col-span-2">
             {activeTab === "personal" && (
-              <div className="bg-white rounded-xl shadow-sm p-8 relative">
+              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-xl shadow-2xl p-8 relative border border-indigo-500/20 overflow-hidden">
+                {/* Interactive Background */}
+                <div className="absolute inset-0 overflow-hidden">
+                  <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl"></div>
+                  <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/10 rounded-full blur-2xl"></div>
+                </div>
+
                 {/* Profile Picture Section */}
-                <div className="flex flex-col items-center mb-8">
+                <div className="flex flex-col items-center mb-8 relative z-10">
                   <div className="relative">
                     <img
                       src={formData.photoURL || "/default-avatar.png"}
                       alt="Profile"
-                      className="w-32 h-32 rounded-full object-cover border-4 border-indigo-500 shadow-md"
+                      className="w-32 h-32 rounded-full object-cover border-4 border-indigo-500 shadow-lg ring-4 ring-indigo-500/20"
                     />
                     <label
                       htmlFor="profileImageUpload"
-                      className="absolute bottom-0 right-0 bg-indigo-600 text-white rounded-full p-2 cursor-pointer hover:bg-indigo-700 transition"
+                      className="absolute bottom-0 right-0 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-full p-2 cursor-pointer hover:from-indigo-700 hover:to-indigo-600 transition shadow-lg"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -382,23 +393,23 @@ export default function ProfilePage() {
                       }}
                     />
                   </div>
-                  <p className="text-sm text-gray-600 mt-3">
+                  <p className="text-sm text-indigo-300/70 mt-3">
                     Click the edit icon to change your photo
                   </p>
                 </div>
 
                 {/* Personal Info Form */}
-                <div className="mb-8">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                <div className="mb-8 relative z-10">
+                  <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent mb-2">
                     Personal info
                   </h2>
-                  <p className="text-gray-600">Update your personal details</p>
+                  <p className="text-indigo-200/70">Update your personal details</p>
                 </div>
 
-                <form className="space-y-5">
+                <form className="space-y-5 relative z-10">
                   {/* Full Name */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                    <label className="block text-sm font-medium text-indigo-200 mb-2">
                       Legal name
                     </label>
                     <input
@@ -406,13 +417,13 @@ export default function ProfilePage() {
                       name="fullName"
                       value={formData.fullName}
                       onChange={handleChange}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
                     />
                   </div>
 
                   {/* Email */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                    <label className="block text-sm font-medium text-indigo-200 mb-2">
                       Email address
                     </label>
                     <input
@@ -420,13 +431,13 @@ export default function ProfilePage() {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
                     />
                   </div>
 
                   {/* Phone */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                    <label className="block text-sm font-medium text-indigo-200 mb-2">
                       Phone number
                     </label>
                     <input
@@ -434,13 +445,13 @@ export default function ProfilePage() {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
                     />
                   </div>
 
                   {/* Address */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                    <label className="block text-sm font-medium text-indigo-200 mb-2">
                       Address
                     </label>
                     <input
@@ -448,7 +459,7 @@ export default function ProfilePage() {
                       name="address"
                       value={formData.address}
                       onChange={handleChange}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
                     />
                   </div>
 
@@ -458,7 +469,7 @@ export default function ProfilePage() {
                       type="button"
                       onClick={handleSaveChanges}
                       disabled={isSaving}
-                      className={`flex items-center gap-2 bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700 transition ${
+                      className={`flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-semibold px-6 py-2.5 rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition shadow-lg ${
                         isSaving ? "opacity-70 cursor-not-allowed" : ""
                       }`}
                     >
@@ -471,62 +482,68 @@ export default function ProfilePage() {
             )}
 
             {activeTab === "security" && (
-              <div className="bg-white rounded-xl shadow-sm p-8">
-                <div className="mb-8">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-xl shadow-2xl p-8 relative border border-indigo-500/20 overflow-hidden">
+                {/* Interactive Background */}
+                <div className="absolute inset-0 overflow-hidden">
+                  <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl"></div>
+                  <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/10 rounded-full blur-2xl"></div>
+                </div>
+
+                <div className="mb-8 relative z-10">
+                  <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent mb-2">
                     Login & security
                   </h2>
-                  <p className="text-gray-600">
+                  <p className="text-indigo-200/70">
                     Update your password and secure your account
                   </p>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-6 relative z-10">
                   {!isGoogleUser && (
-                    <div className="border border-gray-200 rounded-xl p-6">
-                      <h3 className="text-xl font-bold text-gray-900 mb-6">
+                    <div className="border border-indigo-500/30 rounded-xl p-6 bg-slate-700/30 backdrop-blur-sm">
+                      <h3 className="text-xl font-bold text-indigo-300 mb-6">
                         Password
                       </h3>
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          <label className="block text-sm font-semibold text-indigo-200 mb-2">
                             Current password
                           </label>
                           <input
                             type="password"
                             id="password"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                            className="w-full px-4 py-3 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
                             placeholder="Enter current password"
                             onChange={(e) => setCurrentPassword(e.target.value)}
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          <label className="block text-sm font-semibold text-indigo-200 mb-2">
                             New password
                           </label>
                           <input
                             type="password"
                             id="newPassword"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                            className="w-full px-4 py-3 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
                             placeholder="Enter new password"
                             onChange={(e) => setNewPassword(e.target.value)}
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          <label className="block text-sm font-semibold text-indigo-200 mb-2">
                             Confirm new password
                           </label>
                           <input
                             type="password"
                             id="confirmPassword"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                            className="w-full px-4 py-3 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
                             placeholder="Confirm new password"
                             onChange={(e) => setConfirmPassword(e.target.value)}
                           />
                         </div>
                         <button
                           onClick={handlePasswordUpdate}
-                          className="px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-semibold shadow-md hover:shadow-lg"
+                          className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg"
                         >
                           Update password
                         </button>
@@ -535,11 +552,11 @@ export default function ProfilePage() {
                   )}
 
                   {isGoogleUser && (
-                    <div className="border border-gray-200 rounded-xl p-6 bg-gray-50 text-gray-600">
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    <div className="border border-indigo-500/30 rounded-xl p-6 bg-slate-700/30 backdrop-blur-sm">
+                      <h3 className="text-xl font-bold text-indigo-300 mb-2">
                         Password
                       </h3>
-                      <p>
+                      <p className="text-indigo-200/70">
                         You signed in using <strong>Google</strong>. Password
                         changes are managed through your Google account
                         settings.
@@ -548,20 +565,20 @@ export default function ProfilePage() {
                         href="https://myaccount.google.com/security"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-block mt-3 px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-semibold shadow-md hover:shadow-lg"
+                        className="inline-block mt-3 px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg"
                       >
                         Manage in Google Account
                       </a>
                     </div>
                   )}
-                  <div className="border border-gray-200 rounded-xl p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-4">
+                  <div className="border border-indigo-500/30 rounded-xl p-6 bg-slate-700/30 backdrop-blur-sm">
+                    <h3 className="text-xl font-bold text-indigo-300 mb-4">
                       Account management
                     </h3>
                     <div className="space-y-3">
                       <button
                         onClick={handleDeleteAccount}
-                        className="text-red-600 hover:underline font-semibold"
+                        className="text-red-400 hover:text-red-300 hover:underline font-semibold transition"
                       >
                         Delete your account
                       </button>
@@ -572,35 +589,41 @@ export default function ProfilePage() {
             )}
 
             {activeTab === "bookings" && userData.role === "guest" && (
-              <div className="bg-white rounded-xl shadow-sm p-8">
-                <div className="mb-8">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                    Trips
-                  </h2>
-                  <p className="text-gray-600">View and manage your bookings</p>
+              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-xl shadow-2xl p-8 relative border border-indigo-500/20 overflow-hidden">
+                {/* Interactive Background */}
+                <div className="absolute inset-0 overflow-hidden">
+                  <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl"></div>
+                  <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/10 rounded-full blur-2xl"></div>
                 </div>
 
-                <div className="space-y-6">
+                <div className="mb-8 relative z-10">
+                  <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent mb-2">
+                    Trips
+                  </h2>
+                  <p className="text-indigo-200/70">View and manage your bookings</p>
+                </div>
+
+                <div className="space-y-6 relative z-10">
                   {bookings.map((booking) => (
                     <div
                       key={booking.id}
-                      className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg hover:border-gray-300 transition-all"
+                      className="border border-indigo-500/30 rounded-xl overflow-hidden hover:shadow-2xl hover:border-indigo-500/50 transition-all bg-slate-700/20 backdrop-blur-sm"
                     >
                       <div className="flex flex-col md:flex-row gap-6 p-6">
                         <img
                           src={booking.image}
                           alt={booking.property}
-                          className="w-full md:w-48 h-48 md:h-36 object-cover rounded-lg flex-shrink-0"
+                          className="w-full md:w-48 h-48 md:h-36 object-cover rounded-lg flex-shrink-0 ring-2 ring-indigo-500/30"
                         />
 
                         <div className="flex-1 flex flex-col justify-between">
                           <div>
                             <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
                               <div>
-                                <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                                <h3 className="text-2xl font-bold text-indigo-100 mb-1">
                                   {booking.property}
                                 </h3>
-                                <p className="text-gray-600 flex items-center gap-1.5">
+                                <p className="text-indigo-200/70 flex items-center gap-1.5">
                                   <MapPin className="w-4 h-4" />
                                   {booking.location}
                                 </p>
@@ -608,15 +631,15 @@ export default function ProfilePage() {
                               <span
                                 className={`px-4 py-1.5 rounded-full text-sm font-semibold ${
                                   booking.status === "Upcoming"
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-gray-100 text-gray-600"
+                                    ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                                    : "bg-slate-600/30 text-slate-300 border border-slate-500/30"
                                 }`}
                               >
                                 {booking.status}
                               </span>
                             </div>
 
-                            <div className="flex items-center gap-6 text-gray-600 mb-4">
+                            <div className="flex items-center gap-6 text-indigo-200/70 mb-4">
                               <span className="flex items-center gap-2">
                                 <Calendar className="w-4 h-4" />
                                 <span className="text-sm font-medium">
@@ -633,10 +656,10 @@ export default function ProfilePage() {
                           </div>
 
                           <div className="flex gap-3 flex-wrap">
-                            <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-semibold shadow-md hover:shadow-lg">
+                            <button className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg">
                               View reservation
                             </button>
-                            <button className="px-6 py-2.5 border-2 border-slate-900 text-slate-900 rounded-lg hover:bg-slate-900 hover:text-white transition-all font-semibold">
+                            <button className="px-6 py-2.5 border-2 border-indigo-500/50 text-indigo-200 rounded-lg hover:bg-indigo-500/20 hover:border-indigo-400 transition-all font-semibold">
                               Get help
                             </button>
                           </div>
@@ -649,21 +672,27 @@ export default function ProfilePage() {
             )}
 
             {activeTab === "coupons" && userData.role === "host" && (
-              <div className="bg-white rounded-xl shadow-sm p-8 max-h-[500px] overflow-y-auto">
-                <div className="mb-8">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-xl shadow-2xl p-8 max-h-[500px] overflow-y-auto relative border border-indigo-500/20">
+                {/* Interactive Background */}
+                <div className="absolute inset-0 overflow-hidden">
+                  <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl"></div>
+                  <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/10 rounded-full blur-2xl"></div>
+                </div>
+
+                <div className="mb-8 relative z-10">
+                  <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent mb-2">
                     Coupons & Discounts
                   </h2>
-                  <p className="text-gray-600">
+                  <p className="text-indigo-200/70">
                     Manage your active coupons and promotions
                   </p>
                 </div>
 
                 {/* Add Coupon Button */}
-                <div className="mb-8">
+                <div className="mb-8 relative z-10">
                   <button
                     onClick={() => setShowAddModal(true)}
-                    className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-semibold shadow-md hover:shadow-lg"
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg"
                   >
                     <Plus className="w-5 h-5" />
                     Add Coupon
@@ -671,9 +700,9 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Active Coupons Section */}
-                <div className="mb-10">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <Tag className="w-5 h-5 text-green-600" />
+                <div className="mb-10 relative z-10">
+                  <h3 className="text-xl font-bold text-indigo-300 mb-4 flex items-center gap-2">
+                    <Tag className="w-5 h-5 text-green-400" />
                     Active Coupons ({activeCoupons.length})
                   </h3>
 
@@ -682,45 +711,45 @@ export default function ProfilePage() {
                       {activeCoupons.map((coupon) => (
                         <div
                           key={coupon.id}
-                          className="border border-green-200 bg-green-50 rounded-lg p-5 flex items-center justify-between hover:shadow-md transition-all"
+                          className="border border-green-500/30 bg-green-500/10 rounded-lg p-5 flex items-center justify-between hover:shadow-lg hover:border-green-500/50 transition-all backdrop-blur-sm"
                         >
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
-                              <span className="text-lg font-bold text-slate-900 bg-white px-4 py-2 rounded-lg border-2 border-slate-900">
+                              <span className="text-lg font-bold text-indigo-200 bg-slate-700/50 px-4 py-2 rounded-lg border-2 border-indigo-500/50">
                                 {coupon.code}
                               </span>
                               <div className="flex items-center gap-2">
                                 {coupon.type === "percentage" ? (
                                   <>
-                                    <Percent className="w-5 h-5 text-green-600" />
-                                    <span className="text-2xl font-bold text-green-600">
+                                    <Percent className="w-5 h-5 text-green-400" />
+                                    <span className="text-2xl font-bold text-green-400">
                                       {coupon.discount}%
                                     </span>
                                   </>
                                 ) : (
                                   <>
-                                    <DollarSign className="w-5 h-5 text-green-600" />
-                                    <span className="text-2xl font-bold text-green-600">
+                                    <DollarSign className="w-5 h-5 text-green-400" />
+                                    <span className="text-2xl font-bold text-green-400">
                                       ${coupon.discount}
                                     </span>
                                   </>
                                 )}
                               </div>
                             </div>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-indigo-200/70">
                               Expires: {coupon.expiryDate}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => toggleCouponStatus(coupon.id)}
-                              className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium"
+                              className="px-4 py-2 bg-slate-700/50 border border-indigo-500/30 text-indigo-200 rounded-lg hover:bg-slate-700 hover:border-indigo-500/50 transition-all font-medium"
                             >
                               Deactivate
                             </button>
                             <button
                               onClick={() => deleteCoupon(coupon.id)}
-                              className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all"
+                              className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all border border-red-500/30"
                             >
                               <Trash2 className="w-5 h-5" />
                             </button>
@@ -729,8 +758,8 @@ export default function ProfilePage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
-                      <p className="text-gray-500">
+                    <div className="border border-dashed border-indigo-500/30 rounded-lg p-6 text-center bg-slate-700/20 backdrop-blur-sm">
+                      <p className="text-indigo-200/70">
                         No active coupons. Add one to get started!
                       </p>
                     </div>
@@ -739,9 +768,9 @@ export default function ProfilePage() {
 
                 {/* Inactive Coupons Section */}
                 {inactiveCoupons.length > 0 && (
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <Tag className="w-5 h-5 text-gray-400" />
+                  <div className="relative z-10">
+                    <h3 className="text-xl font-bold text-indigo-300 mb-4 flex items-center gap-2">
+                      <Tag className="w-5 h-5 text-slate-400" />
                       Inactive Coupons ({inactiveCoupons.length})
                     </h3>
 
@@ -749,45 +778,45 @@ export default function ProfilePage() {
                       {inactiveCoupons.map((coupon) => (
                         <div
                           key={coupon.id}
-                          className="border border-gray-200 bg-gray-50 rounded-lg p-5 flex items-center justify-between hover:shadow-md transition-all opacity-75"
+                          className="border border-slate-500/20 bg-slate-700/10 rounded-lg p-5 flex items-center justify-between hover:shadow-lg hover:border-slate-500/30 transition-all opacity-75 backdrop-blur-sm"
                         >
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
-                              <span className="text-lg font-bold text-gray-500 bg-white px-4 py-2 rounded-lg border-2 border-gray-300">
+                              <span className="text-lg font-bold text-slate-400 bg-slate-700/50 px-4 py-2 rounded-lg border-2 border-slate-500/30">
                                 {coupon.code}
                               </span>
                               <div className="flex items-center gap-2">
                                 {coupon.type === "percentage" ? (
                                   <>
-                                    <Percent className="w-5 h-5 text-gray-400" />
-                                    <span className="text-2xl font-bold text-gray-400">
+                                    <Percent className="w-5 h-5 text-slate-400" />
+                                    <span className="text-2xl font-bold text-slate-400">
                                       {coupon.discount}%
                                     </span>
                                   </>
                                 ) : (
                                   <>
-                                    <DollarSign className="w-5 h-5 text-gray-400" />
-                                    <span className="text-2xl font-bold text-gray-400">
+                                    <DollarSign className="w-5 h-5 text-slate-400" />
+                                    <span className="text-2xl font-bold text-slate-400">
                                       ${coupon.discount}
                                     </span>
                                   </>
                                 )}
                               </div>
                             </div>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-slate-400">
                               Expires: {coupon.expiryDate}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => toggleCouponStatus(coupon.id)}
-                              className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-medium"
+                              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-medium"
                             >
                               Activate
                             </button>
                             <button
                               onClick={() => deleteCoupon(coupon.id)}
-                              className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all"
+                              className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all border border-red-500/30"
                             >
                               <Trash2 className="w-5 h-5" />
                             </button>
@@ -800,15 +829,15 @@ export default function ProfilePage() {
 
                 {/* Add Coupon Modal */}
                 {showAddModal && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                  <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-2xl max-w-md w-full p-6 border border-indigo-500/30">
                       <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-2xl font-bold text-gray-900">
+                        <h3 className="text-2xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">
                           Add Coupon
                         </h3>
                         <button
                           onClick={() => setShowAddModal(false)}
-                          className="text-gray-500 hover:text-gray-700"
+                          className="text-indigo-300/70 hover:text-indigo-300 transition"
                         >
                           <X className="w-6 h-6" />
                         </button>
@@ -816,7 +845,7 @@ export default function ProfilePage() {
 
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          <label className="block text-sm font-semibold text-indigo-200 mb-2">
                             Coupon Code
                           </label>
                           <input
@@ -826,13 +855,13 @@ export default function ProfilePage() {
                               setFormData({ ...formData, code: e.target.value })
                             }
                             placeholder="e.g., SUMMER20"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                            className="w-full px-4 py-2.5 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
                           />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            <label className="block text-sm font-semibold text-indigo-200 mb-2">
                               Discount Value
                             </label>
                             <input
@@ -845,12 +874,12 @@ export default function ProfilePage() {
                                 })
                               }
                               placeholder="e.g., 20"
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                              className="w-full px-4 py-2.5 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            <label className="block text-sm font-semibold text-indigo-200 mb-2">
                               Type
                             </label>
                             <select
@@ -861,7 +890,7 @@ export default function ProfilePage() {
                                   type: e.target.value,
                                 })
                               }
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                              className="w-full px-4 py-2.5 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
                             >
                               <option value="percentage">Percentage</option>
                               <option value="fixed">Fixed</option>
@@ -870,7 +899,7 @@ export default function ProfilePage() {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          <label className="block text-sm font-semibold text-indigo-200 mb-2">
                             Expiry Date
                           </label>
                           <input
@@ -882,7 +911,7 @@ export default function ProfilePage() {
                                 expiryDate: e.target.value,
                               })
                             }
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                            className="w-full px-4 py-2.5 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
                           />
                         </div>
                       </div>
@@ -890,13 +919,13 @@ export default function ProfilePage() {
                       <div className="flex gap-3 mt-6">
                         <button
                           onClick={() => setShowAddModal(false)}
-                          className="flex-1 px-4 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-semibold"
+                          className="flex-1 px-4 py-2.5 border-2 border-indigo-500/30 text-indigo-200 rounded-lg hover:bg-indigo-500/10 hover:border-indigo-500/50 transition-all font-semibold"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={handleAddCoupon}
-                          className="flex-1 px-4 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-semibold"
+                          className="flex-1 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg"
                         >
                           Add Coupon
                         </button>

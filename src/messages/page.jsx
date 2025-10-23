@@ -84,7 +84,7 @@ export default function MessagesPage() {
               return {
                 id: conv.id,
                 name: otherUser.fullName || "Unknown",
-                avatar: otherUser.photoURL || "/default-avatar.png",
+                avatar: otherUser.photoURL || "/profile-placeholder.png",
                 lastMessage: conv.lastMessage || "",
                 time: conv.updatedAt
                   ? conv.updatedAt.toDate().toLocaleTimeString([], {
@@ -206,7 +206,7 @@ export default function MessagesPage() {
   }, [messages]);
   return (
     <div className="flex flex-col h-screen bg-slate-900">
-      <NavigationBar user={user} userData={userData} />
+      <NavigationBar user={user} userData={userData} forceSimpleNavBar={true} />
 
       <div className="flex flex-1 overflow-hidden mt-[70px]">
         {/* Sidebar - Hidden on mobile when viewing chat */}
@@ -238,7 +238,7 @@ export default function MessagesPage() {
                 }`}
               >
                 <img
-                  src={conv.avatar || null}
+                  src={conv.avatar || "/profile-placeholder.png"}
                   alt={conv.name || ""}
                   className="w-12 lg:w-14 h-12 lg:h-14 rounded-full object-cover flex-shrink-0"
                 />
@@ -279,8 +279,8 @@ export default function MessagesPage() {
             </button>
 
             <img
-              src={hostData.photoURL}
-              alt={hostData.fullName}
+              src={hostData.photoURL || "/profile-placeholder.png"}
+              alt={hostData.fullName || "User"}
               className="w-10 lg:w-14 h-10 lg:h-14 rounded-full object-cover ring-2 ring-indigo-500/30 flex-shrink-0"
             />
             <div className="flex-1 min-w-0">

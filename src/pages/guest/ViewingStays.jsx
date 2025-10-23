@@ -22,11 +22,15 @@ import {
   User,
   Facebook,
   Instagram,
+  Gift,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { DateRange } from "react-date-range";
+import "react-date-range/dist/styles.css";
+import "react-date-range/dist/theme/default.css";
 import { db } from "../../firebase/firebase";
 import {
   doc,
@@ -135,8 +139,17 @@ export default function ListingDetailPage() {
   const [checkIn, setCheckIn] = useState("2025-11-28");
   const [checkOut, setCheckOut] = useState("2025-11-30");
   const [guests, setGuests] = useState(2);
+  const [promoCode, setPromoCode] = useState("");
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dateRange, setDateRange] = useState([
+    {
+      startDate: new Date(2025, 10, 28),
+      endDate: new Date(2025, 10, 30),
+      key: "selection",
+    },
+  ]);
   const [listingData, setListingData] = useState({});
   const [reviewsData, setReviewsData] = useState([]);
   const [walletBalance, setWalletBalance] = useState(0);
@@ -222,7 +235,9 @@ export default function ListingDetailPage() {
     }
 
     // Check if selected dates fall within available date ranges
-    const availableDates = Array.isArray(listingData.availableDates) ? listingData.availableDates : [];
+    const availableDates = Array.isArray(listingData.availableDates)
+      ? listingData.availableDates
+      : [];
     const isWithinAvailable = availableDates.some((range) => {
       const rangeStart = new Date(range.startDate);
       const rangeEnd = new Date(range.endDate);
@@ -275,8 +290,13 @@ export default function ListingDetailPage() {
         checkIn: checkInDate,
         checkOut: checkOutDate,
         guests: guests,
-        totalAmount: grandTotal,
+        baseAmount: basePrice,
+        discountAmount: discountAmount,
+        discountType: isValidPromo ? listingData.discount?.type || null : null,
+        totalAmount: totalPrice,
         serviceFee: serviceFee,
+        grandTotal: grandTotal,
+        promoCode: promoCode || null,
         status: "pending",
         createdAt: serverTimestamp(),
       };
@@ -287,7 +307,9 @@ export default function ListingDetailPage() {
         host_id: listingData.host_id,
         type: "booking",
         title: "New Booking",
-        message: `${userData.fullName || "A guest"} has booked your ${listingData.title} for ${checkIn} to ${checkOut}`,
+        message: `${userData.fullName || "A guest"} has booked your ${
+          listingData.title
+        } for ${checkIn} to ${checkOut}`,
         listing_id: listing_id,
         booking_id: bookingRef.id,
         guest_id: userData.id,
@@ -321,8 +343,51 @@ export default function ListingDetailPage() {
     return diffDays;
   };
 
+  // Date picker handler
+  const formatDateForDisplay = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const handleDateRangeChange = (ranges) => {
+    setDateRange([ranges.selection]);
+  };
+
+  const handleApplyDates = () => {
+    const start = dateRange[0].startDate.toISOString().split("T")[0];
+    const end = dateRange[0].endDate.toISOString().split("T")[0];
+    if (start < end) {
+      setCheckIn(start);
+      setCheckOut(end);
+      setShowDatePicker(false);
+    }
+  };
+
   const nights = calculateNights();
-  const totalPrice = nights * listingData.price;
+  const basePrice = nights * listingData.price;
+
+  // Calculate discount if promo code matches
+  let discountAmount = 0;
+  let isValidPromo = false;
+
+  if (promoCode && listingData.promoCode && promoCode.trim().toUpperCase() === listingData.promoCode.toUpperCase()) {
+    isValidPromo = true;
+    const discount = listingData.discount;
+
+    if (discount) {
+      if (discount.type === "percentage") {
+        discountAmount = basePrice * (discount.value / 100);
+      } else if (discount.type === "fixed") {
+        discountAmount = discount.value;
+      }
+    }
+  }
+
+  const totalPrice = basePrice - discountAmount;
   const serviceFee = totalPrice * 0.1;
   const grandTotal = totalPrice + serviceFee;
 
@@ -450,7 +515,10 @@ export default function ListingDetailPage() {
 
       // If coordinates already exist, don't fetch
       if (listingData?.coordinates?.lat && listingData?.coordinates?.lng) {
-        setMapCenter([listingData.coordinates.lat, listingData.coordinates.lng]);
+        setMapCenter([
+          listingData.coordinates.lat,
+          listingData.coordinates.lng,
+        ]);
         return;
       }
 
@@ -472,7 +540,7 @@ export default function ListingDetailPage() {
   return (
     <div className="min-h-screen bg-slate-900">
       {/* Header */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-[70px] w-full z-40">
+      <header className="fixed top-0 left-0 right-0 bg-slate-800 border-b border-slate-700 w-full z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <button
@@ -510,7 +578,7 @@ export default function ListingDetailPage() {
         </div>
       </header>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 mt-16">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 mt-[65px]">
         {/* Verification Banner */}
         {!isVerified && (
           <div className="mb-6">
@@ -551,7 +619,8 @@ export default function ListingDetailPage() {
               >
                 <img
                   src={
-                    listingData?.photos?.[0] || "https://via.placeholder.com/800"
+                    listingData?.photos?.[0] ||
+                    "https://via.placeholder.com/800"
                   }
                   alt="Main"
                   className="w-full h-full object-cover"
@@ -793,7 +862,6 @@ export default function ListingDetailPage() {
                 ))}
               </div>
             </div>
-
           </div>
 
           {/* Booking Card */}
@@ -807,39 +875,53 @@ export default function ListingDetailPage() {
               </div>
 
               <div className="space-y-4 mb-6">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
-                    <label className="text-xs font-medium text-slate-300 block mb-1">
-                      CHECK-IN
-                    </label>
-                    <input
-                      type="date"
-                      value={checkIn}
-                      onChange={(e) => setCheckIn(e.target.value)}
-                      className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white"
-                    />
+                <button
+                  onClick={() => {
+                    setDateRange([
+                      {
+                        startDate: new Date(checkIn),
+                        endDate: new Date(checkOut),
+                        key: "selection",
+                      },
+                    ]);
+                    setShowDatePicker(true);
+                  }}
+                  className="w-full border-2 border-slate-600 rounded-xl p-4 bg-gradient-to-br from-slate-700 to-slate-800 hover:border-indigo-500/50 transition-colors cursor-pointer text-left"
+                >
+                  <label className="text-xs font-semibold text-slate-400 block mb-3 uppercase tracking-wider">
+                    <Calendar className="w-3 h-3 inline mr-1" />
+                    Select Dates
+                  </label>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-slate-500 mb-1">
+                        Check-in
+                      </div>
+                      <div className="text-sm font-semibold text-white">
+                        {formatDateForDisplay(checkIn)}
+                      </div>
+                    </div>
+                    <div className="text-slate-400">→</div>
+                    <div className="text-right">
+                      <div className="text-xs text-slate-500 mb-1">
+                        Check-out
+                      </div>
+                      <div className="text-sm font-semibold text-white">
+                        {formatDateForDisplay(checkOut)}
+                      </div>
+                    </div>
                   </div>
-                  <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
-                    <label className="text-xs font-medium text-slate-300 block mb-1">
-                      CHECKOUT
-                    </label>
-                    <input
-                      type="date"
-                      value={checkOut}
-                      onChange={(e) => setCheckOut(e.target.value)}
-                      className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white"
-                    />
-                  </div>
-                </div>
+                </button>
 
-                <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
-                  <label className="text-xs font-medium text-slate-300 block mb-1">
-                    GUESTS
+                <div className="border-2 border-slate-600 rounded-xl p-4 bg-gradient-to-br from-slate-700 to-slate-800 hover:border-indigo-500/50 transition-colors">
+                  <label className="text-xs font-semibold text-slate-400 block mb-2 uppercase tracking-wider">
+                    <Users className="w-3 h-3 inline mr-1" />
+                    Guests
                   </label>
                   <select
                     value={guests}
                     onChange={(e) => setGuests(Number(e.target.value))}
-                    className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white"
+                    className="w-full text-sm font-medium focus:outline-none rounded-lg bg-slate-600/50 text-white px-3 py-2 border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none cursor-pointer"
                   >
                     {Array.from(
                       { length: listingData?.numberOfGuests || 1 },
@@ -851,40 +933,73 @@ export default function ListingDetailPage() {
                     ))}
                   </select>
                 </div>
+
+                <div className="border-2 border-slate-600 rounded-xl p-4 bg-gradient-to-br from-slate-700 to-slate-800 hover:border-indigo-500/50 transition-colors">
+                  <label className="text-xs font-semibold text-slate-400 block mb-2 uppercase tracking-wider">
+                    <Gift className="w-3 h-3 inline mr-1" />
+                    Promo Code (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    placeholder="Enter promo code"
+                    className="w-full text-sm font-medium focus:outline-none rounded-lg bg-slate-600/50 text-white placeholder-slate-400 px-3 py-2 border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  />
+                </div>
               </div>
 
               <button
                 onClick={() =>
                   handleActionWithVerification(() => setShowBookingModal(true))
                 }
-                className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition mb-4"
+                className="w-full bg-gradient-to-r from-indigo-600 to-indigo-600 hover:from-indigo-700 hover:to-indigo-700 text-white py-3.5 rounded-xl font-semibold transition-all duration-200 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 mb-4 flex items-center justify-center gap-2"
               >
-                Reserve
+                <Calendar className="w-5 h-5" />
+                Reserve Now
               </button>
 
-              <p className="text-center text-sm text-slate-400 mb-6">
+              <p className="text-center text-xs text-slate-400 mb-6 flex items-center justify-center gap-1">
+                <Check className="w-3 h-3 text-emerald-400" />
                 You won't be charged yet
               </p>
 
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400 underline">
-                    ₱{listingData?.price?.toLocaleString() || 0} × {nights}{" "}
-                    nights
+              <div className="space-y-3 text-sm bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 backdrop-blur-sm">
+                <div className="flex items-center justify-between pb-3">
+                  <span className="text-slate-400">
+                    <span className="font-medium">
+                      ₱{listingData?.price?.toLocaleString() || 0}
+                    </span>{" "}
+                    × {nights} {nights === 1 ? "night" : "nights"}
                   </span>
-                  <span className="font-medium text-white">
-                    ₱{totalPrice?.toLocaleString() || 0}
+                  <span className="font-semibold text-white">
+                    ₱{basePrice?.toLocaleString() || 0}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400 underline">Service fee</span>
-                  <span className="font-medium text-white">
+
+                {/* Discount Row - Only show if valid promo code */}
+                {isValidPromo && discountAmount > 0 && (
+                  <div className="flex items-center justify-between pb-3 text-emerald-400">
+                    <span className="text-emerald-300/80">
+                      Discount ({listingData.discount?.type === "percentage"
+                        ? `${listingData.discount?.value}%`
+                        : "Fixed"})
+                    </span>
+                    <span className="font-semibold text-emerald-400">
+                      -₱{discountAmount?.toLocaleString() || 0}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pb-3 border-b border-slate-700/50">
+                  <span className="text-slate-400">Service fee</span>
+                  <span className="font-semibold text-white">
                     ₱{serviceFee?.toLocaleString() || 0}
                   </span>
                 </div>
-                <div className="pt-3 border-t border-slate-600 flex items-center justify-between">
-                  <span className="font-semibold text-white">Total</span>
-                  <span className="font-bold text-white text-lg">
+                <div className="flex items-center justify-between pt-2">
+                  <span className="font-semibold text-slate-100">Total</span>
+                  <span className="font-bold text-lg bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
                     ₱{grandTotal?.toLocaleString() || 0}
                   </span>
                 </div>
@@ -898,7 +1013,7 @@ export default function ListingDetailPage() {
                     )
                   )
                 }
-                className="w-full mt-6 flex items-center justify-center gap-2 py-3 border border-slate-600 rounded-lg text-slate-300 hover:bg-slate-700 transition"
+                className="w-full mt-6 flex items-center justify-center gap-2 py-3.5 border-2 border-slate-600 rounded-xl text-slate-300 hover:text-white hover:border-indigo-500/50 hover:bg-indigo-500/10 transition-all duration-200 font-medium"
               >
                 <MessageCircle className="w-4 h-4" />
                 Contact Host
@@ -995,23 +1110,49 @@ export default function ListingDetailPage() {
                 <span className="text-slate-400">Guests</span>
                 <span className="font-medium text-white">{guests}</span>
               </div>
+              {promoCode && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Promo Code</span>
+                  <span className={`font-medium ${isValidPromo ? "text-emerald-400" : "text-red-400"}`}>
+                    {promoCode} {isValidPromo ? "✓" : "✗"}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="border-t border-slate-600 pt-4 mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-slate-400">Total amount</span>
-                <span className="text-2xl font-bold text-white">
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Subtotal</span>
+                  <span className="font-medium text-white">
+                    ₱{basePrice?.toLocaleString() || 0}
+                  </span>
+                </div>
+                {isValidPromo && discountAmount > 0 && (
+                  <div className="flex items-center justify-between text-sm text-emerald-400">
+                    <span>Discount ({listingData.discount?.type === "percentage" ? `${listingData.discount?.value}%` : "Fixed"})</span>
+                    <span className="font-medium">-₱{discountAmount?.toLocaleString() || 0}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Service fee</span>
+                  <span className="font-medium text-white">
+                    ₱{serviceFee?.toLocaleString() || 0}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between mb-2 border-t border-slate-600 pt-3">
+                <span className="text-white font-semibold">Total amount</span>
+                <span className="text-2xl font-bold text-indigo-400">
                   ₱{grandTotal?.toLocaleString() || 0}
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
-                Includes ₱{serviceFee?.toLocaleString() || 0} service fee
-              </p>
             </div>
 
             <div className="mb-4 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
               <p className="text-xs text-blue-300">
-                Payment will be processed only when the host confirms your booking. No charges will be made now.
+                Payment will be processed only when the host confirms your
+                booking. No charges will be made now.
               </p>
             </div>
 
@@ -1044,13 +1185,19 @@ export default function ListingDetailPage() {
               <X className="w-5 h-5" />
             </button>
 
-            <h2 className="text-2xl font-bold text-white mb-6">Share this stay</h2>
+            <h2 className="text-2xl font-bold text-white mb-6">
+              Share this stay
+            </h2>
 
             <div className="space-y-3">
               <button
                 onClick={() => {
                   const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
-                  const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(listingData?.title || "Check out this stay")}`;
+                  const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+                    shareUrl
+                  )}&quote=${encodeURIComponent(
+                    listingData?.title || "Check out this stay"
+                  )}`;
                   window.open(facebookUrl, "_blank", "width=600,height=400");
                   setShowShareModal(false);
                 }}
@@ -1063,13 +1210,21 @@ export default function ListingDetailPage() {
               <button
                 onClick={() => {
                   const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
-                  const twitterUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(listingData?.title || "Check out this stay")}`;
+                  const twitterUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(
+                    shareUrl
+                  )}&text=${encodeURIComponent(
+                    listingData?.title || "Check out this stay"
+                  )}`;
                   window.open(twitterUrl, "_blank", "width=600,height=400");
                   setShowShareModal(false);
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition font-medium"
               >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2s9 5 20 5a9.5 9.5 0 00-9-5.5c4.75 2.25 9 0 11-4s1-8.5 0-11.5a4.5 4.5 0 00-.5-.5z" />
                 </svg>
                 Share on Twitter
@@ -1078,9 +1233,13 @@ export default function ListingDetailPage() {
               <button
                 onClick={() => {
                   const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
-                  const instagramUrl = `https://www.instagram.com/?url=${encodeURIComponent(shareUrl)}`;
+                  const instagramUrl = `https://www.instagram.com/?url=${encodeURIComponent(
+                    shareUrl
+                  )}`;
                   navigator.clipboard.writeText(shareUrl);
-                  toast.success("Link copied! You can paste it in Instagram DM");
+                  toast.success(
+                    "Link copied! You can paste it in Instagram DM"
+                  );
                   window.open(instagramUrl, "_blank", "width=600,height=400");
                   setShowShareModal(false);
                 }}
@@ -1093,7 +1252,9 @@ export default function ListingDetailPage() {
               <button
                 onClick={() => {
                   const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
-                  const messengerUrl = `https://www.facebook.com/dialog/send?app_id=YOUR_APP_ID&link=${encodeURIComponent(shareUrl)}&redirect_uri=${encodeURIComponent(shareUrl)}`;
+                  const messengerUrl = `https://www.facebook.com/dialog/send?app_id=YOUR_APP_ID&link=${encodeURIComponent(
+                    shareUrl
+                  )}&redirect_uri=${encodeURIComponent(shareUrl)}`;
                   window.open(messengerUrl, "_blank", "width=600,height=400");
                   setShowShareModal(false);
                 }}
@@ -1114,6 +1275,293 @@ export default function ListingDetailPage() {
               >
                 <Share2 className="w-5 h-5" />
                 Copy link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Date Range Picker Modal */}
+      {showDatePicker && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-xl max-h-[80vh] overflow-auto p-5 border border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-indigo-400" />
+                Select Dates
+              </h3>
+              <button
+                onClick={() => setShowDatePicker(false)}
+                className="text-indigo-400/60 hover:text-indigo-400 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Available Dates */}
+            {Array.isArray(listingData.availableDates) && listingData.availableDates.length > 0 && (
+              <div className="mb-4 p-3 bg-slate-900/50 rounded-lg border border-green-500/30">
+                <div className="text-xs font-semibold text-green-400 mb-2 flex items-center gap-1">
+                  <Check className="w-4 h-4" />
+                  Available Dates
+                </div>
+                <div className="space-y-1">
+                  {listingData.availableDates.map((range, idx) => (
+                    <div key={idx} className="text-xs text-slate-300">
+                      <span className="text-green-400 font-medium">
+                        {new Date(range.startDate).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                      <span className="text-slate-500 mx-1">→</span>
+                      <span className="text-green-400 font-medium">
+                        {new Date(range.endDate).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Date Range Picker */}
+            <div className="mb-4 w-full flex justify-center">
+              <style>{`
+                .rdrCalendarWrapper {
+                  background-color: rgba(15, 23, 42, 0.8);
+                  border-radius: 12px;
+                  width: 100%;
+                  padding: 16px;
+                }
+                .rdrCalendarContainer {
+                  width: 100%;
+                }
+                .rdrMonth {
+                  width: 100%;
+                  padding: 0 10px;
+                }
+                .rdrMonths {
+                  width: 100%;
+                  display: flex;
+                  gap: 20px;
+                }
+                .rdrMonthAndYearWrapper {
+                  background-color: rgba(30, 41, 59, 0.5);
+                  border-radius: 8px;
+                  padding: 10px;
+                  margin-bottom: 12px;
+                  text-align: center;
+                  color: #a5b4fc;
+                  font-weight: 600;
+                  font-size: 14px;
+                }
+                .rdrMonthAndYearPickers button {
+                  color: #a5b4fc;
+                  padding: 2px 6px;
+                }
+                .rdrMonthAndYearPickers button:hover {
+                  background-color: rgba(79, 70, 229, 0.2);
+                }
+                .rdrDayNames {
+                  margin-bottom: 10px;
+                  display: grid;
+                  grid-template-columns: repeat(7, 1fr);
+                  gap: 3px;
+                }
+                .rdrDayName {
+                  color: #c7d2fe;
+                  font-size: 11px;
+                  font-weight: 600;
+                  text-align: center;
+                  padding: 6px 0;
+                }
+                .rdrDays {
+                  display: grid;
+                  grid-template-columns: repeat(7, 1fr);
+                  gap: 3px;
+                }
+                .rdrDayDisabled {
+                  background-color: transparent;
+                }
+                .rdrDay {
+                  height: 42px;
+                  display: flex !important;
+                  align-items: center !important;
+                  justify-content: center !important;
+                  border-radius: 6px;
+                  border: 1px solid transparent !important;
+                  cursor: pointer;
+                  position: relative;
+                  width: 100%;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                }
+                .rdrDayNumber {
+                  color: #cbd5e1;
+                  font-size: 13px;
+                  font-weight: 500;
+                  position: relative;
+                  z-index: 1;
+                  text-decoration: none !important;
+                  border: none !important;
+                  outline: none !important;
+                }
+                .rdrDayNumber span {
+                  color: #cbd5e1;
+                  text-decoration: none !important;
+                  border: none !important;
+                }
+                .rdrDayNumber::before,
+                .rdrDayNumber::after {
+                  content: none !important;
+                }
+                .rdrStartEdge {
+                  border-radius: 6px 0 0 6px !important;
+                  border: 1px solid #818cf8 !important;
+                  border-right: none !important;
+                  background-color: #6366f1 !important;
+                  width: 100% !important;
+                }
+                .rdrStartEdge::after {
+                  content: none !important;
+                }
+                .rdrEndEdge {
+                  border-radius: 0 6px 6px 0 !important;
+                  border: 1px solid #818cf8 !important;
+                  border-left: none !important;
+                  background-color: #6366f1 !important;
+                  width: 100% !important;
+                }
+                .rdrEndEdge::before {
+                  content: none !important;
+                }
+                .rdrDayStartPreview {
+                  background-color: #6366f1 !important;
+                  border-radius: 6px !important;
+                  border: 1px solid #818cf8 !important;
+                  width: 100% !important;
+                }
+                .rdrDayInPreview {
+                  background-color: rgba(99, 102, 241, 0.2) !important;
+                  border: none !important;
+                  width: 100% !important;
+                }
+                .rdrDayInPreview::before,
+                .rdrDayInPreview::after {
+                  content: none !important;
+                }
+                .rdrDayEndPreview {
+                  background-color: #6366f1 !important;
+                  border-radius: 6px !important;
+                  border: 1px solid #818cf8 !important;
+                  width: 100% !important;
+                }
+                .rdrDayInRange {
+                  background-color: rgba(99, 102, 241, 0.2) !important;
+                  border: none !important;
+                  width: 100% !important;
+                }
+                .rdrDayInRange::before,
+                .rdrDayInRange::after {
+                  content: none !important;
+                }
+                .rdrDayStartOfMonth,
+                .rdrDayEndOfMonth {
+                  background-color: transparent;
+                }
+                .rdrDaySelected {
+                  background-color: #6366f1 !important;
+                  color: #ffffff !important;
+                  border-radius: 6px !important;
+                  border: 1px solid #818cf8 !important;
+                }
+                .rdrDaySelected .rdrDayNumber {
+                  color: #ffffff !important;
+                }
+                .rdrDayStartOfWeek,
+                .rdrDayEndOfWeek {
+                  border-radius: 6px;
+                }
+                /* Scrollbar Styling */
+                div:has(> .DateRange)::-webkit-scrollbar {
+                  width: 8px;
+                }
+                div:has(> .DateRange)::-webkit-scrollbar-track {
+                  background-color: rgba(30, 41, 59, 0.5);
+                  border-radius: 10px;
+                }
+                div:has(> .DateRange)::-webkit-scrollbar-thumb {
+                  background: linear-gradient(180deg, #6366f1 0%, #818cf8 100%);
+                  border-radius: 10px;
+                  border: 2px solid rgba(30, 41, 59, 0.5);
+                }
+                div:has(> .DateRange)::-webkit-scrollbar-thumb:hover {
+                  background: linear-gradient(180deg, #818cf8 0%, #a5b4fc 100%);
+                }
+              `}</style>
+              <DateRange
+                editableDateInputs={false}
+                onChange={handleDateRangeChange}
+                moveRangeOnFirstSelection={false}
+                ranges={dateRange}
+                months={2}
+                direction="horizontal"
+                showMonthAndYearPickers={false}
+              />
+            </div>
+
+            {/* Selected dates summary */}
+            <div className="mb-4 p-3 bg-slate-900/50 rounded-lg border border-indigo-500/20">
+              <div className="flex items-center justify-between text-sm">
+                <div>
+                  <div className="text-xs text-slate-400 mb-1">Check-in</div>
+                  <div className="text-sm font-semibold text-white">
+                    {dateRange[0].startDate.toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </div>
+                </div>
+                <div className="text-slate-500">→</div>
+                <div className="text-right">
+                  <div className="text-xs text-slate-400 mb-1">Check-out</div>
+                  <div className="text-sm font-semibold text-white">
+                    {dateRange[0].endDate.toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div className="text-xs text-slate-400 text-center mt-2">
+                {Math.ceil(
+                  (dateRange[0].endDate - dateRange[0].startDate) /
+                    (1000 * 60 * 60 * 24)
+                )}{" "}
+                nights
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDatePicker(false)}
+                className="flex-1 px-4 py-2 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 hover:border-indigo-500/50 transition font-medium text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApplyDates}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition flex items-center justify-center gap-2 font-medium text-sm shadow-lg shadow-indigo-500/20"
+              >
+                <Calendar className="w-4 h-4" />
+                Apply Dates
               </button>
             </div>
           </div>
