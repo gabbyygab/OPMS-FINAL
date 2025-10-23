@@ -14,7 +14,8 @@
       "Bash(git checkout:*)",
       "Bash(findstr:*)",
       "Bash(del nul)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

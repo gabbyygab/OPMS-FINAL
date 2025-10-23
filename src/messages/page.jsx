@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import NavBar2 from "../components/NavigationBarForPandM";
+import NavigationBar from "../components/NavigationBar";
 import { toast } from "react-toastify";
 import { getDoc, doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase/firebase";
@@ -17,7 +17,7 @@ import { useAuth } from "../context/AuthContext";
 import { listenToMessages } from "../firebase/messagesService";
 
 export default function MessagesPage() {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const { user_id, host_id } = useParams();
   const [hostData, setHostData] = useState({});
   const [conversations, setConversations] = useState([]);
@@ -206,7 +206,7 @@ export default function MessagesPage() {
   }, [messages]);
   return (
     <div className="flex flex-col h-screen bg-slate-900">
-      <NavBar2 />
+      <NavigationBar user={user} userData={userData} />
 
       <div className="flex flex-1 overflow-hidden mt-[70px]">
         {/* Sidebar - Hidden on mobile when viewing chat */}

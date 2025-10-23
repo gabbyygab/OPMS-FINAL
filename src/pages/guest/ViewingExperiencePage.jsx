@@ -38,6 +38,7 @@ import LoadingSpinner from "../../loading/Loading";
 import { useAuth } from "../../context/AuthContext";
 import VerificationBanner from "../../components/Verification";
 import { sendOtpToUser } from "../../utils/sendOtpToUser";
+import { getCoordinatesFromLocation } from "../../utils/geocoding";
 import { toast } from "react-toastify";
 
 const reviews = [
@@ -184,6 +185,7 @@ export default function ExperienceDetailPage() {
         guest_id: user.uid,
         guest_avatar: null,
         read: false,
+        isRead: false,
         createdAt: serverTimestamp(),
       };
       await addDoc(collection(db, "notifications"), notificationData);
@@ -284,14 +286,38 @@ export default function ExperienceDetailPage() {
     };
     getSelectedExperience();
   }, [listing_id, user]);
-  //   console.log(experienceData);
+
+  // Fetch coordinates from location if they don't exist
+  useEffect(() => {
+    const fetchCoordinatesFromLocation = async () => {
+      if (!experienceData?.location) return;
+
+      // If coordinates already exist, don't fetch
+      if (experienceData?.coordinates?.lat && experienceData?.coordinates?.lng) {
+        setMapCenter([experienceData.coordinates.lat, experienceData.coordinates.lng]);
+        return;
+      }
+
+      try {
+        const coords = await getCoordinatesFromLocation(experienceData.location);
+        if (coords) {
+          setMapCenter([coords.lat, coords.lng]);
+          console.log(`📍 Map centered at: ${experienceData.location}`);
+        }
+      } catch (error) {
+        console.error("Error fetching coordinates:", error);
+      }
+    };
+
+    fetchCoordinatesFromLocation();
+  }, [experienceData?.location, experienceData?.coordinates]);
 
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div className="min-h-screen bg-slate-900 pt-20 sm:pt-20 lg:pt-20">
+    <div className="min-h-screen bg-slate-900">
       {/* Header */}
-      <header className="bg-slate-800 border-b border-slate-700 fixed top-0 w-full z-40">
+      <header className="bg-slate-800 border-b border-slate-700 sticky top-[70px] w-full z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <button
@@ -327,7 +353,7 @@ export default function ExperienceDetailPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 mt-16">
         {/* Verification Banner */}
         {!isVerified && (
           <div className="mb-6">
@@ -414,24 +440,21 @@ export default function ExperienceDetailPage() {
               <MapPin className="w-5 h-5 text-indigo-400" />
               <span>{experienceData?.location || "Location details"}</span>
             </div>
-            <div className="rounded-xl overflow-hidden border border-slate-700 flex-1 min-h-96">
+            <div className="rounded-xl overflow-hidden border border-slate-700 flex-1 min-h-96 relative z-0">
               <MapContainer
                 center={mapCenter}
                 zoom={15}
-                scrollWheelZoom={true}
-                style={{ width: "100%", height: "100%" }}
+                scrollWheelZoom={false}
+                style={{ width: "100%", height: "100%", zIndex: 0 }}
                 ref={mapRef}
               >
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                {experienceData?.coordinates?.lat && (
+                {mapCenter && mapCenter.length === 2 && (
                   <Marker
-                    position={[
-                      experienceData.coordinates.lat,
-                      experienceData.coordinates.lng,
-                    ]}
+                    position={mapCenter}
                     icon={L.icon({
                       iconUrl:
                         "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDMyIDQwIj48cGF0aCBkPSJNMTYgMEM4LjMgMCAxIDcuNyAxIDE2YzAgOC4yIDEyIDI0IDEyIDI0czEyLTE1LjggMTItMjRjMC04LjMtNy4zLTE2LTE2LTE2eiIgZmlsbD0iIzRmNDZlNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSI2IiBmaWxsPSIjZmZmIi8+PC9zdmc+",

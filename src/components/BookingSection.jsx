@@ -17,7 +17,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import VerificationBanner from "./Verification";
 import { sendOtpToUser } from "../utils/sendOtpToUser";
-import { point } from "leaflet";
 // Extract city or province from location string
 function extractCity(location) {
   if (!location) return "Other";
@@ -133,9 +132,11 @@ function formatRange(fromDate, toDate) {
 }
 export default function BookingsSection({ userData, isFavoritePage }) {
   const [listings, setListings] = useState([]);
-  const [activeFilter, setActiveFilter] = useState("all");
   const [selectedListing, setSelectedListing] = useState(null); // for modal
   const [searchParams] = useSearchParams();
+
+  // Get active filter from URL params (set by navbar tabs)
+  const activeFilter = searchParams.get("type") || "stays";
 
   //favorites
 
@@ -317,19 +318,13 @@ export default function BookingsSection({ userData, isFavoritePage }) {
     return true;
   };
 
-  const filteredFavoriteItems =
-    activeFilter === "all"
-      ? favorites.filter(matchesSearchFilters)
-      : favorites.filter(
-          (item) => item.type === activeFilter && matchesSearchFilters(item)
-        );
+  const filteredFavoriteItems = favorites.filter(
+    (item) => item.type === activeFilter && matchesSearchFilters(item)
+  );
 
-  const filteredItems =
-    activeFilter === "all"
-      ? listings.filter(matchesSearchFilters)
-      : listings.filter(
-          (item) => item.type === activeFilter && matchesSearchFilters(item)
-        );
+  const filteredItems = listings.filter(
+    (item) => item.type === activeFilter && matchesSearchFilters(item)
+  );
 
   const toggleFavorite = async (
     listingId,
@@ -442,28 +437,17 @@ export default function BookingsSection({ userData, isFavoritePage }) {
           <h1 className="text-3xl font-bold text-white mb-2">
             {isFavoritePage
               ? "My Favorites"
-              : "Explore Stays, Services & Experiences"}
+              : activeFilter === "stays"
+              ? "Explore Homes"
+              : activeFilter === "experiences"
+              ? "Explore Experiences"
+              : "Explore Services"}
           </h1>
           <p className="text-slate-300">
             {!isFavoritePage
               ? "Browse all available listings from hosts and providers"
               : ""}
           </p>
-        </div>
-        <div className="flex gap-3 mb-8 flex-wrap">
-          {["all", "stays", "services", "experiences"].map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setActiveFilter(filter)}
-              className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                activeFilter === filter
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30"
-                  : "bg-slate-800/50 text-slate-300 border border-slate-700 hover:bg-slate-800 hover:text-white hover:border-slate-600"
-              }`}
-            >
-              {filter.charAt(0).toUpperCase() + filter.slice(1)}
-            </button>
-          ))}
         </div>
 
         {/* Active Filters Display */}

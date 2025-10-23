@@ -24,7 +24,7 @@ export default function HeroSection() {
         </div>
 
         {/* Main heading with better typography */}
-        <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-8 leading-tight text-white drop-shadow-lg">
+        <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-6 sm:mb-8 leading-tight text-white drop-shadow-lg">
           Your Perfect Getaway
           <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-indigo-400 to-blue-300">
@@ -33,7 +33,7 @@ export default function HeroSection() {
         </h1>
 
         {/* Subtitle with improved readability */}
-        <p className="text-lg sm:text-xl lg:text-2xl text-white/90 max-w-3xl mx-auto mb-12 leading-relaxed drop-shadow-md font-light">
+        <p className="text-base sm:text-lg lg:text-2xl text-white/90 max-w-3xl mx-auto mb-8 sm:mb-12 leading-relaxed drop-shadow-md font-light">
           Discover exceptional stays, unforgettable experiences, and reliable
           services.
           <br className="hidden sm:inline" />
@@ -41,11 +41,11 @@ export default function HeroSection() {
         </p>
 
         {/* Call to actions with enhanced design */}
-        <div className="flex flex-col sm:flex-row gap-6 justify-center">
-          <button className="group px-10 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-2xl text-lg font-bold transition-all shadow-2xl hover:shadow-3xl hover:scale-105 transform duration-300 flex items-center justify-center gap-2">
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center px-4 sm:px-0">
+          <button className="group px-8 sm:px-10 py-3 sm:py-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-2xl text-base sm:text-lg font-bold transition-all shadow-2xl hover:shadow-3xl hover:scale-105 transform duration-300 flex items-center justify-center gap-2">
             <span>Get Started</span>
             <svg
-              className="w-5 h-5 group-hover:translate-x-1 transition-transform"
+              className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -58,13 +58,13 @@ export default function HeroSection() {
               />
             </svg>
           </button>
-          <button className="px-10 py-4 bg-white/10 backdrop-blur-md border-2 border-white/30 hover:border-white/60 text-white rounded-2xl text-lg font-bold transition-all hover:bg-white/20 transform hover:scale-105 duration-300">
+          <button className="px-8 sm:px-10 py-3 sm:py-4 bg-white/10 backdrop-blur-md border-2 border-white/30 hover:border-white/60 text-white rounded-2xl text-base sm:text-lg font-bold transition-all hover:bg-white/20 transform hover:scale-105 duration-300">
             Learn More
           </button>
         </div>
 
-        {/* Trust badges */}
-        <div className="mt-16 flex justify-center gap-8 flex-wrap">
+        {/* Trust badges - Hidden on mobile */}
+        <div className="hidden sm:flex mt-12 lg:mt-16 justify-center gap-6 lg:gap-8 flex-wrap">
           <div className="flex items-center gap-2 text-white/80">
             <svg
               className="w-5 h-5 text-green-400"

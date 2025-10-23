@@ -267,6 +267,7 @@ export default function HostMyBookings() {
         booking_id: bookingToAction.id,
         host_id: userData.id,
         read: false,
+        isRead: false,
         createdAt: serverTimestamp(),
       });
 
@@ -322,6 +323,7 @@ export default function HostMyBookings() {
         booking_id: bookingToAction.id,
         host_id: userData.id,
         read: false,
+        isRead: false,
         createdAt: serverTimestamp(),
       });
 

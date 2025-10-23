@@ -30,7 +30,7 @@ import {
 } from "firebase/auth";
 
 import { useNavigate } from "react-router-dom";
-import NavBar2 from "../../../components/NavigationBarForPandM";
+import NavBar2 from "../../../components/NavigationBar";
 
 export default function ProfilePage() {
   //coupons
@@ -255,7 +255,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation */}
 
-      <NavBar2 />
+      <NavBar2 user={user} userData={userData} />
       {/* Header */}
       <div className="bg-white border-b border-gray-200 mt-[70px]">
         <div className="max-w-7xl mx-auto px-8 py-8">

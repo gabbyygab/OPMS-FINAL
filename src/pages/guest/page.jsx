@@ -10,10 +10,16 @@ import { sendOtpToUser } from "../../utils/sendOtpToUser";
 import LoadingSpinner from "../../loading/Loading";
 import NavigationBar from "../../components/NavigationBar";
 export default function GuestPage({ userData, user }) {
+  // Calculate top padding for fixed navbar with tabs and search bar
+  // Top row (logo + tabs + profile): ~54px (py-2.5)
+  // Search bar row: ~50px (py-2.5)
+  // Total when not scrolled: ~104px
+  // When scrolled: ~54px (only top row)
+  // Using 104px to account for both rows
   return (
     <>
       <NavigationBar user={user} userData={userData} />
-      <section>
+      <section style={{ paddingTop: user && userData?.role === "guest" ? "104px" : "0px" }}>
         <BookingsSection userData={userData} isFavoritePage={false} />
       </section>
       <Footer />
