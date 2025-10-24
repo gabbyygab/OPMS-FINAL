@@ -18,6 +18,7 @@ import {
   collection,
   query,
   where,
+  orderBy,
   getDocs,
   deleteDoc,
   doc,
@@ -43,7 +44,11 @@ export default function NotificationsPage() {
       try {
         setLoading(true);
         const notificationsRef = collection(db, "notifications");
-        const q = query(notificationsRef, where("host_id", "==", user.uid));
+        const q = query(
+          notificationsRef,
+          where("host_id", "==", user.uid),
+          orderBy("createdAt", "desc")
+        );
         const querySnapshot = await getDocs(q);
 
         const notificationsData = await Promise.all(

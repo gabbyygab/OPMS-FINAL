@@ -23,7 +23,13 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useLocation,
+  useSearchParams,
+} from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { auth, db } from "../firebase/firebase";
 import { signOut } from "firebase/auth";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
@@ -340,7 +346,9 @@ const GuestUserActions = ({
             <p className="text-sm font-semibold text-white truncate">
               {user?.fullName || "Guest"}
             </p>
-            <p className="text-xs text-slate-400 truncate">{user?.email || ""}</p>
+            <p className="text-xs text-slate-400 truncate">
+              {user?.email || ""}
+            </p>
           </div>
 
           {/* Profile Section */}
@@ -350,7 +358,8 @@ const GuestUserActions = ({
               className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
               onClick={() => setProfileDropdownOpen(false)}
             >
-              <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> My Profile
+              <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+              My Profile
             </Link>
 
             <Link
@@ -358,7 +367,8 @@ const GuestUserActions = ({
               className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-pink-500/20 hover:to-pink-500/20 hover:text-pink-300"
               onClick={() => setProfileDropdownOpen(false)}
             >
-              <Heart className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> Favorites
+              <Heart className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+              Favorites
             </Link>
           </div>
 
@@ -369,7 +379,8 @@ const GuestUserActions = ({
               className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
               onClick={() => setProfileDropdownOpen(false)}
             >
-              <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> Messages
+              <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+              Messages
             </Link>
           </div>
 
@@ -380,7 +391,8 @@ const GuestUserActions = ({
               className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
               onClick={() => setProfileDropdownOpen(false)}
             >
-              <LucideWallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> E-Wallet
+              <LucideWallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+              E-Wallet
             </Link>
           </div>
 
@@ -388,7 +400,8 @@ const GuestUserActions = ({
             className="w-full flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item text-left hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-500/20 hover:text-red-300"
             onClick={handleLogout}
           >
-            <LogOut className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> Logout
+            <LogOut className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+            Logout
           </button>
         </div>
       )}
@@ -464,7 +477,9 @@ const HostUserActions = ({
             <p className="text-sm font-semibold text-white truncate">
               {userData?.fullName || "Host"}
             </p>
-            <p className="text-xs text-slate-400 truncate">{userData?.email || ""}</p>
+            <p className="text-xs text-slate-400 truncate">
+              {userData?.email || ""}
+            </p>
           </div>
 
           {/* Profile Section */}
@@ -474,7 +489,8 @@ const HostUserActions = ({
               className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
               onClick={() => setProfileDropdownOpen(false)}
             >
-              <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> My Profile
+              <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+              My Profile
             </Link>
           </div>
 
@@ -485,7 +501,8 @@ const HostUserActions = ({
               className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-indigo-500/20 hover:to-indigo-500/20 hover:text-indigo-300"
               onClick={() => setProfileDropdownOpen(false)}
             >
-              <BarChart3 className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> Dashboard
+              <BarChart3 className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+              Dashboard
             </Link>
 
             <Link
@@ -493,7 +510,8 @@ const HostUserActions = ({
               className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-cyan-500/20 hover:text-cyan-300"
               onClick={() => setProfileDropdownOpen(false)}
             >
-              <Home className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> My Stays
+              <Home className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+              My Stays
             </Link>
 
             <Link
@@ -501,7 +519,8 @@ const HostUserActions = ({
               className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
               onClick={() => setProfileDropdownOpen(false)}
             >
-              <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> My Experiences
+              <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+              My Experiences
             </Link>
 
             <Link
@@ -509,7 +528,8 @@ const HostUserActions = ({
               className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-green-500/20 hover:to-green-500/20 hover:text-green-300"
               onClick={() => setProfileDropdownOpen(false)}
             >
-              <Briefcase className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> My Services
+              <Briefcase className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+              My Services
             </Link>
           </div>
 
@@ -520,7 +540,8 @@ const HostUserActions = ({
               className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-green-500/20 hover:to-green-500/20 hover:text-green-300"
               onClick={() => setProfileDropdownOpen(false)}
             >
-              <Settings className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> Account Settings
+              <Settings className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+              Account Settings
             </Link>
 
             <Link
@@ -528,7 +549,8 @@ const HostUserActions = ({
               className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
               onClick={() => setProfileDropdownOpen(false)}
             >
-              <Wallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> E-wallet
+              <Wallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+              E-wallet
             </Link>
 
             <Link
@@ -536,7 +558,8 @@ const HostUserActions = ({
               className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
               onClick={() => setProfileDropdownOpen(false)}
             >
-              <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> Calendar
+              <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+              Calendar
             </Link>
 
             <Link
@@ -544,7 +567,8 @@ const HostUserActions = ({
               className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-orange-500/20 hover:to-orange-500/20 hover:text-orange-300"
               onClick={() => setProfileDropdownOpen(false)}
             >
-              <FileEdit className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> Drafts
+              <FileEdit className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+              Drafts
             </Link>
           </div>
 
@@ -685,6 +709,204 @@ const MobileMenu = ({
   </div>
 );
 
+// Host Mobile Menu Drawer Component (right-side sidebar for host view)
+const HostMobileMenuDrawer = ({
+  mobileMenuOpen,
+  userData,
+  user,
+  setMobileMenuOpen,
+  unreadNotificationsCount,
+  handleLogout,
+}) => {
+  const location = useLocation();
+
+  const hostNavItems = [
+    { to: ROUTES.HOST.DASHBOARD, icon: BarChart3, label: "Dashboard", color: "from-indigo-500/20 to-blue-500/20" },
+    { to: ROUTES.HOST.STAYS, icon: Home, label: "My Stays", color: "from-cyan-500/20 to-blue-500/20" },
+    { to: ROUTES.HOST.EXPERIENCES, icon: Calendar, label: "Experiences", color: "from-purple-500/20 to-pink-500/20" },
+    { to: ROUTES.HOST.SERVICES, icon: Briefcase, label: "Services", color: "from-green-500/20 to-emerald-500/20" },
+  ];
+
+  const isRouteActive = (route) => {
+    return location.pathname === route || location.pathname.startsWith(route);
+  };
+
+  return (
+    <AnimatePresence>
+      {mobileMenuOpen && (
+        <>
+          <motion.div
+            className="fixed inset-0 bg-black/50 z-40 top-0 transition-all duration-300 lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          ></motion.div>
+          <motion.div className="fixed right-0 top-0 h-screen w-80 max-w-[90vw] bg-slate-800 backdrop-blur-xl border-l border-slate-700/50 z-50 overflow-y-auto lg:hidden"
+            initial={{ x: 320, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 320, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+            {/* Menu Header */}
+            <div className="sticky top-0 px-6 py-4 border-b border-slate-700/50 bg-slate-900/95 backdrop-blur flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Host Menu</h2>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-300" />
+              </button>
+            </div>
+
+            {/* User Info */}
+            <div className="px-6 py-4 border-b border-slate-700/50">
+              <div className="flex items-center gap-3 mb-3">
+                {userData?.photoURL ? (
+                  <img
+                    src={userData.photoURL}
+                    alt="Profile"
+                    className="w-12 h-12 rounded-full object-cover border-2 border-slate-600"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-white text-sm font-semibold">
+                    {user?.fullName
+                      ? user.fullName
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .substring(0, 2)
+                          .toUpperCase()
+                      : "H"}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">
+                    {user?.fullName || "Host"}
+                  </p>
+                  <p className="text-xs text-slate-400 truncate">{user?.email || ""}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Host Navigation Items */}
+            <div className="space-y-1 px-3 py-4">
+              {hostNavItems.map(({ to, icon: Icon, label, color }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className={`flex items-center gap-3 px-3 py-3 text-slate-200 rounded-lg transition-all duration-200 ${
+                    isRouteActive(to)
+                      ? `bg-gradient-to-r ${color} text-white font-medium`
+                      : "hover:text-white hover:bg-slate-800/50"
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">{label}</span>
+                </Link>
+              ))}
+            </div>
+
+            <div className="border-t border-slate-700/50 my-2 mx-3"></div>
+
+            {/* Host Menu Items */}
+            <div className="space-y-1 px-3 py-4">
+              <Link
+                to={ROUTES.HOST.PROFILE}
+                className={`flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 rounded-lg transition-all duration-200 ${
+                  isRouteActive(ROUTES.HOST.PROFILE) ? "bg-gradient-to-r from-blue-500/20 to-blue-500/20 text-blue-300" : ""
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <User className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm font-medium">My Profile</span>
+              </Link>
+
+              <Link
+                to={ROUTES.HOST.MESSAGES}
+                className={`flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-pink-500/20 hover:to-pink-500/20 rounded-lg transition-all duration-200 ${
+                  isRouteActive(ROUTES.HOST.MESSAGES) ? "bg-gradient-to-r from-pink-500/20 to-pink-500/20 text-pink-300" : ""
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <MessageSquare className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm font-medium">Messages</span>
+              </Link>
+
+              <Link
+                to={ROUTES.HOST.NOTIFICATIONS}
+                className={`relative flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 rounded-lg transition-all duration-200 ${
+                  isRouteActive(ROUTES.HOST.NOTIFICATIONS) ? "bg-gradient-to-r from-yellow-500/20 to-yellow-500/20 text-yellow-300" : ""
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <div className="relative">
+                  <Bell className="w-5 h-5 flex-shrink-0" />
+                  {unreadNotificationsCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-semibold w-4 h-4 rounded-full flex items-center justify-center">
+                      {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm font-medium">Notifications</span>
+              </Link>
+
+              <Link
+                to={ROUTES.HOST.SETTINGS}
+                className={`flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-green-500/20 hover:to-green-500/20 rounded-lg transition-all duration-200 ${
+                  isRouteActive(ROUTES.HOST.SETTINGS) ? "bg-gradient-to-r from-green-500/20 to-green-500/20 text-green-300" : ""
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Settings className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm font-medium">Settings</span>
+              </Link>
+
+              <Link
+                to={ROUTES.HOST.E_WALLET}
+                className={`flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 rounded-lg transition-all duration-200 ${
+                  isRouteActive(ROUTES.HOST.E_WALLET) ? "bg-gradient-to-r from-yellow-500/20 to-yellow-500/20 text-yellow-300" : ""
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <LucideWallet className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm font-medium">E-Wallet</span>
+              </Link>
+
+              <Link
+                to={ROUTES.HOST.CALENDAR}
+                className={`flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-orange-500/20 hover:to-orange-500/20 rounded-lg transition-all duration-200 ${
+                  isRouteActive(ROUTES.HOST.CALENDAR) ? "bg-gradient-to-r from-orange-500/20 to-orange-500/20 text-orange-300" : ""
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Calendar className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm font-medium">Calendar</span>
+              </Link>
+            </div>
+
+            {/* Logout Button */}
+            <div className="border-t border-slate-700/50 px-3 py-4 mt-auto">
+              <button
+                className="w-full flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-red-300 hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-500/20 rounded-lg transition-all duration-200 text-sm font-medium"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleLogout();
+                }}
+              >
+                <LogOut className="w-5 h-5 flex-shrink-0" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
 // Streamlined Mobile Menu Component (for authenticated users)
 const StreamlinedMobileMenu = ({
   mobileMenuOpen,
@@ -707,8 +929,15 @@ const StreamlinedMobileMenu = ({
     return location.pathname === route || location.pathname.startsWith(route);
   };
 
-  return mobileMenuOpen ? (
-    <div className="lg:hidden bg-slate-900/98 backdrop-blur-xl border-t border-slate-700/50 shadow-2xl">
+  return (
+    <AnimatePresence>
+      {mobileMenuOpen && (
+        <motion.div className="lg:hidden bg-slate-900/98 backdrop-blur-xl border-t border-slate-700/50 shadow-2xl"
+          initial={{ y: -100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -100, opacity: 0 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+        >
       <div className="max-w-7xl mx-auto px-4 py-4 space-y-1">
         {/* Profile Header - Mobile */}
         <div className="flex items-center gap-3 px-4 py-3 bg-slate-800/50 rounded-xl mb-3">
@@ -765,9 +994,17 @@ const StreamlinedMobileMenu = ({
 
         {/* Common Menu Items */}
         <Link
-          to={userData?.role === "host" ? ROUTES.HOST.PROFILE : ROUTES.GUEST.PROFILE}
+          to={
+            userData?.role === "host"
+              ? ROUTES.HOST.PROFILE
+              : ROUTES.GUEST.PROFILE
+          }
           className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-            isRouteActive(userData?.role === "host" ? ROUTES.HOST.PROFILE : ROUTES.GUEST.PROFILE)
+            isRouteActive(
+              userData?.role === "host"
+                ? ROUTES.HOST.PROFILE
+                : ROUTES.GUEST.PROFILE
+            )
               ? "bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300"
               : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
           }`}
@@ -835,7 +1072,9 @@ const StreamlinedMobileMenu = ({
                 <Bell className="w-5 h-5" />
                 {unreadNotificationsCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-semibold w-4 h-4 rounded-full flex items-center justify-center">
-                    {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                    {unreadNotificationsCount > 9
+                      ? "9+"
+                      : unreadNotificationsCount}
                   </span>
                 )}
               </div>
@@ -858,9 +1097,17 @@ const StreamlinedMobileMenu = ({
         )}
 
         <Link
-          to={userData?.role === "host" ? ROUTES.HOST.E_WALLET : ROUTES.GUEST.E_WALLET}
+          to={
+            userData?.role === "host"
+              ? ROUTES.HOST.E_WALLET
+              : ROUTES.GUEST.E_WALLET
+          }
           className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-            isRouteActive(userData?.role === "host" ? ROUTES.HOST.E_WALLET : ROUTES.GUEST.E_WALLET)
+            isRouteActive(
+              userData?.role === "host"
+                ? ROUTES.HOST.E_WALLET
+                : ROUTES.GUEST.E_WALLET
+            )
               ? "bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-300"
               : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
           }`}
@@ -895,8 +1142,10 @@ const StreamlinedMobileMenu = ({
           <span className="font-medium">Logout</span>
         </button>
       </div>
-    </div>
-  ) : null;
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 };
 
 // Guest Tab Navigation Component - Airbnb Style
@@ -907,7 +1156,9 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeFilter, setActiveFilter] = useState(searchParams.get("type") || "stays");
+  const [activeFilter, setActiveFilter] = useState(
+    searchParams.get("type") || "stays"
+  );
   const [searchData, setSearchData] = useState({
     location: searchParams.get("location") || "",
     checkIn: searchParams.get("checkIn") || "",
@@ -917,9 +1168,24 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
 
   // Tabs for guest navigation
   const guestTabs = [
-    { id: "stays", label: "Homes", icon: Home, color: "from-cyan-400 to-blue-400" },
-    { id: "experiences", label: "Experiences", icon: Calendar, color: "from-purple-400 to-pink-400" },
-    { id: "services", label: "Services", icon: Briefcase, color: "from-green-400 to-emerald-400" },
+    {
+      id: "stays",
+      label: "Homes",
+      icon: Home,
+      color: "from-cyan-400 to-blue-400",
+    },
+    {
+      id: "experiences",
+      label: "Experiences",
+      icon: Calendar,
+      color: "from-purple-400 to-pink-400",
+    },
+    {
+      id: "services",
+      label: "Services",
+      icon: Briefcase,
+      color: "from-green-400 to-emerald-400",
+    },
   ];
 
   // Sync activeFilter with URL params
@@ -975,9 +1241,11 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
     <div className="fixed top-0 left-0 right-0 z-50">
       <style>{animatedBorderStyle}</style>
       {/* Main Navbar Container */}
-      <nav className={`transition-all duration-300 text-white bg-slate-900/95 backdrop-blur-sm shadow-md border-b border-white/10 ${
-        isScrolled ? "py-1.5" : "py-2.5"
-      }`}>
+      <nav
+        className={`transition-all duration-300 text-white bg-slate-900/95 backdrop-blur-sm shadow-md border-b border-white/10 ${
+          isScrolled ? "py-1.5" : "py-2.5"
+        }`}
+      >
         {/* Top Row - Logo, Tabs, Profile */}
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="flex items-center justify-between gap-2 sm:gap-3 lg:gap-6">
@@ -1021,11 +1289,17 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                   <div className="flex items-center gap-1 lg:gap-2">
                     <Icon
                       className={`w-4 lg:w-5 h-4 lg:h-5 transition-transform ${
-                        activeFilter === id ? "scale-110" : "group-hover:scale-110"
+                        activeFilter === id
+                          ? "scale-110"
+                          : "group-hover:scale-110"
                       }`}
                     />
-                    <span className="hidden lg:inline font-medium">{label}</span>
-                    <span className="lg:hidden font-medium text-xs">{label.split('')[0]}</span>
+                    <span className="hidden lg:inline font-medium">
+                      {label}
+                    </span>
+                    <span className="lg:hidden font-medium text-xs">
+                      {label.split("")[0]}
+                    </span>
                   </div>
                   {activeFilter === id && (
                     <div
@@ -1088,7 +1362,9 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                     <p className="text-sm font-semibold text-white truncate">
                       {user?.fullName || "Guest"}
                     </p>
-                    <p className="text-xs text-slate-400 truncate">{user?.email || ""}</p>
+                    <p className="text-xs text-slate-400 truncate">
+                      {user?.email || ""}
+                    </p>
                   </div>
 
                   {/* Profile Section */}
@@ -1098,7 +1374,8 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                       className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
                       onClick={() => {}}
                     >
-                      <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> My Profile
+                      <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                      My Profile
                     </Link>
 
                     <Link
@@ -1106,7 +1383,8 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                       className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-pink-500/20 hover:to-pink-500/20 hover:text-pink-300"
                       onClick={() => {}}
                     >
-                      <Heart className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> Favorites
+                      <Heart className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                      Favorites
                     </Link>
                   </div>
 
@@ -1117,7 +1395,8 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                       className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-cyan-500/20 hover:text-cyan-300"
                       onClick={() => {}}
                     >
-                      <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> My Bookings
+                      <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                      My Bookings
                     </Link>
 
                     <Link
@@ -1125,7 +1404,8 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                       className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
                       onClick={() => {}}
                     >
-                      <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> Messages
+                      <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                      Messages
                     </Link>
                   </div>
 
@@ -1136,7 +1416,8 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                       className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
                       onClick={() => {}}
                     >
-                      <LucideWallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> E-Wallet
+                      <LucideWallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                      E-Wallet
                     </Link>
                   </div>
 
@@ -1144,7 +1425,8 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                     className="w-full flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item text-left hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-500/20 hover:text-red-300"
                     onClick={handleLogout}
                   >
-                    <LogOut className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> Logout
+                    <LogOut className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    Logout
                   </button>
                 </div>
               </div>
@@ -1153,11 +1435,13 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
         </div>
 
         {/* Search Bar Row - Below tabs (smooth animation) */}
-        <div className={`max-w-full mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-500 ease-out overflow-hidden ${
-          isScrolled
-            ? "opacity-0 max-h-0 py-0"
-            : "opacity-100 max-h-20 py-2.5"
-        }`}>
+        <div
+          className={`max-w-full mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-500 ease-out overflow-hidden ${
+            isScrolled
+              ? "opacity-0 max-h-0 py-0"
+              : "opacity-100 max-h-20 py-2.5"
+          }`}
+        >
           <button
             onClick={handleSearchClick}
             className="w-full max-w-3xl lg:mx-auto lg:flex lg:justify-center flex items-center bg-white rounded-full px-3 lg:px-4 py-1.5 lg:py-2 text-gray-700 shadow-md gap-2 lg:gap-3 transition-all hover:shadow-lg"
@@ -1196,18 +1480,23 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
               />
             </div>
 
-            <button type="button" className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0">
+            <button
+              type="button"
+              className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0"
+            >
               <Search className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
             </button>
           </button>
         </div>
 
         {/* Search Bar Row When Scrolled - In top row */}
-        <div className={`hidden md:flex lg:flex flex-1 items-center justify-center px-4 sm:px-6 lg:px-8 transition-all duration-500 ease-out absolute inset-0 ${
-          isScrolled
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
-        }`}>
+        <div
+          className={`hidden md:flex lg:flex flex-1 items-center justify-center px-4 sm:px-6 lg:px-8 transition-all duration-500 ease-out absolute inset-0 ${
+            isScrolled
+              ? "opacity-100 pointer-events-auto"
+              : "opacity-0 pointer-events-none"
+          }`}
+        >
           <button
             onClick={handleSearchClick}
             className="flex-1 max-w-lg flex items-center bg-white rounded-full px-3 lg:px-4 py-1.5 lg:py-2 text-gray-700 shadow-md gap-1.5 lg:gap-2.5 transition-all hover:shadow-lg"
@@ -1240,17 +1529,25 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
               className="hidden lg:block outline-none bg-transparent text-xs lg:text-sm flex-1 min-w-0"
             />
 
-            <button type="button" className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0">
+            <button
+              type="button"
+              className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0"
+            >
               <Search className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
             </button>
           </button>
         </div>
-
       </nav>
 
       {/* Expanded Search View - Full Navbar with Search Form */}
       {isSearchExpanded && (
-        <div className={`fixed top-14 sm:top-16 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-sm border-t border-white/10 transition-all duration-300 ease-in-out transform ${isSearchExpanded ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full"}`}>
+        <div
+          className={`fixed top-14 sm:top-16 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-sm border-t border-white/10 transition-all duration-300 ease-in-out transform ${
+            isSearchExpanded
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 -translate-y-full"
+          }`}
+        >
           <div className="max-w-full mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
             {/* Close Button */}
             <button
@@ -1261,7 +1558,10 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
             </button>
 
             {/* Expanded Content */}
-            <form onSubmit={handleSearchSubmit} className="space-y-4 sm:space-y-6 w-full">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="space-y-4 sm:space-y-6 w-full"
+            >
               {/* Where */}
               <div>
                 <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-2">
@@ -1271,7 +1571,9 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                   type="text"
                   placeholder="Search destinations..."
                   value={searchData.location}
-                  onChange={(e) => setSearchData({ ...searchData, location: e.target.value })}
+                  onChange={(e) =>
+                    setSearchData({ ...searchData, location: e.target.value })
+                  }
                   autoFocus
                   className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm sm:text-base"
                 />
@@ -1286,7 +1588,9 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                   <input
                     type="date"
                     value={searchData.checkIn}
-                    onChange={(e) => setSearchData({ ...searchData, checkIn: e.target.value })}
+                    onChange={(e) =>
+                      setSearchData({ ...searchData, checkIn: e.target.value })
+                    }
                     className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm sm:text-base"
                   />
                 </div>
@@ -1297,7 +1601,9 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                   <input
                     type="date"
                     value={searchData.checkOut}
-                    onChange={(e) => setSearchData({ ...searchData, checkOut: e.target.value })}
+                    onChange={(e) =>
+                      setSearchData({ ...searchData, checkOut: e.target.value })
+                    }
                     className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm sm:text-base"
                   />
                 </div>
@@ -1309,7 +1615,9 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                     type="number"
                     min="1"
                     value={searchData.guests}
-                    onChange={(e) => setSearchData({ ...searchData, guests: e.target.value })}
+                    onChange={(e) =>
+                      setSearchData({ ...searchData, guests: e.target.value })
+                    }
                     className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm sm:text-base"
                   />
                 </div>
@@ -1336,123 +1644,137 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
       )}
 
       {/* Mobile Menu Drawer */}
-      {isMobileMenuOpen && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/50 z-40 top-0 transition-all duration-300 lg:hidden"
-            onClick={() => setIsMobileMenuOpen(false)}
-          ></div>
-          <div className="fixed right-0 top-0 h-screen w-80 max-w-[90vw] bg-slate-800 backdrop-blur-xl border-l border-slate-700/50 z-50 overflow-y-auto transition-all duration-300 transform lg:hidden">
-            {/* Menu Header */}
-            <div className="sticky top-0 px-6 py-4 border-b border-slate-700/50 bg-slate-900/95 backdrop-blur flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Menu</h2>
-              <button
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-300" />
-              </button>
-            </div>
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-black/50 z-40 top-0 transition-all duration-300 lg:hidden"
+              onClick={() => setIsMobileMenuOpen(false)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            ></motion.div>
+            <motion.div
+              className="fixed right-0 top-0 h-screen w-80 max-w-[90vw] bg-slate-800 backdrop-blur-xl border-l border-slate-700/50 z-50 overflow-y-auto transition-all duration-300 transform lg:hidden"
+              initial={{ x: 320, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 320, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+            >
+              {/* Menu Header */}
+              <div className="sticky top-0 px-6 py-4 border-b border-slate-700/50 bg-slate-900/95 backdrop-blur flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-white">Menu</h2>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-300" />
+                </button>
+              </div>
 
-            {/* User Info */}
-            <div className="px-6 py-4 border-b border-slate-700/50">
-              <div className="flex items-center gap-3 mb-3">
-                {userData?.photoURL ? (
-                  <img
-                    src={userData.photoURL}
-                    alt="Profile"
-                    className="w-12 h-12 rounded-full object-cover border-2 border-slate-600"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm font-semibold">
-                    {user?.fullName
-                      ? user.fullName
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")
-                          .substring(0, 2)
-                          .toUpperCase()
-                      : "G"}
+              {/* User Info */}
+              <div className="px-6 py-4 border-b border-slate-700/50">
+                <div className="flex items-center gap-3 mb-3">
+                  {userData?.photoURL ? (
+                    <img
+                      src={userData.photoURL}
+                      alt="Profile"
+                      className="w-12 h-12 rounded-full object-cover border-2 border-slate-600"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm font-semibold">
+                      {user?.fullName
+                        ? user.fullName
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .substring(0, 2)
+                            .toUpperCase()
+                        : "G"}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">
+                      {user?.fullName || "Guest"}
+                    </p>
+                    <p className="text-xs text-slate-400 truncate">
+                      {user?.email || ""}
+                    </p>
                   </div>
-                )}
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">
-                    {user?.fullName || "Guest"}
-                  </p>
-                  <p className="text-xs text-slate-400 truncate">{user?.email || ""}</p>
                 </div>
               </div>
-            </div>
 
-            {/* Menu Items */}
-            <div className="space-y-1 px-3 py-4">
-              {/* Profile */}
-              <Link
-                to={ROUTES.GUEST.PROFILE}
-                className="flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 rounded-lg transition-all duration-200"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <User className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium">My Profile</span>
-              </Link>
+              {/* Menu Items */}
+              <div className="space-y-1 px-3 py-4">
+                {/* Profile */}
+                <Link
+                  to={ROUTES.GUEST.PROFILE}
+                  className="flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 rounded-lg transition-all duration-200"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <User className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">My Profile</span>
+                </Link>
 
-              {/* Favorites */}
-              <Link
-                to={ROUTES.GUEST.FAVORITES}
-                className="flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-pink-500/20 hover:to-pink-500/20 rounded-lg transition-all duration-200"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <Heart className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium">Favorites</span>
-              </Link>
+                {/* Favorites */}
+                <Link
+                  to={ROUTES.GUEST.FAVORITES}
+                  className="flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-pink-500/20 hover:to-pink-500/20 rounded-lg transition-all duration-200"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Heart className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">Favorites</span>
+                </Link>
 
-              {/* My Bookings */}
-              <Link
-                to={ROUTES.GUEST.MY_BOOKINGS}
-                className="flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-cyan-500/20 rounded-lg transition-all duration-200"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <Calendar className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium">My Bookings</span>
-              </Link>
+                {/* My Bookings */}
+                <Link
+                  to={ROUTES.GUEST.MY_BOOKINGS}
+                  className="flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-cyan-500/20 rounded-lg transition-all duration-200"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Calendar className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">My Bookings</span>
+                </Link>
 
-              {/* Messages */}
-              <Link
-                to={ROUTES.GUEST.MESSAGES}
-                className="flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 rounded-lg transition-all duration-200"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <MessageSquare className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium">Messages</span>
-              </Link>
+                {/* Messages */}
+                <Link
+                  to={ROUTES.GUEST.MESSAGES}
+                  className="flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 rounded-lg transition-all duration-200"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <MessageSquare className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">Messages</span>
+                </Link>
 
-              {/* E-Wallet */}
-              <Link
-                to={ROUTES.GUEST.E_WALLET}
-                className="flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 rounded-lg transition-all duration-200"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <LucideWallet className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium">E-Wallet</span>
-              </Link>
-            </div>
+                {/* E-Wallet */}
+                <Link
+                  to={ROUTES.GUEST.E_WALLET}
+                  className="flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 rounded-lg transition-all duration-200"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <LucideWallet className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">E-Wallet</span>
+                </Link>
+              </div>
 
-            {/* Logout Button */}
-            <div className="border-t border-slate-700/50 px-3 py-4 mt-auto">
-              <button
-                className="w-full flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-red-300 hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-500/20 rounded-lg transition-all duration-200 text-sm font-medium"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  handleLogout();
-                }}
-              >
-                <LogOut className="w-5 h-5 flex-shrink-0" />
-                <span>Logout</span>
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+              {/* Logout Button */}
+              <div className="border-t border-slate-700/50 px-3 py-4 mt-auto">
+                <button
+                  className="w-full flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-red-300 hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-500/20 rounded-lg transition-all duration-200 text-sm font-medium"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                >
+                  <LogOut className="w-5 h-5 flex-shrink-0" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -1524,7 +1846,9 @@ const GuestSimpleNavBar = ({ user, userData, handleLogout }) => {
                 <p className="text-sm font-semibold text-white truncate">
                   {user?.fullName || "Guest"}
                 </p>
-                <p className="text-xs text-slate-400 truncate">{user?.email || ""}</p>
+                <p className="text-xs text-slate-400 truncate">
+                  {user?.email || ""}
+                </p>
               </div>
 
               {/* Menu Items */}
@@ -1533,14 +1857,16 @@ const GuestSimpleNavBar = ({ user, userData, handleLogout }) => {
                   to={ROUTES.GUEST.PROFILE}
                   className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
                 >
-                  <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> My Profile
+                  <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                  My Profile
                 </Link>
 
                 <Link
                   to={ROUTES.GUEST.FAVORITES}
                   className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-pink-500/20 hover:to-pink-500/20 hover:text-pink-300"
                 >
-                  <Heart className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> Favorites
+                  <Heart className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                  Favorites
                 </Link>
               </div>
 
@@ -1549,14 +1875,16 @@ const GuestSimpleNavBar = ({ user, userData, handleLogout }) => {
                   to={ROUTES.GUEST.MY_BOOKINGS}
                   className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-cyan-500/20 hover:text-cyan-300"
                 >
-                  <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> My Bookings
+                  <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                  My Bookings
                 </Link>
 
                 <Link
                   to={ROUTES.GUEST.MESSAGES}
                   className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
                 >
-                  <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> Messages
+                  <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                  Messages
                 </Link>
               </div>
 
@@ -1565,7 +1893,8 @@ const GuestSimpleNavBar = ({ user, userData, handleLogout }) => {
                   to={ROUTES.GUEST.E_WALLET}
                   className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
                 >
-                  <LucideWallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> E-Wallet
+                  <LucideWallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                  E-Wallet
                 </Link>
               </div>
 
@@ -1573,7 +1902,8 @@ const GuestSimpleNavBar = ({ user, userData, handleLogout }) => {
                 className="w-full flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item text-left hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-500/20 hover:text-red-300"
                 onClick={handleLogout}
               >
-                <LogOut className="w-5 h-5 group-hover/item:scale-110 transition-transform" /> Logout
+                <LogOut className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                Logout
               </button>
             </div>
           </div>
@@ -1585,7 +1915,11 @@ const GuestSimpleNavBar = ({ user, userData, handleLogout }) => {
 
 // ========== MAIN COMPONENT ==========
 
-export default function NavigationBar({ userData, user, forceSimpleNavBar = false }) {
+export default function NavigationBar({
+  userData,
+  user,
+  forceSimpleNavBar = false,
+}) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -1689,13 +2023,35 @@ export default function NavigationBar({ userData, user, forceSimpleNavBar = fals
               {isHost && (
                 <div className="hidden lg:flex items-center gap-2">
                   {[
-                    { to: ROUTES.HOST.DASHBOARD, icon: BarChart3, label: "Dashboard", color: "from-indigo-400 to-blue-400" },
-                    { to: ROUTES.HOST.STAYS, icon: Home, label: "My Stays", color: "from-cyan-400 to-blue-400" },
-                    { to: ROUTES.HOST.EXPERIENCES, icon: Calendar, label: "Experiences", color: "from-purple-400 to-pink-400" },
-                    { to: ROUTES.HOST.SERVICES, icon: Briefcase, label: "Services", color: "from-green-400 to-emerald-400" },
+                    {
+                      to: ROUTES.HOST.DASHBOARD,
+                      icon: BarChart3,
+                      label: "Dashboard",
+                      color: "from-indigo-400 to-blue-400",
+                    },
+                    {
+                      to: ROUTES.HOST.STAYS,
+                      icon: Home,
+                      label: "My Stays",
+                      color: "from-cyan-400 to-blue-400",
+                    },
+                    {
+                      to: ROUTES.HOST.EXPERIENCES,
+                      icon: Calendar,
+                      label: "Experiences",
+                      color: "from-purple-400 to-pink-400",
+                    },
+                    {
+                      to: ROUTES.HOST.SERVICES,
+                      icon: Briefcase,
+                      label: "Services",
+                      color: "from-green-400 to-emerald-400",
+                    },
                   ].map(({ to, icon: IconComponent, label, color }) => {
                     const IconElement = IconComponent;
-                    const isActive = location.pathname === to || location.pathname.startsWith(to);
+                    const isActive =
+                      location.pathname === to ||
+                      location.pathname.startsWith(to);
                     return (
                       <Link
                         key={to}
@@ -1731,7 +2087,8 @@ export default function NavigationBar({ userData, user, forceSimpleNavBar = fals
                   <Link
                     to={ROUTES.GUEST.MY_BOOKINGS}
                     className={`nav-link-border group relative px-6 py-2.5 rounded-xl transition-all duration-300 ${
-                      location.pathname === ROUTES.GUEST.MY_BOOKINGS || location.pathname.startsWith(ROUTES.GUEST.MY_BOOKINGS)
+                      location.pathname === ROUTES.GUEST.MY_BOOKINGS ||
+                      location.pathname.startsWith(ROUTES.GUEST.MY_BOOKINGS)
                         ? "nav-link-active bg-gradient-to-r from-cyan-400 to-purple-400 text-white shadow-lg"
                         : "text-slate-300 hover:text-white hover:bg-slate-800/50"
                     }`}
@@ -1739,14 +2096,18 @@ export default function NavigationBar({ userData, user, forceSimpleNavBar = fals
                     <div className="flex items-center gap-2">
                       <Calendar
                         className={`w-5 h-5 transition-transform ${
-                          location.pathname === ROUTES.GUEST.MY_BOOKINGS || location.pathname.startsWith(ROUTES.GUEST.MY_BOOKINGS)
+                          location.pathname === ROUTES.GUEST.MY_BOOKINGS ||
+                          location.pathname.startsWith(ROUTES.GUEST.MY_BOOKINGS)
                             ? "scale-110"
                             : "group-hover:scale-110"
                         }`}
                       />
                       <span className="font-medium">My Bookings</span>
                     </div>
-                    {(location.pathname === ROUTES.GUEST.MY_BOOKINGS || location.pathname.startsWith(ROUTES.GUEST.MY_BOOKINGS)) && (
+                    {(location.pathname === ROUTES.GUEST.MY_BOOKINGS ||
+                      location.pathname.startsWith(
+                        ROUTES.GUEST.MY_BOOKINGS
+                      )) && (
                       <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-purple-400 rounded-xl blur-xl opacity-30 -z-10"></div>
                     )}
                   </Link>
@@ -1817,11 +2178,7 @@ export default function NavigationBar({ userData, user, forceSimpleNavBar = fals
 
                       {/* Profile Link */}
                       <Link
-                        to={
-                          isHost
-                            ? ROUTES.HOST.PROFILE
-                            : ROUTES.GUEST.PROFILE
-                        }
+                        to={isHost ? ROUTES.HOST.PROFILE : ROUTES.GUEST.PROFILE}
                         className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-slate-700/50 hover:text-purple-300"
                         onClick={() => setProfileDropdownOpen(false)}
                       >
@@ -1940,15 +2297,26 @@ export default function NavigationBar({ userData, user, forceSimpleNavBar = fals
             </div>
           </div>
 
-          {/* Streamlined Mobile Menu */}
-          <StreamlinedMobileMenu
-            mobileMenuOpen={mobileMenuOpen}
-            userData={userData}
-            user={user}
-            setMobileMenuOpen={setMobileMenuOpen}
-            unreadNotificationsCount={unreadNotificationsCount}
-            handleLogout={handleLogout}
-          />
+          {/* Mobile Menu - Show Host Sidebar for hosts, Streamlined Menu for guests */}
+          {isHost ? (
+            <HostMobileMenuDrawer
+              mobileMenuOpen={mobileMenuOpen}
+              userData={userData}
+              user={user}
+              setMobileMenuOpen={setMobileMenuOpen}
+              unreadNotificationsCount={unreadNotificationsCount}
+              handleLogout={handleLogout}
+            />
+          ) : (
+            <StreamlinedMobileMenu
+              mobileMenuOpen={mobileMenuOpen}
+              userData={userData}
+              user={user}
+              setMobileMenuOpen={setMobileMenuOpen}
+              unreadNotificationsCount={unreadNotificationsCount}
+              handleLogout={handleLogout}
+            />
+          )}
         </nav>
       </>
     );
@@ -1956,12 +2324,30 @@ export default function NavigationBar({ userData, user, forceSimpleNavBar = fals
 
   // ========== GUEST TAB NAVIGATION (for guest users on home page only) ==========
   if (isGuest && user && location.pathname === ROUTES.GUEST.HOME) {
-    return <GuestTabNavigation user={user} userData={userData} handleLogout={handleLogout} />;
+    return (
+      <GuestTabNavigation
+        user={user}
+        userData={userData}
+        handleLogout={handleLogout}
+      />
+    );
   }
 
-  // ========== SIMPLE NAVBAR (for profile and messages pages, or guest non-home pages) ==========
-  if (user && (location.pathname.includes("/profile") || location.pathname.includes("/messages")) || forceSimpleNavBar) {
-    return <GuestSimpleNavBar user={user} userData={userData} handleLogout={handleLogout} />;
+  // ========== SIMPLE NAVBAR (for profile, messages, and notifications pages, or guest non-home pages) ==========
+  if (
+    (user &&
+      (location.pathname.includes("/profile") ||
+        location.pathname.includes("/messages") ||
+        location.pathname.includes("/notifications"))) ||
+    forceSimpleNavBar
+  ) {
+    return (
+      <GuestSimpleNavBar
+        user={user}
+        userData={userData}
+        handleLogout={handleLogout}
+      />
+    );
   }
 
   // ========== CLASSIC LAYOUT (default, for all user types) ==========
@@ -2028,16 +2414,27 @@ export default function NavigationBar({ userData, user, forceSimpleNavBar = fals
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <MobileMenu
-            user={user}
+        {/* Mobile Menu - Show Host Sidebar for hosts, MobileMenu for guests */}
+        {userData?.role === "host" ? (
+          <HostMobileMenuDrawer
+            mobileMenuOpen={mobileMenuOpen}
             userData={userData}
-            isMobileSearchOpen={isMobileSearchOpen}
-            setMobileSearchOpen={setMobileSearchOpen}
+            user={user}
             setMobileMenuOpen={setMobileMenuOpen}
+            unreadNotificationsCount={unreadNotificationsCount}
             handleLogout={handleLogout}
           />
+        ) : (
+          mobileMenuOpen && (
+            <MobileMenu
+              user={user}
+              userData={userData}
+              isMobileSearchOpen={isMobileSearchOpen}
+              setMobileSearchOpen={setMobileSearchOpen}
+              setMobileMenuOpen={setMobileMenuOpen}
+              handleLogout={handleLogout}
+            />
+          )
         )}
       </nav>
     </>

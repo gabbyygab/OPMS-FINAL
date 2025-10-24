@@ -512,17 +512,17 @@ export default function BookingsSection({ userData, isFavoritePage }) {
 
       {/* Static gradient overlay for depth */}
       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-transparent to-slate-900/30"></div>
-      <div className="mt-28">
-        <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="pt-20 sm:pt-24 lg:pt-28 pb-12">
+      <div className="mt-20 sm:mt-28">
+        <main className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+          <div className="pt-6 sm:pt-12 md:pt-20 lg:pt-28 pb-8 sm:pb-12">
             {!isVerified && (
               <VerificationBanner
                 handleVerification={handleVerification}
                 userData={userData}
               />
             )}
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-white mb-2">
+            <div className="mb-6 sm:mb-8">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">
                 {isFavoritePage
                   ? "My Favorites"
                   : activeFilter === "stays"
@@ -531,7 +531,7 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                   ? "Explore Experiences"
                   : "Explore Services"}
               </h1>
-              <p className="text-slate-300">
+              <p className="text-sm sm:text-base text-slate-300">
                 {!isFavoritePage
                   ? "Browse all available listings from hosts and providers"
                   : ""}
@@ -604,10 +604,10 @@ export default function BookingsSection({ userData, isFavoritePage }) {
             ) : currentListings.length > 0 ? (
               Object.entries(groupListingsByCity(currentListings)).map(
                 ([city, cityListings]) => (
-                  <div key={city} className="mb-12">
-                    <div className="flex items-center gap-3 mb-6">
-                      <MapPin className="w-6 h-6 text-indigo-400" />
-                      <h2 className="text-2xl font-bold text-white">{city}</h2>
+                  <div key={city} className="mb-8 sm:mb-12">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                      <MapPin className="w-5 sm:w-6 h-5 sm:h-6 text-indigo-400 flex-shrink-0" />
+                      <h2 className="text-xl sm:text-2xl font-bold text-white">{city}</h2>
                       <span className="ml-auto text-sm text-slate-400">
                         {cityListings.length}{" "}
                         {cityListings.length === 1 ? "listing" : "listings"}
@@ -656,9 +656,9 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                               </button>
                             </div>
 
-                            <div className="p-5 flex flex-col h-full">
+                            <div className="p-3 sm:p-5 flex flex-col h-full">
                               <div className="flex-1">
-                                <h3 className="text-lg font-bold text-white truncate mb-2">
+                                <h3 className="text-base sm:text-lg font-bold text-white truncate mb-2">
                                   {listing.title || "Untitled Listing"}
                                 </h3>
                                 <div className="flex items-center text-slate-300 text-sm mt-2">
