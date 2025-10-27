@@ -163,7 +163,7 @@ export default function ExperienceDetailPage() {
       const bookingData = {
         listing_id: listing_id,
         guest_id: user.uid,
-        host_id: experienceData.host_id,
+        host_id: experienceData.hostId,
         selectedDate: selectedDateTime.date,
         selectedTime: selectedDateTime.time,
         guests: guests,
@@ -176,7 +176,7 @@ export default function ExperienceDetailPage() {
 
       // Create notification for host
       const notificationData = {
-        host_id: experienceData.host_id,
+        host_id: experienceData.hostId,
         type: "booking",
         title: "New Booking",
         message: `${user.fullName || "A guest"} has booked your ${experienceData.title} for ${selectedDateTime.date} at ${selectedDateTime.time}`,
@@ -238,8 +238,8 @@ export default function ExperienceDetailPage() {
         const reviewCount = reviewSnap.size;
 
         let hostData = null;
-        if (data.host_id) {
-          const hostRef = doc(db, "users", data.host_id);
+        if (data.hostId) {
+          const hostRef = doc(db, "users", data.hostId);
           const hostSnap = await getDoc(hostRef);
           if (hostSnap.exists()) {
             hostData = { id: hostSnap.id, ...hostSnap.data() };
@@ -353,7 +353,7 @@ export default function ExperienceDetailPage() {
         </div>
       </header>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 mt-[70px]">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 mt-[64px]">
         {/* Verification Banner */}
         {!isVerified && (
           <div className="mb-6">
@@ -766,7 +766,7 @@ export default function ExperienceDetailPage() {
                 onClick={() =>
                   handleActionWithVerification(() =>
                     navigate(
-                      `/guest/messages/${user?.uid}/${experienceData?.host_id}`
+                      `/guest/messages/${user?.uid}/${experienceData?.hostId}`
                     )
                   )
                 }

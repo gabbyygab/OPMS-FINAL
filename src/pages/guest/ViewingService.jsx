@@ -76,12 +76,13 @@ export default function ServiceDetailPage() {
   const [additionalNotes, setAdditionalNotes] = useState("");
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [serviceData, setServiceData] = useState({});
+  const [reviewsData, setReviewsData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isLoadingVerification, setIsLoadingVerification] = useState(false);
 
   const { user, isVerified } = useAuth();
   const navigate = useNavigate();
-  const { service_id } = useParams();
+  const { listing_id } = useParams();
 
   const handleVerification = async () => {
     try {
@@ -105,7 +106,7 @@ export default function ServiceDetailPage() {
     action();
   };
 
-  const basePrice = serviceData?.basePrice || 0;
+  const basePrice = serviceData?.price || 0;
   const serviceFee = basePrice * 0.12;
   const totalPrice = basePrice + serviceFee;
 
@@ -125,7 +126,8 @@ export default function ServiceDetailPage() {
     const getSelectedService = async () => {
       try {
         setLoading(true);
-        const serviceRef = doc(db, "services", service_id);
+        // Fetch service listing from listings collection
+        const serviceRef = doc(db, "listings", listing_id);
         const serviceSnap = await getDoc(serviceRef);
 
         if (!serviceSnap.exists()) {
@@ -134,14 +136,39 @@ export default function ServiceDetailPage() {
         }
 
         const data = serviceSnap.data();
+
+        // Fetch reviews using listing_id
         const reviewsRef = collection(db, "reviews");
-        const q = query(reviewsRef, where("service_id", "==", service_id));
+        const q = query(reviewsRef, where("listing_id", "==", listing_id));
         const reviewSnap = await getDocs(q);
         const reviewCount = reviewSnap.size;
 
+        // Fetch review details with user data
+        const reviewsWithUsers = await Promise.all(
+          reviewSnap.docs.map(async (reviewDoc) => {
+            const reviewData = reviewDoc.data();
+            let userData = null;
+
+            if (reviewData.user_id) {
+              const userRef = doc(db, "users", reviewData.user_id);
+              const userSnap = await getDoc(userRef);
+              if (userSnap.exists()) {
+                userData = userSnap.data();
+              }
+            }
+
+            return {
+              id: reviewDoc.id,
+              ...reviewData,
+              user: userData,
+            };
+          })
+        );
+
+        // Fetch provider/host data
         let providerData = null;
-        if (data.provider_id) {
-          const providerRef = doc(db, "users", data.provider_id);
+        if (data.hostId) {
+          const providerRef = doc(db, "users", data.hostId);
           const providerSnap = await getDoc(providerRef);
           if (providerSnap.exists()) {
             providerData = { id: providerSnap.id, ...providerSnap.data() };
@@ -149,12 +176,16 @@ export default function ServiceDetailPage() {
         }
 
         setServiceData({ ...data, reviewCount, provider: providerData });
+        setReviewsData(reviewsWithUsers || []);
 
         // Set first available time slot and service type
-        if (data?.availableTimes?.length > 0) {
+        if (
+          Array.isArray(data?.availableTimes) &&
+          data.availableTimes.length > 0
+        ) {
           setSelectedTime(data.availableTimes[0]);
         }
-        if (data?.serviceTypes?.length > 0) {
+        if (Array.isArray(data?.serviceTypes) && data.serviceTypes.length > 0) {
           setServiceType(data.serviceTypes[0]);
         }
       } catch (error) {
@@ -164,9 +195,10 @@ export default function ServiceDetailPage() {
       }
     };
     getSelectedService();
-  }, [service_id]);
+  }, [listing_id]);
 
   if (loading) return <LoadingSpinner />;
+  console.log(serviceData);
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -188,9 +220,7 @@ export default function ServiceDetailPage() {
               </button>
               <button
                 onClick={() =>
-                  handleActionWithVerification(() =>
-                    setIsFavorite(!isFavorite)
-                  )
+                  handleActionWithVerification(() => setIsFavorite(!isFavorite))
                 }
                 className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-700 transition text-slate-300"
               >
@@ -206,7 +236,7 @@ export default function ServiceDetailPage() {
         </div>
       </header>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 mt-[70px]">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 mt-[64px]">
         {/* Verification Banner */}
         {!isVerified && (
           <div className="mb-6">
@@ -267,7 +297,8 @@ export default function ServiceDetailPage() {
               >
                 <img
                   src={
-                    serviceData?.photos?.[0] || "https://via.placeholder.com/800"
+                    serviceData?.photos?.[0] ||
+                    "https://via.placeholder.com/800"
                   }
                   alt="Main"
                   className="w-full h-full object-cover"
@@ -300,7 +331,9 @@ export default function ServiceDetailPage() {
           {/* Provider Info Card */}
           <div className="flex flex-col">
             <div className="bg-slate-800 rounded-2xl shadow-lg p-6 border border-slate-700 flex-1">
-              <h3 className="text-xl font-semibold text-white mb-4">Service Provider</h3>
+              <h3 className="text-xl font-semibold text-white mb-4">
+                Service Provider
+              </h3>
               <div className="flex items-center gap-4 mb-6">
                 <img
                   src={
@@ -311,19 +344,27 @@ export default function ServiceDetailPage() {
                   className="w-16 h-16 rounded-full"
                 />
                 <div>
-                  <h4 className="font-semibold text-white">{serviceData?.provider?.fullName || "Professional"}</h4>
-                  <p className="text-slate-400 text-sm">{serviceData?.experienceYears || 5}+ years experience</p>
+                  <h4 className="font-semibold text-white">
+                    {serviceData?.provider?.fullName || "Professional"}
+                  </h4>
+                  <p className="text-slate-400 text-sm">
+                    {serviceData?.experienceYears || 5}+ years experience
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2 text-slate-300">
                   <Phone className="w-4 h-4 text-indigo-400" />
-                  <span>{serviceData?.provider?.phone || "Available after booking"}</span>
+                  <span>
+                    {serviceData?.provider?.phone || "Available after booking"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300">
                   <Mail className="w-4 h-4 text-indigo-400" />
-                  <span>{serviceData?.provider?.email || "Available after booking"}</span>
+                  <span>
+                    {serviceData?.provider?.email || "Available after booking"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -396,45 +437,51 @@ export default function ServiceDetailPage() {
                 {serviceData?.description || "No description available."}
               </p>
 
-              {serviceData?.highlights && serviceData.highlights.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                  {serviceData.highlights.map((highlight, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-3 text-slate-300 bg-slate-800 px-4 py-3 rounded-lg"
-                    >
-                      <Check className="w-5 h-5 text-indigo-400 flex-shrink-0" />
-                      <span>{highlight}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {Array.isArray(serviceData?.highlights) &&
+                serviceData.highlights.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                    {serviceData.highlights.map((highlight, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-3 text-slate-300 bg-slate-800 px-4 py-3 rounded-lg"
+                      >
+                        <Check className="w-5 h-5 text-indigo-400 flex-shrink-0" />
+                        <span>{highlight}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
             </div>
 
             {/* Services Offered */}
-            <div className="pb-8 border-b border-slate-700">
-              <h3 className="text-xl font-semibold text-white mb-4">
-                Services offered
-              </h3>
-              <div className="space-y-3">
-                {serviceData?.serviceTypes?.map((service, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-start justify-between p-4 bg-slate-800 rounded-lg"
-                  >
-                    <div className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-indigo-400 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-slate-200 font-medium">{service}</p>
+            {Array.isArray(serviceData?.serviceTypes) &&
+              serviceData.serviceTypes.length > 0 && (
+                <div className="pb-8 border-b border-slate-700">
+                  <h3 className="text-xl font-semibold text-white mb-4">
+                    Services offered
+                  </h3>
+                  <div className="space-y-3">
+                    {serviceData.serviceTypes.map((service, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start justify-between p-4 bg-slate-800 rounded-lg"
+                      >
+                        <div className="flex items-start gap-3">
+                          <Check className="w-5 h-5 text-indigo-400 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-slate-200 font-medium">
+                              {service}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              )}
 
             {/* Service Area */}
-            {serviceData?.serviceAreas &&
+            {Array.isArray(serviceData?.serviceAreas) &&
               serviceData.serviceAreas.length > 0 && (
                 <div className="pb-8 border-b border-slate-700">
                   <h3 className="text-xl font-semibold text-white mb-4">
@@ -454,7 +501,7 @@ export default function ServiceDetailPage() {
               )}
 
             {/* Certifications */}
-            {serviceData?.certifications &&
+            {Array.isArray(serviceData?.certifications) &&
               serviceData.certifications.length > 0 && (
                 <div className="pb-8 border-b border-slate-700">
                   <h3 className="text-xl font-semibold text-white mb-4">
@@ -472,48 +519,62 @@ export default function ServiceDetailPage() {
               )}
 
             {/* Reviews */}
-            <div className="pb-8 border-b border-slate-700">
-              <div className="flex items-center gap-2 mb-6">
-                <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
-                <h3 className="text-xl font-semibold text-white">
-                  {serviceData?.rating || 0} · {serviceData?.reviewCount || 0}{" "}
-                  reviews
-                </h3>
-              </div>
-              <div className="space-y-6">
-                {reviews.map((review) => (
-                  <div key={review.id} className="flex gap-4">
-                    <img
-                      src={review.avatar}
-                      alt={review.author}
-                      className="w-12 h-12 rounded-full flex-shrink-0"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-white">
-                          {review.author}
-                        </span>
-                        <span className="text-slate-500 text-sm">·</span>
-                        <span className="text-slate-500 text-sm">
-                          {review.date}
-                        </span>
+            {reviewsData.length > 0 && (
+              <div className="pb-8 border-b border-slate-700">
+                <div className="flex items-center gap-2 mb-6">
+                  <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
+                  <h3 className="text-xl font-semibold text-white">
+                    {serviceData?.rating || 0} · {serviceData?.reviewCount || 0}{" "}
+                    reviews
+                  </h3>
+                </div>
+                <div className="space-y-6">
+                  {reviewsData.map((review) => (
+                    <div key={review.id} className="flex gap-4">
+                      <img
+                        src={
+                          review.user?.photoURL ||
+                          "https://via.placeholder.com/100"
+                        }
+                        alt={review.user?.fullName || "User"}
+                        className="w-12 h-12 rounded-full flex-shrink-0"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-white">
+                            {review.user?.fullName || "Anonymous"}
+                          </span>
+                          <span className="text-slate-500 text-sm">·</span>
+                          <span className="text-slate-500 text-sm">
+                            {review.createdAt
+                              ? new Date(
+                                  review.createdAt.toDate()
+                                ).toLocaleDateString("en-US", {
+                                  month: "long",
+                                  year: "numeric",
+                                })
+                              : "Recently"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 mb-2">
+                          {Array.from({ length: review.rating || 5 }).map(
+                            (_, i) => (
+                              <Star
+                                key={i}
+                                className="w-3 h-3 fill-yellow-400 text-yellow-400"
+                              />
+                            )
+                          )}
+                        </div>
+                        <p className="text-slate-300 text-sm leading-relaxed">
+                          {review.comment || review.review || "Great service!"}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-1 mb-2">
-                        {Array.from({ length: review.rating }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className="w-3 h-3 fill-yellow-400 text-yellow-400"
-                          />
-                        ))}
-                      </div>
-                      <p className="text-slate-300 text-sm leading-relaxed">
-                        {review.comment}
-                      </p>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Terms & Conditions */}
             <div>
@@ -537,7 +598,7 @@ export default function ServiceDetailPage() {
               <div className="mb-6">
                 <div className="flex items-baseline gap-2 mb-2">
                   <span className="text-3xl font-bold text-white">
-                    ₱{serviceData?.basePrice?.toLocaleString() || 0}
+                    ₱{serviceData?.price?.toLocaleString() || 0}
                   </span>
                   <span className="text-slate-400">starting price</span>
                 </div>
@@ -569,11 +630,18 @@ export default function ServiceDetailPage() {
                     onChange={(e) => setSelectedTime(e.target.value)}
                     className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white"
                   >
-                    {serviceData?.availableTimes?.map((time, idx) => (
-                      <option key={idx} value={time}>
-                        {time}
+                    {Array.isArray(serviceData?.availableTimes) &&
+                    serviceData.availableTimes.length > 0 ? (
+                      serviceData.availableTimes.map((time, idx) => (
+                        <option key={idx} value={time}>
+                          {time}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        No times available
                       </option>
-                    ))}
+                    )}
                   </select>
                 </div>
 
@@ -586,11 +654,18 @@ export default function ServiceDetailPage() {
                     onChange={(e) => setServiceType(e.target.value)}
                     className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white"
                   >
-                    {serviceData?.serviceTypes?.map((type, idx) => (
-                      <option key={idx} value={type}>
-                        {type}
+                    {Array.isArray(serviceData?.serviceTypes) &&
+                    serviceData.serviceTypes.length > 0 ? (
+                      serviceData.serviceTypes.map((type, idx) => (
+                        <option key={idx} value={type}>
+                          {type}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        No services available
                       </option>
-                    ))}
+                    )}
                   </select>
                 </div>
 
@@ -648,7 +723,7 @@ export default function ServiceDetailPage() {
                 onClick={() =>
                   handleActionWithVerification(() =>
                     navigate(
-                      `/guest/messages/${user?.uid}/${serviceData?.provider_id}`
+                      `/guest/messages/${user?.uid}/${serviceData?.hostId}`
                     )
                   )
                 }

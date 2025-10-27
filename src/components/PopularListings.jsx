@@ -2,12 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { db } from "../firebase/firebase";
-import {
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-} from "firebase/firestore";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 
 export default function PopularListings() {
   const navigate = useNavigate();
@@ -38,11 +33,16 @@ export default function PopularListings() {
         });
 
         // Get minimum threshold (at least 2 bookings to be considered popular)
-        const minBookings = Math.max(2, Math.min(...Array.from(uniqueListingIds).map(id => bookingCounts[id])));
+        const minBookings = Math.max(
+          2,
+          Math.min(
+            ...Array.from(uniqueListingIds).map((id) => bookingCounts[id])
+          )
+        );
 
         // Sort listing IDs by booking count (highest first) and filter by minimum threshold
         const sortedListingIds = Array.from(uniqueListingIds)
-          .filter(id => bookingCounts[id] >= minBookings)
+          .filter((id) => bookingCounts[id] >= minBookings)
           .sort((a, b) => bookingCounts[b] - bookingCounts[a]);
 
         // Fetch listing details for top unique listings
@@ -181,22 +181,7 @@ export default function PopularListings() {
   }
 
   if (listings.length === 0) {
-    return (
-      <section className="py-20 px-4 bg-gradient-to-b from-transparent via-slate-900/50 to-transparent">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center">
-            <h2 className="text-4xl sm:text-5xl font-bold mb-4">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400">
-                Most Popular Listings
-              </span>
-            </h2>
-            <p className="text-slate-300 text-lg max-w-2xl mx-auto">
-              No popular listings yet. Check back soon as more listings get booked!
-            </p>
-          </div>
-        </div>
-      </section>
-    );
+    return null;
   }
 
   return (

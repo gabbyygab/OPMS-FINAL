@@ -3,7 +3,15 @@
     "allow": [
       "Bash(find:*)",
       "Bash(git checkout:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "mcp__ide__getDiagnostics",
+      "WebSearch",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:daypicker.dev)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:react-tailwindcss-datepicker.vercel.app)",
+      "WebFetch(domain:ui.shadcn.com)",
+      "WebFetch(domain:bundlephobia.com)"
     ],
     "deny": [],
     "ask": []

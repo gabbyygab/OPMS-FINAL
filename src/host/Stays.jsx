@@ -18,6 +18,8 @@ import {
   Bed,
   Bath,
   Gift,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -160,6 +162,8 @@ export default function HostMyStays({ user, userData }) {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -200,7 +204,7 @@ export default function HostMyStays({ user, userData }) {
       const listingRef = collection(db, "listings");
       const q = query(
         listingRef,
-        where("host_id", "==", userData.id),
+        where("hostId", "==", userData.id),
         where("isDraft", "==", false),
         where("type", "==", "stays")
       );
@@ -412,6 +416,17 @@ export default function HostMyStays({ user, userData }) {
     return matchesSearch && matchesFilter;
   });
 
+  // Reset to first page when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredStays.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedStays = filteredStays.slice(startIndex, endIndex);
+
   // Handle Add Stay
 
   const handleAddStay = async (isDraft = false) => {
@@ -467,7 +482,7 @@ export default function HostMyStays({ user, userData }) {
         isDraft: !!isDraft,
         status: "active",
         type: "stays",
-        host_id: userData.id || "unknown",
+        hostId: userData.id || "unknown",
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
       };
@@ -605,7 +620,7 @@ export default function HostMyStays({ user, userData }) {
         isDraft: false,
         status: "active",
         type: "stays",
-        host_id: userData.id || "unknown",
+        hostId: userData.id || "unknown",
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
       };
@@ -899,16 +914,17 @@ export default function HostMyStays({ user, userData }) {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredStays.map((stay) => (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+              {paginatedStays.map((stay) => (
               <div
                 key={stay.id}
-                className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 overflow-hidden hover:border-indigo-500/40 hover:shadow-indigo-500/20 transition flex flex-col backdrop-blur-sm"
+                className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-lg shadow-lg shadow-indigo-500/10 border border-indigo-500/20 overflow-hidden hover:border-indigo-500/40 hover:shadow-indigo-500/20 transition flex flex-col backdrop-blur-sm"
               >
                 {/* Image */}
-                <div className="relative h-48 overflow-hidden">
+                <div className="relative h-40 overflow-hidden">
                   <img
-                    src={stay.photos[0]}
+                    src={stay.photos?.[0] || stay.images?.[0] || "https://via.placeholder.com/400x300?text=No+Image"}
                     alt={stay.title}
                     className="w-full h-full object-cover"
                   />
@@ -955,7 +971,7 @@ export default function HostMyStays({ user, userData }) {
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent">
-                        ₱{stay.price.toFixed(2)}
+                        ₱{(stay.price || 0).toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -1013,8 +1029,46 @@ export default function HostMyStays({ user, userData }) {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-8">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  <ChevronLeft className="w-5 h-5 text-indigo-300" />
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-10 h-10 rounded-lg font-semibold transition ${
+                        currentPage === page
+                          ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/30"
+                          : "bg-slate-700/50 border border-indigo-500/30 text-indigo-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  <ChevronRight className="w-5 h-5 text-indigo-300" />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

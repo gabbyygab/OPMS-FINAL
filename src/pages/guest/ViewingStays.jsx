@@ -286,7 +286,7 @@ export default function ListingDetailPage() {
       const bookingData = {
         listing_id: listing_id,
         guest_id: userData.id,
-        host_id: listingData.host_id,
+        host_id: listingData.hostId,
         checkIn: checkInDate,
         checkOut: checkOutDate,
         guests: guests,
@@ -304,7 +304,7 @@ export default function ListingDetailPage() {
 
       // Create notification for host
       const notificationData = {
-        host_id: listingData.host_id,
+        host_id: listingData.hostId,
         type: "booking",
         title: "New Booking",
         message: `${userData.fullName || "A guest"} has booked your ${
@@ -485,8 +485,8 @@ export default function ListingDetailPage() {
 
         // Fetch host data
         let hostData = null;
-        if (data.host_id) {
-          const hostRef = doc(db, "users", data.host_id);
+        if (data.hostId) {
+          const hostRef = doc(db, "users", data.hostId);
           const hostSnap = await getDoc(hostRef);
           if (hostSnap.exists()) {
             hostData = { id: hostSnap.id, ...hostSnap.data() };
@@ -711,11 +711,11 @@ export default function ListingDetailPage() {
                   <div className="flex items-center gap-3 text-slate-400 text-sm">
                     <span>{listingData?.numberOfGuests || 0} guests</span>
                     <span>·</span>
-                    <span>{listingData?.bedrooms || 0} bedroom</span>
+                    <span>{listingData?.bedrooms || 0} bedrooms</span>
                     <span>·</span>
-                    <span>{listingData?.details?.beds || 0} beds</span>
+                    <span>{listingData?.beds || 0} beds</span>
                     <span>·</span>
-                    <span>{listingData?.bathrooms || 0} bath</span>
+                    <span>{listingData?.bathrooms || 0} baths</span>
                   </div>
                 </div>
                 <img
@@ -768,11 +768,11 @@ export default function ListingDetailPage() {
                 {listingData?.amenities?.map((amenity, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-3 text-slate-600 bg-slate-50 px-3 py-2 rounded-lg shadow-sm hover:bg-slate-100 transition"
+                    className="flex items-center gap-3 text-slate-200 bg-slate-700/50 px-3 py-2 rounded-lg border border-slate-600/50 hover:bg-slate-700 hover:border-indigo-500/30 transition"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="w-5 h-5 text-indigo-400"
+                      className="w-5 h-5 text-indigo-400 flex-shrink-0"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -1009,7 +1009,7 @@ export default function ListingDetailPage() {
                 onClick={() =>
                   handleActionWithVerification(() =>
                     navigate(
-                      `/guest/messages/${user.uid}/${listingData.host_id}`
+                      `/guest/messages/${user.uid}/${listingData.hostId}`
                     )
                   )
                 }

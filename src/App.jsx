@@ -56,6 +56,7 @@ import {
   PaymentMethods,
 } from "./pages/admin";
 import DraftsPage from "./pages/host/DraftsPage";
+import SeedData from "./pages/admin/SeedData";
 
 // Scroll to top on route change
 function ScrollToTop() {
@@ -284,6 +285,7 @@ function App() {
             <Route path="policy" element={<PolicyCompliance />} />
             <Route path="reports" element={<Reports />} />
             <Route path="payments" element={<PaymentMethods />} />
+            <Route path="seed-data" element={<SeedData />} />
             <Route index element={<Navigate to="dashboard" replace />} />
           </Route>
         </Route>

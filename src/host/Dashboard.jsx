@@ -76,7 +76,7 @@ export default function HostDashboard({ isVerified, user }) {
         const listingsRef = collection(db, "listings");
         const listingsQuery = query(
           listingsRef,
-          where("host_id", "==", userData.id),
+          where("hostId", "==", userData.id),
           where("isDraft", "==", false)
         );
         const listingsSnap = await getDocs(listingsQuery);

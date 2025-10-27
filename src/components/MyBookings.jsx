@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   MapPin,
   Calendar,
@@ -44,6 +45,10 @@ function formatDate(dateStr) {
 
 export default function MyBookingsSection() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const highlightedBookingId = searchParams.get("booking");
+  const highlightedBookingRef = useRef(null);
+
   const [bookings, setBookings] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -112,6 +117,18 @@ export default function MyBookingsSection() {
 
     fetchBookings();
   }, [user]);
+
+  // Scroll to and highlight the booking if a booking ID is in the query params
+  useEffect(() => {
+    if (highlightedBookingId && highlightedBookingRef.current) {
+      setTimeout(() => {
+        highlightedBookingRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }, 500); // Wait for animations to settle
+    }
+  }, [highlightedBookingId, bookings]);
 
   // Handle refund
   const handleRefund = async () => {
@@ -385,7 +402,7 @@ export default function MyBookingsSection() {
     <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <div className="absolute inset-0 bg-[url('/guestBg.png')] bg-cover bg-center opacity-5"></div>
 
-      <div className="relative z-10">
+      <div className="relative z-10 mt-16 sm:mt-20">
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-white mb-2">My Bookings</h1>
@@ -439,7 +456,12 @@ export default function MyBookingsSection() {
                   {currentBookings.map((booking) => (
                     <div
                       key={booking.id}
-                      className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 overflow-hidden hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 cursor-pointer group"
+                      ref={highlightedBookingId === booking.id ? highlightedBookingRef : null}
+                      className={`backdrop-blur-sm rounded-2xl shadow-lg border overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group ${
+                        highlightedBookingId === booking.id
+                          ? "bg-indigo-600/20 border-indigo-500 shadow-xl shadow-indigo-500/30"
+                          : "bg-slate-800/50 border-slate-700 hover:shadow-indigo-500/10 hover:border-slate-600"
+                      }`}
                       onClick={() => setSelectedBooking(booking)}
                     >
                       <div className="flex flex-col sm:flex-row">

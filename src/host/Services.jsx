@@ -30,6 +30,8 @@ import {
   Check,
   Info,
   Shield,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   MapContainer,
@@ -114,7 +116,8 @@ function LocationPicker({ marker, setMarker, setFormData, formData }) {
 
         const data = await res.json();
         const parsedAddress = parseNominatimAddress(data);
-        const placeName = parsedAddress || data.display_name || `${lat}, ${lng}`;
+        const placeName =
+          parsedAddress || data.display_name || `${lat}, ${lng}`;
 
         setFormData({
           ...formData,
@@ -157,6 +160,8 @@ export default function HostMyServices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -180,6 +185,8 @@ export default function HostMyServices() {
     experienceYears: "",
     completedJobs: "",
     isVerified: false,
+    discount: { type: "percentage", value: "" },
+    promoCode: "",
   });
 
   const [newServiceType, setNewServiceType] = useState("");
@@ -211,7 +218,7 @@ export default function HostMyServices() {
       const servicesRef = collection(db, "listings");
       const q = query(
         servicesRef,
-        where("host_id", "==", userData.id),
+        where("hostId", "==", userData.id),
         where("isDraft", "==", false),
         where("type", "==", "services")
       );
@@ -227,7 +234,9 @@ export default function HostMyServices() {
             where("listing_id", "==", doc.id)
           );
           const bookingSnapshot = await getDocs(bookingQuery);
-          const revenue = (serviceData.price || serviceData.basePrice || 0) * bookingSnapshot.size;
+          const revenue =
+            (serviceData.price || serviceData.basePrice || 0) *
+            bookingSnapshot.size;
 
           return {
             id: serviceData.id,
@@ -418,6 +427,17 @@ export default function HostMyServices() {
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
+  // Reset to first page when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus, filterCategory]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedServices = filteredServices.slice(startIndex, endIndex);
+
   // Handle Add Service
   const handleAddService = async (isDraft = false) => {
     try {
@@ -473,11 +493,16 @@ export default function HostMyServices() {
         terms: Array.isArray(formData.terms) ? formData.terms : [],
         experienceYears: Number(formData.experienceYears) || 0,
         completedJobs: Number(formData.completedJobs) || 0,
+        discount: {
+          type: formData.discount?.type || "percentage",
+          value: Number(formData.discount?.value) || 0,
+        },
+        promoCode: formData.promoCode || null,
         isVerified: isVerified,
         isDraft: !!isDraft,
         status: "active",
         type: "services",
-        host_id: userData.id || "unknown",
+        hostId: userData.id || "unknown",
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
       };
@@ -501,9 +526,7 @@ export default function HostMyServices() {
 
       toast.dismiss(loadingToast);
       toast.success(
-        isDraft
-          ? "Draft saved successfully!"
-          : "Service added successfully!"
+        isDraft ? "Draft saved successfully!" : "Service added successfully!"
       );
 
       resetForm();
@@ -583,6 +606,11 @@ export default function HostMyServices() {
         terms: Array.isArray(formData.terms) ? formData.terms : [],
         experienceYears: Number(formData.experienceYears) || 0,
         completedJobs: Number(formData.completedJobs) || 0,
+        discount: {
+          type: formData.discount?.type || "percentage",
+          value: Number(formData.discount?.value) || 0,
+        },
+        promoCode: formData.promoCode || null,
         isVerified: isVerified,
         isDraft: false,
         status: "active",
@@ -606,7 +634,9 @@ export default function HostMyServices() {
       // Update local state
       setServices((prev) =>
         prev.map((service) =>
-          service.id === selectedId ? { id: selectedId, ...cleanService } : service
+          service.id === selectedId
+            ? { id: selectedId, ...cleanService }
+            : service
         )
       );
 
@@ -664,12 +694,12 @@ export default function HostMyServices() {
       });
 
       setServices(
-        services.map((s) =>
-          s.id === id ? { ...s, status: newStatus } : s
-        )
+        services.map((s) => (s.id === id ? { ...s, status: newStatus } : s))
       );
       toast.success(
-        `Service ${newStatus === "active" ? "activated" : "deactivated"} successfully!`
+        `Service ${
+          newStatus === "active" ? "activated" : "deactivated"
+        } successfully!`
       );
     } catch (error) {
       console.error("Error toggling status:", error);
@@ -706,6 +736,8 @@ export default function HostMyServices() {
       terms: Array.isArray(service.terms) ? service.terms : [],
       experienceYears: service.experienceYears || "",
       completedJobs: service.completedJobs || "",
+      discount: service.discount || { type: "percentage", value: "" },
+      promoCode: service.promoCode || "",
     });
 
     if (service.photos && service.photos.length > 0) {
@@ -780,6 +812,8 @@ export default function HostMyServices() {
       experienceYears: "",
       completedJobs: "",
       isVerified: false,
+      discount: { type: "percentage", value: "" },
+      promoCode: "",
     });
     setPreviewImages([]);
     setImageFiles([]);
@@ -852,7 +886,10 @@ export default function HostMyServices() {
               <div>
                 <p className="text-orange-300/70 text-sm">Total Bookings</p>
                 <h3 className="text-2xl font-bold text-orange-100 mt-1">
-                  {services.reduce((sum, service) => sum + (service.bookingCount || 0), 0)}
+                  {services.reduce(
+                    (sum, service) => sum + (service.bookingCount || 0),
+                    0
+                  )}
                 </h3>
               </div>
               <div className="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center border border-orange-500/30">
@@ -958,17 +995,18 @@ export default function HostMyServices() {
               )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredServices.map((service) => (
-              <div
-                key={service.id}
-                className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm overflow-hidden hover:shadow-indigo-500/20 transition"
-              >
-                {/* Image */}
-                <div className="relative h-48 overflow-hidden bg-slate-700">
-                  {service.photos && service.photos.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+              {paginatedServices.map((service) => (
+                <div
+                  key={service.id}
+                  className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-lg shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm overflow-hidden hover:shadow-indigo-500/20 transition"
+                >
+                  {/* Image */}
+                  <div className="relative h-40 overflow-hidden bg-slate-700">
+                  {(service.photos?.length > 0 || service.images?.length > 0) ? (
                     <img
-                      src={service.photos[0]}
+                      src={service.photos?.[0] || service.images?.[0]}
                       alt={service.title}
                       className="w-full h-full object-cover"
                     />
@@ -1009,11 +1047,15 @@ export default function HostMyServices() {
                   <div className="flex items-center gap-4 text-sm text-indigo-300/70 mb-4">
                     <span className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
-                      {service.duration}h
+                      {service.duration || "N/A"}h
                     </span>
                     <span className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
-                      {service.availability}
+                      {typeof service.availability === 'string'
+                        ? service.availability
+                        : service.availability
+                          ? "Custom Hours"
+                          : "Flexible"}
                     </span>
                   </div>
 
@@ -1027,7 +1069,7 @@ export default function HostMyServices() {
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-indigo-100">
-                        ₱{Number(service.basePrice).toLocaleString()}
+                        ₱{(service.price || 0).toFixed(2)}
                       </p>
                       <p className="text-xs text-indigo-300/60">per service</p>
                     </div>
@@ -1094,8 +1136,46 @@ export default function HostMyServices() {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-8">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  <ChevronLeft className="w-5 h-5 text-indigo-300" />
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-10 h-10 rounded-lg font-semibold transition ${
+                        currentPage === page
+                          ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/30"
+                          : "bg-slate-700/50 border border-indigo-500/30 text-indigo-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  <ChevronRight className="w-5 h-5 text-indigo-300" />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -1168,13 +1248,20 @@ export default function HostMyServices() {
                   )}
                 </div>
 
-                <div className="mt-4 rounded-xl overflow-hidden border border-indigo-500/30 relative" style={{ zIndex: 1 }}>
+                <div
+                  className="mt-4 rounded-xl overflow-hidden border border-indigo-500/30 relative"
+                  style={{ zIndex: 1 }}
+                >
                   <MapContainer
                     center={marker || defaultCenter}
                     zoom={10}
                     scrollWheelZoom={false}
                     zoomControl={false}
-                    style={{ height: "350px", width: "100%", position: "relative" }}
+                    style={{
+                      height: "350px",
+                      width: "100%",
+                      position: "relative",
+                    }}
                   >
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -1272,7 +1359,10 @@ export default function HostMyServices() {
                     type="number"
                     value={formData.experienceYears}
                     onChange={(e) =>
-                      setFormData({ ...formData, experienceYears: e.target.value })
+                      setFormData({
+                        ...formData,
+                        experienceYears: e.target.value,
+                      })
                     }
                     placeholder="5"
                     className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
@@ -1579,6 +1669,70 @@ export default function HostMyServices() {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Discount */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
+                    Discount Type
+                  </label>
+                  <select
+                    value={formData.discount?.type || "percentage"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        discount: {
+                          ...formData.discount,
+                          type: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100"
+                  >
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="fixed">Fixed Amount</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
+                    Discount Value
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.discount?.value || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        discount: {
+                          ...formData.discount,
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="Enter discount value"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                  />
+                </div>
+              </div>
+
+              {/* Promo Code */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
+                  Promo Code (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.promoCode || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      promoCode: e.target.value.toUpperCase(),
+                    })
+                  }
+                  placeholder="e.g., SAVE10"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                />
               </div>
 
               {/* Photos */}
@@ -1726,13 +1880,20 @@ export default function HostMyServices() {
                   )}
                 </div>
 
-                <div className="mt-4 rounded-xl overflow-hidden border border-indigo-500/30 relative" style={{ zIndex: 1 }}>
+                <div
+                  className="mt-4 rounded-xl overflow-hidden border border-indigo-500/30 relative"
+                  style={{ zIndex: 1 }}
+                >
                   <MapContainer
                     center={marker || defaultCenter}
                     zoom={10}
                     scrollWheelZoom={false}
                     zoomControl={false}
-                    style={{ height: "350px", width: "100%", position: "relative" }}
+                    style={{
+                      height: "350px",
+                      width: "100%",
+                      position: "relative",
+                    }}
                   >
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -1830,7 +1991,10 @@ export default function HostMyServices() {
                     type="number"
                     value={formData.experienceYears}
                     onChange={(e) =>
-                      setFormData({ ...formData, experienceYears: e.target.value })
+                      setFormData({
+                        ...formData,
+                        experienceYears: e.target.value,
+                      })
                     }
                     placeholder="5"
                     className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
@@ -2139,13 +2303,79 @@ export default function HostMyServices() {
                 )}
               </div>
 
+              {/* Discount */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
+                    Discount Type
+                  </label>
+                  <select
+                    value={formData.discount?.type || "percentage"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        discount: {
+                          ...formData.discount,
+                          type: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100"
+                  >
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="fixed">Fixed Amount</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
+                    Discount Value
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.discount?.value || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        discount: {
+                          ...formData.discount,
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="Enter discount value"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                  />
+                </div>
+              </div>
+
+              {/* Promo Code */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
+                  Promo Code (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.promoCode || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      promoCode: e.target.value.toUpperCase(),
+                    })
+                  }
+                  placeholder="e.g., SAVE10"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                />
+              </div>
+
               {/* Photos */}
               <div>
                 <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Photos
                 </label>
                 <div
-                  onClick={() => document.getElementById("editPhotoInput").click()}
+                  onClick={() =>
+                    document.getElementById("editPhotoInput").click()
+                  }
                   className="border-2 border-dashed border-indigo-500/30 rounded-lg p-8 text-center hover:border-indigo-500/60 hover:bg-slate-700/30 transition cursor-pointer bg-slate-700/20"
                 >
                   <Upload className="w-12 h-12 text-indigo-400/50 mx-auto mb-3" />
@@ -2218,8 +2448,10 @@ export default function HostMyServices() {
             </h2>
             <p className="text-indigo-300/70 mb-6">
               Are you sure you want to delete{" "}
-              <span className="font-semibold text-indigo-200">{selectedService?.title}</span>?
-              This action cannot be undone.
+              <span className="font-semibold text-indigo-200">
+                {selectedService?.title}
+              </span>
+              ? This action cannot be undone.
             </p>
             <div className="flex gap-3 justify-center">
               <button

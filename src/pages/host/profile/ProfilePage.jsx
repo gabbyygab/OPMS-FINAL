@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Calendar,
   MapPin,
@@ -18,7 +18,15 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { db } from "../../../firebase/firebase";
-import { updateDoc, doc } from "firebase/firestore";
+import {
+  updateDoc,
+  doc,
+  collection,
+  query,
+  where,
+  getDocs,
+  getDoc,
+} from "firebase/firestore";
 import { toast } from "react-toastify";
 import { uploadToCloudinary } from "../../../cloudinary/uploadFunction";
 import {
@@ -30,6 +38,7 @@ import {
 } from "firebase/auth";
 
 import { useNavigate } from "react-router-dom";
+import { ROUTES } from "../../../constants/routes";
 import NavigationBar from "../../../components/NavigationBar";
 
 export default function ProfilePage() {
@@ -122,40 +131,81 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
 
   // console.log(user.photoURL);
-  const bookings = [
-    {
-      id: 1,
-      property: "Cozy Beach House",
-      location: "Malibu, CA",
-      checkIn: "Dec 15, 2024",
-      checkOut: "Dec 20, 2024",
-      status: "Upcoming",
-      image:
-        "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=400&h=300&fit=crop",
-    },
-    {
-      id: 2,
-      property: "Downtown Loft",
-      location: "New York, NY",
-      checkIn: "Oct 1, 2024",
-      checkOut: "Oct 5, 2024",
-      status: "Completed",
-      image:
-        "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=300&fit=crop",
-    },
-    {
-      id: 3,
-      property: "Mountain Cabin",
-      location: "Aspen, CO",
-      checkIn: "Jan 10, 2025",
-      checkOut: "Jan 15, 2025",
-      status: "Upcoming",
-      image:
-        "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=400&h=300&fit=crop",
-    },
-  ];
   //deletionand deactivation
   const navigate = useNavigate();
+  const [bookings, setBookings] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(true);
+
+  // Fetch bookings from Firestore
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (!userData?.id) return;
+
+      try {
+        setLoadingBookings(true);
+
+        // Query bookings for this user
+        const bookingsRef = collection(db, "bookings");
+        const bookingsQuery = query(
+          bookingsRef,
+          where("guest_id", "==", userData.id)
+        );
+        const bookingsSnapshot = await getDocs(bookingsQuery);
+
+        // Fetch listing data for each booking
+        const bookingsWithListings = await Promise.all(
+          bookingsSnapshot.docs.map(async (bookingDoc) => {
+            const bookingData = bookingDoc.data();
+            const listingRef = doc(db, "listings", bookingData.listing_id);
+            const listingSnap = await getDoc(listingRef);
+
+            const listingData = listingSnap.exists() ? listingSnap.data() : {};
+
+            // Convert Firestore Timestamp to Date
+            const checkInDate = bookingData.checkIn?.toDate
+              ? bookingData.checkIn.toDate()
+              : new Date(bookingData.checkIn);
+            const checkOutDate = bookingData.checkOut?.toDate
+              ? bookingData.checkOut.toDate()
+              : new Date(bookingData.checkOut);
+
+            // Determine status based on check-out date
+            const today = new Date();
+            const status = checkOutDate < today ? "Completed" : "Upcoming";
+
+            return {
+              id: bookingDoc.id,
+              property: listingData.title || "Unknown Property",
+              location: listingData.location || "Unknown Location",
+              checkIn: checkInDate.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              }),
+              checkOut: checkOutDate.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              }),
+              status,
+              image: listingData.photos?.[0] || "/default-image.png",
+              totalAmount: bookingData.grandTotal || 0,
+            };
+          })
+        );
+
+        setBookings(bookingsWithListings);
+      } catch (error) {
+        console.error("Error fetching bookings:", error);
+        toast.error("Failed to load bookings.");
+      } finally {
+        setLoadingBookings(false);
+      }
+    };
+
+    fetchBookings();
+  }, [userData?.id]);
+
   const handleDeleteAccount = async () => {
     if (!user) return toast.error("No user logged in");
     const confirmDelete = window.confirm(
@@ -264,10 +314,14 @@ export default function ProfilePage() {
           <div className="absolute -bottom-20 -left-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
         </div>
         <div className="max-w-7xl mx-auto px-8 py-8 relative z-10">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Account</h1>
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+            Account
+          </h1>
           <p className="text-indigo-300/80 mt-2 text-lg">
-            <span className="font-semibold text-indigo-200">{userData.fullName}</span> ·
-            {userData.email}
+            <span className="font-semibold text-indigo-200">
+              {userData.fullName}
+            </span>{" "}
+            ·{userData.email}
           </p>
         </div>
       </div>
@@ -403,7 +457,9 @@ export default function ProfilePage() {
                   <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent mb-2">
                     Personal info
                   </h2>
-                  <p className="text-indigo-200/70">Update your personal details</p>
+                  <p className="text-indigo-200/70">
+                    Update your personal details
+                  </p>
                 </div>
 
                 <form className="space-y-5 relative z-10">
@@ -600,73 +656,107 @@ export default function ProfilePage() {
                   <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent mb-2">
                     Trips
                   </h2>
-                  <p className="text-indigo-200/70">View and manage your bookings</p>
+                  <p className="text-indigo-200/70">
+                    View and manage your bookings
+                  </p>
                 </div>
 
                 <div className="space-y-6 relative z-10">
-                  {bookings.map((booking) => (
-                    <div
-                      key={booking.id}
-                      className="border border-indigo-500/30 rounded-xl overflow-hidden hover:shadow-2xl hover:border-indigo-500/50 transition-all bg-slate-700/20 backdrop-blur-sm"
-                    >
-                      <div className="flex flex-col md:flex-row gap-6 p-6">
-                        <img
-                          src={booking.image}
-                          alt={booking.property}
-                          className="w-full md:w-48 h-48 md:h-36 object-cover rounded-lg flex-shrink-0 ring-2 ring-indigo-500/30"
-                        />
+                  {loadingBookings ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="text-center">
+                        <div className="relative w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                          <div className="absolute inset-0 rounded-full border-4 border-slate-700"></div>
+                          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-500 border-r-indigo-500 animate-spin"></div>
+                          <div className="absolute w-2 h-2 bg-indigo-500 rounded-full"></div>
+                        </div>
+                        <p className="text-white text-lg font-semibold">
+                          Loading bookings...
+                        </p>
+                      </div>
+                    </div>
+                  ) : bookings.length > 0 ? (
+                    bookings.map((booking) => (
+                      <div
+                        key={booking.id}
+                        className="border border-indigo-500/30 rounded-xl overflow-hidden hover:shadow-2xl hover:border-indigo-500/50 transition-all bg-slate-700/20 backdrop-blur-sm"
+                      >
+                        <div className="flex flex-col md:flex-row gap-6 p-6">
+                          <img
+                            src={booking.image}
+                            alt={booking.property}
+                            className="w-full md:w-48 h-48 md:h-36 object-cover rounded-lg flex-shrink-0 ring-2 ring-indigo-500/30"
+                          />
 
-                        <div className="flex-1 flex flex-col justify-between">
-                          <div>
-                            <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
-                              <div>
-                                <h3 className="text-2xl font-bold text-indigo-100 mb-1">
-                                  {booking.property}
-                                </h3>
-                                <p className="text-indigo-200/70 flex items-center gap-1.5">
-                                  <MapPin className="w-4 h-4" />
-                                  {booking.location}
-                                </p>
+                          <div className="flex-1 flex flex-col justify-between">
+                            <div>
+                              <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
+                                <div>
+                                  <h3 className="text-2xl font-bold text-indigo-100 mb-1">
+                                    {booking.property}
+                                  </h3>
+                                  <p className="text-indigo-200/70 flex items-center gap-1.5">
+                                    <MapPin className="w-4 h-4" />
+                                    {booking.location}
+                                  </p>
+                                </div>
+                                <span
+                                  className={`px-4 py-1.5 rounded-full text-sm font-semibold ${
+                                    booking.status === "Upcoming"
+                                      ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                                      : "bg-slate-600/30 text-slate-300 border border-slate-500/30"
+                                  }`}
+                                >
+                                  {booking.status}
+                                </span>
                               </div>
-                              <span
-                                className={`px-4 py-1.5 rounded-full text-sm font-semibold ${
-                                  booking.status === "Upcoming"
-                                    ? "bg-green-500/20 text-green-300 border border-green-500/30"
-                                    : "bg-slate-600/30 text-slate-300 border border-slate-500/30"
-                                }`}
+
+                              <div className="flex items-center gap-6 text-indigo-200/70 mb-4">
+                                <span className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4" />
+                                  <span className="text-sm font-medium">
+                                    {booking.checkIn}
+                                  </span>
+                                </span>
+                                <span className="flex items-center gap-2">
+                                  <Clock className="w-4 h-4" />
+                                  <span className="text-sm font-medium">
+                                    {booking.checkOut}
+                                  </span>
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-3 flex-wrap">
+                              <button
+                                onClick={() =>
+                                  navigate(
+                                    `${ROUTES.GUEST.MY_BOOKINGS}?booking=${booking.id}`
+                                  )
+                                }
+                                className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg"
                               >
-                                {booking.status}
-                              </span>
+                                View reservation
+                              </button>
+                              <button className="px-6 py-2.5 border-2 border-indigo-500/50 text-indigo-200 rounded-lg hover:bg-indigo-500/20 hover:border-indigo-400 transition-all font-semibold">
+                                Get help
+                              </button>
                             </div>
-
-                            <div className="flex items-center gap-6 text-indigo-200/70 mb-4">
-                              <span className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4" />
-                                <span className="text-sm font-medium">
-                                  {booking.checkIn}
-                                </span>
-                              </span>
-                              <span className="flex items-center gap-2">
-                                <Clock className="w-4 h-4" />
-                                <span className="text-sm font-medium">
-                                  {booking.checkOut}
-                                </span>
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-3 flex-wrap">
-                            <button className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg">
-                              View reservation
-                            </button>
-                            <button className="px-6 py-2.5 border-2 border-indigo-500/50 text-indigo-200 rounded-lg hover:bg-indigo-500/20 hover:border-indigo-400 transition-all font-semibold">
-                              Get help
-                            </button>
                           </div>
                         </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="border border-dashed border-indigo-500/30 rounded-lg p-12 text-center bg-slate-700/20 backdrop-blur-sm">
+                      <Calendar className="w-16 h-16 mx-auto mb-4 text-indigo-400/50" />
+                      <p className="text-indigo-200/70 text-lg">
+                        No bookings yet
+                      </p>
+                      <p className="text-indigo-200/50 mt-2">
+                        Start exploring and book your first trip!
+                      </p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             )}

@@ -128,6 +128,138 @@ Example: `import { auth } from '@/src/firebase'`
 - Image uploads (Cloudinary and UploadThing)
 - Interactive maps for location selection
 
+## Listing Data Structure
+
+The application supports three listing types, each with specific fields stored in Firestore:
+
+### Stays Listing Fields
+```javascript
+{
+  type: "stays",
+  title: string,                       // Property name
+  description: string,                 // Property description
+  location: string,                    // Full address
+  price: number,                       // Price per night
+  numberOfGuests: number,              // Total capacity (from formData.guests)
+  bedrooms: number,                    // Number of bedrooms
+  bathrooms: number,                   // Number of bathrooms
+  beds: number,                        // Total number of beds
+  amenities: string[],                 // e.g., ["WiFi", "Pool", "Kitchen"]
+  houseRules: string[],                // e.g., ["No Smoking", "No Pets"]
+  photos: string[],                    // Array of image URLs from Cloudinary
+  availableDates: [{                   // Array of availability ranges
+    startDate: string,                 // "YYYY-MM-DD"
+    endDate: string                    // "YYYY-MM-DD"
+  }],
+  bookedDates: string[],               // Dates that are already booked
+  promoCode: string | null,            // Promotional code if applicable
+  discount: {                          // Discount information
+    type: string,                      // "percentage" or "fixed"
+    value: number                      // Discount amount
+  },
+  ratings: number,                     // Average rating
+  isDraft: boolean,                    // Whether listing is in draft mode
+  status: string,                      // "active" or "inactive"
+  hostId: string,                      // Reference to host user ID
+  created_at: timestamp,               // Creation timestamp
+  updated_at: timestamp                // Last update timestamp
+}
+```
+
+### Experiences Listing Fields
+```javascript
+{
+  type: "experiences",
+  title: string,                       // Experience name
+  description: string,                 // Experience description
+  location: string,                    // Location/address
+  price: number,                       // Price per person
+  duration: number,                    // Duration in hours
+  maxGuests: number,                   // Maximum number of participants
+  category: string,                    // e.g., "Adventure", "Culture", "Food", "Wellness"
+  language: string,                    // Language spoken during experience
+  ageMin: number,                      // Minimum age requirement
+  availableTimes: string[],            // Available time slots
+  availableDates: [{                   // Array of availability ranges
+    startDate: string,                 // "YYYY-MM-DD"
+    endDate: string                    // "YYYY-MM-DD"
+  }],
+  activities: string[],                // Activities included (e.g., "Hiking", "Photography")
+  thingsToKnow: string[],              // Important information for participants
+  included: string[],                  // What's included in the experience
+  toBring: string[],                   // What participants should bring
+  photos: string[],                    // Array of image URLs from Cloudinary
+  discount: {                          // Discount information
+    type: string,                      // "percentage" or "fixed"
+    value: number                      // Discount amount
+  },
+  promoCode: string | null,            // Promotional code if applicable
+  rating: number,                      // Average rating
+  isDraft: boolean,                    // Whether listing is in draft mode
+  status: string,                      // "active" or "inactive"
+  hostId: string,                      // Reference to host user ID
+  createdAt: timestamp,                // Creation timestamp
+  updatedAt: timestamp                 // Last update timestamp
+}
+```
+
+### Services Listing Fields
+```javascript
+{
+  type: "services",
+  title: string,                       // Service name
+  description: string,                 // Service description
+  location: string,                    // Service location or area
+  price: number,                       // Price per hour (from formData.basePrice)
+  duration: number,                    // Duration in hours
+  category: string,                    // Service category (e.g., "Home Services")
+  responseTime: string,                // Response time (e.g., "within 1 hour")
+  photos: string[],                    // Array of image URLs from Cloudinary
+  serviceTypes: string[],              // e.g., ["Deep Cleaning", "Window Cleaning"]
+  highlights: string[],                // Key features/highlights of the service
+  serviceAreas: string[],              // Geographic areas served
+  certifications: string[],            // Professional certifications
+  terms: string[],                     // Terms and conditions
+  experienceYears: number,             // Years of experience
+  completedJobs: number,               // Number of completed jobs
+  availableDates: [{                   // Array of availability ranges
+    startDate: string,                 // "YYYY-MM-DD"
+    endDate: string                    // "YYYY-MM-DD"
+  }],
+  discount: {                          // Discount information
+    type: string,                      // "percentage" or "fixed"
+    value: number                      // Discount amount
+  },
+  promoCode: string | null,            // Promotional code if applicable
+  isVerified: boolean,                 // Whether provider is verified
+  isDraft: boolean,                    // Whether listing is in draft mode
+  status: string,                      // "active" or "inactive"
+  hostId: string,                      // Reference to host user ID
+  created_at: timestamp,               // Creation timestamp
+  updated_at: timestamp                // Last update timestamp
+}
+```
+
+### Common Fields Across All Types
+- **type**: "stays" | "experiences" | "services"
+- **title**: Name of the listing
+- **description**: Detailed information about the listing
+- **location**: Physical address or service area
+- **latitude/longitude**: Geographic coordinates for map integration
+- **images**: Array of image URLs stored in Firebase Storage
+- **availableDates**: Array of date ranges when the listing is available
+- **hostId**: User ID of the host who created the listing
+- **rating**: Average rating (0-5)
+- **reviews**: Number of reviews received
+- **createdAt/updatedAt**: Firestore timestamps
+
+### Searching & Filtering
+Listings are filtered based on:
+- **Location**: String search/matching
+- **Check-in/Check-out dates**: Date range overlap with availableDates
+- **Guests**: Minimum guest requirement (stays: numberOfGuests, experiences: maxParticipants)
+- **Service Type**: Available serviceTypes array (services only)
+
 ## Development Commands
 
 ```bash
@@ -162,10 +294,36 @@ Uses React Context API located in `src/context/`:
 
 Route protection implemented in `src/routing/ProtectedRoute.jsx` to guard authenticated pages.
 
+## Field Naming Convention
+
+### Listing Host Reference
+The database uses `hostId` (camelCase) for storing the host/seller's user ID in listing documents:
+
+```javascript
+{
+  hostId: "WMdkYEhTTrYUsHw9XpeH3xw1T9s2",  // Firestore user ID of the host
+  // ... other listing fields
+}
+```
+
+All host-side CRUD operations in `src/host/` pages use `hostId` for:
+- Querying listings: `where("hostId", "==", userData.id)`
+- Creating new listings: `hostId: userData.id`
+- Updating listings
+
+### Files Updated (host_id → hostId)
+- `src/host/Dashboard.jsx` - Dashboard fetch queries
+- `src/host/Stays.jsx` - Create/Update stays, fetch stays listings
+- `src/host/Experience.jsx` - Create/Update experiences, fetch experiences listings
+- `src/host/Services.jsx` - Create/Update services, fetch services listings
+
 ## Recent Development Activity
 
 Based on git history:
 - Messaging system completed
 - Profile functionality completed
-- Minor fixes and improvements ongoing
+- Search functionality enhanced with filters
+- Admin logout functionality added
+- Sample data seeding tool created
+- Field naming standardization (host_id → hostId)
 - Active development on main branch

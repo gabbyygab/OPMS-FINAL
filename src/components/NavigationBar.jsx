@@ -34,6 +34,9 @@ import { auth, db } from "../firebase/firebase";
 import { signOut } from "firebase/auth";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { ROUTES } from "../constants/routes";
+import { DateRange } from "react-date-range";
+import "react-date-range/dist/styles.css";
+import "react-date-range/dist/theme/default.css";
 
 // Flag to switch between layouts: 'classic' or 'streamlined'
 // Use 'streamlined' for authenticated users only (focused, header-heavy navigation)
@@ -625,51 +628,51 @@ const MobileMenu = ({
         <>
           {userData?.role === "guest" && (
             <>
-              <button
-                className="flex items-center gap-2 hover:text-white transition"
-                onClick={() => setMobileSearchOpen(!isMobileSearchOpen)}
-              >
-                <Search className="w-5 h-5" /> Search
-              </button>
-              {isMobileSearchOpen && (
-                <div className="flex flex-col gap-3 bg-white text-gray-700 rounded-2xl shadow-md p-4">
-                  {/* Where */}
-                  <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-                    <MapPin className="w-4 h-4 text-gray-500" />
-                    <input
-                      type="text"
-                      placeholder="Where?"
-                      className="outline-none bg-transparent text-sm w-full"
-                    />
-                  </div>
-
-                  {/* When */}
-                  <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-                    <Calendar className="w-4 h-4 text-gray-500" />
-                    <input
-                      type="text"
-                      placeholder="When?"
-                      className="outline-none bg-transparent text-sm w-full"
-                    />
-                  </div>
-
-                  {/* Who */}
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-gray-500" />
-                    <input
-                      type="text"
-                      placeholder="Who?"
-                      className="outline-none bg-transparent text-sm w-full"
-                    />
-                  </div>
-
-                  {/* Search button */}
-                  <button className="bg-indigo-600 text-white flex items-center justify-center gap-2 py-2 rounded-full hover:bg-indigo-700 transition">
-                    <Search className="w-4 h-4" />
-                    <span className="text-sm font-medium">Search</span>
-                  </button>
-                </div>
-              )}
+              {/* Category Navigation */}
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => {
+                    setActiveFilter("stays");
+                    navigate("/guest?type=stays");
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all ${
+                    activeFilter === "stays"
+                      ? "bg-indigo-600 text-white"
+                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  }`}
+                >
+                  Stays
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveFilter("services");
+                    navigate("/guest?type=services");
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all ${
+                    activeFilter === "services"
+                      ? "bg-indigo-600 text-white"
+                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  }`}
+                >
+                  Services
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveFilter("experiences");
+                    navigate("/guest?type=experiences");
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all ${
+                    activeFilter === "experiences"
+                      ? "bg-indigo-600 text-white"
+                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  }`}
+                >
+                  Experiences
+                </button>
+              </div>
 
               <Link
                 to={ROUTES.GUEST.HOME}
@@ -721,10 +724,30 @@ const HostMobileMenuDrawer = ({
   const location = useLocation();
 
   const hostNavItems = [
-    { to: ROUTES.HOST.DASHBOARD, icon: BarChart3, label: "Dashboard", color: "from-indigo-500/20 to-blue-500/20" },
-    { to: ROUTES.HOST.STAYS, icon: Home, label: "My Stays", color: "from-cyan-500/20 to-blue-500/20" },
-    { to: ROUTES.HOST.EXPERIENCES, icon: Calendar, label: "Experiences", color: "from-purple-500/20 to-pink-500/20" },
-    { to: ROUTES.HOST.SERVICES, icon: Briefcase, label: "Services", color: "from-green-500/20 to-emerald-500/20" },
+    {
+      to: ROUTES.HOST.DASHBOARD,
+      icon: BarChart3,
+      label: "Dashboard",
+      color: "from-indigo-500/20 to-blue-500/20",
+    },
+    {
+      to: ROUTES.HOST.STAYS,
+      icon: Home,
+      label: "My Stays",
+      color: "from-cyan-500/20 to-blue-500/20",
+    },
+    {
+      to: ROUTES.HOST.EXPERIENCES,
+      icon: Calendar,
+      label: "Experiences",
+      color: "from-purple-500/20 to-pink-500/20",
+    },
+    {
+      to: ROUTES.HOST.SERVICES,
+      icon: Briefcase,
+      label: "Services",
+      color: "from-green-500/20 to-emerald-500/20",
+    },
   ];
 
   const isRouteActive = (route) => {
@@ -743,7 +766,8 @@ const HostMobileMenuDrawer = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           ></motion.div>
-          <motion.div className="fixed right-0 top-0 h-screen w-80 max-w-[90vw] bg-slate-800 backdrop-blur-xl border-l border-slate-700/50 z-50 overflow-y-auto lg:hidden"
+          <motion.div
+            className="fixed right-0 top-0 h-screen w-80 max-w-[90vw] bg-slate-800 backdrop-blur-xl border-l border-slate-700/50 z-50 overflow-y-auto lg:hidden"
             initial={{ x: 320, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 320, opacity: 0 }}
@@ -785,7 +809,9 @@ const HostMobileMenuDrawer = ({
                   <p className="text-sm font-semibold text-white truncate">
                     {user?.fullName || "Host"}
                   </p>
-                  <p className="text-xs text-slate-400 truncate">{user?.email || ""}</p>
+                  <p className="text-xs text-slate-400 truncate">
+                    {user?.email || ""}
+                  </p>
                 </div>
               </div>
             </div>
@@ -816,7 +842,9 @@ const HostMobileMenuDrawer = ({
               <Link
                 to={ROUTES.HOST.PROFILE}
                 className={`flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 rounded-lg transition-all duration-200 ${
-                  isRouteActive(ROUTES.HOST.PROFILE) ? "bg-gradient-to-r from-blue-500/20 to-blue-500/20 text-blue-300" : ""
+                  isRouteActive(ROUTES.HOST.PROFILE)
+                    ? "bg-gradient-to-r from-blue-500/20 to-blue-500/20 text-blue-300"
+                    : ""
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -827,7 +855,9 @@ const HostMobileMenuDrawer = ({
               <Link
                 to={ROUTES.HOST.MESSAGES}
                 className={`flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-pink-500/20 hover:to-pink-500/20 rounded-lg transition-all duration-200 ${
-                  isRouteActive(ROUTES.HOST.MESSAGES) ? "bg-gradient-to-r from-pink-500/20 to-pink-500/20 text-pink-300" : ""
+                  isRouteActive(ROUTES.HOST.MESSAGES)
+                    ? "bg-gradient-to-r from-pink-500/20 to-pink-500/20 text-pink-300"
+                    : ""
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -838,7 +868,9 @@ const HostMobileMenuDrawer = ({
               <Link
                 to={ROUTES.HOST.NOTIFICATIONS}
                 className={`relative flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 rounded-lg transition-all duration-200 ${
-                  isRouteActive(ROUTES.HOST.NOTIFICATIONS) ? "bg-gradient-to-r from-yellow-500/20 to-yellow-500/20 text-yellow-300" : ""
+                  isRouteActive(ROUTES.HOST.NOTIFICATIONS)
+                    ? "bg-gradient-to-r from-yellow-500/20 to-yellow-500/20 text-yellow-300"
+                    : ""
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -846,7 +878,9 @@ const HostMobileMenuDrawer = ({
                   <Bell className="w-5 h-5 flex-shrink-0" />
                   {unreadNotificationsCount > 0 && (
                     <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-semibold w-4 h-4 rounded-full flex items-center justify-center">
-                      {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                      {unreadNotificationsCount > 9
+                        ? "9+"
+                        : unreadNotificationsCount}
                     </span>
                   )}
                 </div>
@@ -856,7 +890,9 @@ const HostMobileMenuDrawer = ({
               <Link
                 to={ROUTES.HOST.SETTINGS}
                 className={`flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-green-500/20 hover:to-green-500/20 rounded-lg transition-all duration-200 ${
-                  isRouteActive(ROUTES.HOST.SETTINGS) ? "bg-gradient-to-r from-green-500/20 to-green-500/20 text-green-300" : ""
+                  isRouteActive(ROUTES.HOST.SETTINGS)
+                    ? "bg-gradient-to-r from-green-500/20 to-green-500/20 text-green-300"
+                    : ""
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -867,7 +903,9 @@ const HostMobileMenuDrawer = ({
               <Link
                 to={ROUTES.HOST.E_WALLET}
                 className={`flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 rounded-lg transition-all duration-200 ${
-                  isRouteActive(ROUTES.HOST.E_WALLET) ? "bg-gradient-to-r from-yellow-500/20 to-yellow-500/20 text-yellow-300" : ""
+                  isRouteActive(ROUTES.HOST.E_WALLET)
+                    ? "bg-gradient-to-r from-yellow-500/20 to-yellow-500/20 text-yellow-300"
+                    : ""
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -878,7 +916,9 @@ const HostMobileMenuDrawer = ({
               <Link
                 to={ROUTES.HOST.CALENDAR}
                 className={`flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-orange-500/20 hover:to-orange-500/20 rounded-lg transition-all duration-200 ${
-                  isRouteActive(ROUTES.HOST.CALENDAR) ? "bg-gradient-to-r from-orange-500/20 to-orange-500/20 text-orange-300" : ""
+                  isRouteActive(ROUTES.HOST.CALENDAR)
+                    ? "bg-gradient-to-r from-orange-500/20 to-orange-500/20 text-orange-300"
+                    : ""
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -932,220 +972,242 @@ const StreamlinedMobileMenu = ({
   return (
     <AnimatePresence>
       {mobileMenuOpen && (
-        <motion.div className="lg:hidden bg-slate-900/98 backdrop-blur-xl border-t border-slate-700/50 shadow-2xl"
+        <motion.div
+          className="lg:hidden bg-slate-900/98 backdrop-blur-xl border-t border-slate-700/50 shadow-2xl"
           initial={{ y: -100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -100, opacity: 0 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
         >
-      <div className="max-w-7xl mx-auto px-4 py-4 space-y-1">
-        {/* Profile Header - Mobile */}
-        <div className="flex items-center gap-3 px-4 py-3 bg-slate-800/50 rounded-xl mb-3">
-          {userData?.photoURL ? (
-            <img
-              src={userData.photoURL}
-              alt="Profile"
-              className="w-12 h-12 rounded-full object-cover border-2 border-slate-600"
-            />
-          ) : (
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-white font-semibold">
-              {user?.fullName
-                ? user.fullName
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .substring(0, 2)
-                    .toUpperCase()
-                : "U"}
+          <div className="max-w-7xl mx-auto px-4 py-4 space-y-1">
+            {/* Profile Header - Mobile */}
+            <div className="flex items-center gap-3 px-4 py-3 bg-slate-800/50 rounded-xl mb-3">
+              {userData?.photoURL ? (
+                <img
+                  src={userData.photoURL}
+                  alt="Profile"
+                  className="w-12 h-12 rounded-full object-cover border-2 border-slate-600"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+                  {user?.fullName
+                    ? user.fullName
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .substring(0, 2)
+                        .toUpperCase()
+                    : "U"}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white truncate">
+                  {user?.fullName || "User"}
+                </p>
+                <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+              </div>
             </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">
-              {user?.fullName || "User"}
-            </p>
-            <p className="text-xs text-slate-400 truncate">{user?.email}</p>
-          </div>
-        </div>
 
-        {/* Host Navigation - Mobile */}
-        {userData?.role === "host" && (
-          <>
-            {hostNavItems.map(({ to, icon: IconComponent, label }) => {
-              const IconElement = IconComponent;
-              return (
+            {/* Host Navigation - Mobile */}
+            {userData?.role === "host" && (
+              <>
+                {hostNavItems.map(({ to, icon: IconComponent, label }) => {
+                  const IconElement = IconComponent;
+                  return (
+                    <Link
+                      key={to}
+                      to={to}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                        isRouteActive(to)
+                          ? `nav-link-active bg-gradient-to-r from-cyan-400 to-purple-400 text-white shadow-lg`
+                          : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <IconElement className="w-5 h-5" />
+                      <span className="font-medium">{label}</span>
+                    </Link>
+                  );
+                })}
+                <div className="border-t border-slate-700/50 my-2"></div>
+              </>
+            )}
+
+            {/* Common Menu Items */}
+            <Link
+              to={
+                userData?.role === "host"
+                  ? ROUTES.HOST.PROFILE
+                  : ROUTES.GUEST.PROFILE
+              }
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                isRouteActive(
+                  userData?.role === "host"
+                    ? ROUTES.HOST.PROFILE
+                    : ROUTES.GUEST.PROFILE
+                )
+                  ? "bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300"
+                  : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
+              }`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <User className="w-5 h-5" />
+              <span className="font-medium">My Profile</span>
+            </Link>
+
+            {userData?.role === "guest" && (
+              <>
                 <Link
-                  key={to}
-                  to={to}
+                  to={ROUTES.GUEST.FAVORITES}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                    isRouteActive(to)
-                      ? `nav-link-active bg-gradient-to-r from-cyan-400 to-purple-400 text-white shadow-lg`
+                    isRouteActive(ROUTES.GUEST.FAVORITES)
+                      ? "bg-gradient-to-r from-pink-500/20 to-red-500/20 text-pink-300"
                       : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  <IconElement className="w-5 h-5" />
-                  <span className="font-medium">{label}</span>
+                  <Heart className="w-5 h-5" />
+                  <span className="font-medium">Favorites</span>
                 </Link>
-              );
-            })}
-            <div className="border-t border-slate-700/50 my-2"></div>
-          </>
-        )}
 
-        {/* Common Menu Items */}
-        <Link
-          to={
-            userData?.role === "host"
-              ? ROUTES.HOST.PROFILE
-              : ROUTES.GUEST.PROFILE
-          }
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-            isRouteActive(
-              userData?.role === "host"
-                ? ROUTES.HOST.PROFILE
-                : ROUTES.GUEST.PROFILE
-            )
-              ? "bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300"
-              : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
-          }`}
-          onClick={() => setMobileMenuOpen(false)}
-        >
-          <User className="w-5 h-5" />
-          <span className="font-medium">My Profile</span>
-        </Link>
+                <Link
+                  to={ROUTES.GUEST.MESSAGES}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    isRouteActive(ROUTES.GUEST.MESSAGES)
+                      ? "bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300"
+                      : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  <span className="font-medium">Messages</span>
+                </Link>
+              </>
+            )}
 
-        {userData?.role === "guest" && (
-          <>
+            {userData?.role === "host" && (
+              <>
+                <Link
+                  to={ROUTES.HOST.MESSAGES}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    isRouteActive(ROUTES.HOST.MESSAGES)
+                      ? "bg-gradient-to-r from-pink-500/20 to-red-500/20 text-pink-300"
+                      : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  <span className="font-medium">Messages</span>
+                </Link>
+
+                <Link
+                  to={ROUTES.HOST.NOTIFICATIONS}
+                  className={`relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    isRouteActive(ROUTES.HOST.NOTIFICATIONS)
+                      ? "bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-300"
+                      : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <div className="relative">
+                    <Bell className="w-5 h-5" />
+                    {unreadNotificationsCount > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-semibold w-4 h-4 rounded-full flex items-center justify-center">
+                        {unreadNotificationsCount > 9
+                          ? "9+"
+                          : unreadNotificationsCount}
+                      </span>
+                    )}
+                  </div>
+                  <span className="font-medium">Notifications</span>
+                </Link>
+
+                <Link
+                  to={ROUTES.HOST.SETTINGS}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    isRouteActive(ROUTES.HOST.SETTINGS)
+                      ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300"
+                      : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Settings className="w-5 h-5" />
+                  <span className="font-medium">Settings</span>
+                </Link>
+              </>
+            )}
+
             <Link
-              to={ROUTES.GUEST.FAVORITES}
+              to={
+                userData?.role === "host"
+                  ? ROUTES.HOST.E_WALLET
+                  : ROUTES.GUEST.E_WALLET
+              }
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                isRouteActive(ROUTES.GUEST.FAVORITES)
-                  ? "bg-gradient-to-r from-pink-500/20 to-red-500/20 text-pink-300"
-                  : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
-              }`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Heart className="w-5 h-5" />
-              <span className="font-medium">Favorites</span>
-            </Link>
-
-            <Link
-              to={ROUTES.GUEST.MESSAGES}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                isRouteActive(ROUTES.GUEST.MESSAGES)
-                  ? "bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300"
-                  : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
-              }`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <MessageSquare className="w-5 h-5" />
-              <span className="font-medium">Messages</span>
-            </Link>
-          </>
-        )}
-
-        {userData?.role === "host" && (
-          <>
-            <Link
-              to={ROUTES.HOST.MESSAGES}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                isRouteActive(ROUTES.HOST.MESSAGES)
-                  ? "bg-gradient-to-r from-pink-500/20 to-red-500/20 text-pink-300"
-                  : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
-              }`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <MessageSquare className="w-5 h-5" />
-              <span className="font-medium">Messages</span>
-            </Link>
-
-            <Link
-              to={ROUTES.HOST.NOTIFICATIONS}
-              className={`relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                isRouteActive(ROUTES.HOST.NOTIFICATIONS)
+                isRouteActive(
+                  userData?.role === "host"
+                    ? ROUTES.HOST.E_WALLET
+                    : ROUTES.GUEST.E_WALLET
+                )
                   ? "bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-300"
                   : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
               }`}
               onClick={() => setMobileMenuOpen(false)}
             >
-              <div className="relative">
-                <Bell className="w-5 h-5" />
-                {unreadNotificationsCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-semibold w-4 h-4 rounded-full flex items-center justify-center">
-                    {unreadNotificationsCount > 9
-                      ? "9+"
-                      : unreadNotificationsCount}
-                  </span>
-                )}
-              </div>
-              <span className="font-medium">Notifications</span>
+              <LucideWallet className="w-5 h-5" />
+              <span className="font-medium">E-Wallet</span>
             </Link>
 
-            <Link
-              to={ROUTES.HOST.SETTINGS}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                isRouteActive(ROUTES.HOST.SETTINGS)
-                  ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300"
-                  : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
-              }`}
-              onClick={() => setMobileMenuOpen(false)}
+            {userData?.role === "host" && (
+              <Link
+                to={ROUTES.HOST.CALENDAR}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                  isRouteActive(ROUTES.HOST.CALENDAR)
+                    ? "bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-300"
+                    : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Calendar className="w-5 h-5" />
+                <span className="font-medium">Calendar</span>
+              </Link>
+            )}
+
+            <div className="border-t border-slate-700/50 my-2"></div>
+
+            <button
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200 text-left"
+              onClick={handleLogout}
             >
-              <Settings className="w-5 h-5" />
-              <span className="font-medium">Settings</span>
-            </Link>
-          </>
-        )}
-
-        <Link
-          to={
-            userData?.role === "host"
-              ? ROUTES.HOST.E_WALLET
-              : ROUTES.GUEST.E_WALLET
-          }
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-            isRouteActive(
-              userData?.role === "host"
-                ? ROUTES.HOST.E_WALLET
-                : ROUTES.GUEST.E_WALLET
-            )
-              ? "bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-300"
-              : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
-          }`}
-          onClick={() => setMobileMenuOpen(false)}
-        >
-          <LucideWallet className="w-5 h-5" />
-          <span className="font-medium">E-Wallet</span>
-        </Link>
-
-        {userData?.role === "host" && (
-          <Link
-            to={ROUTES.HOST.CALENDAR}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-              isRouteActive(ROUTES.HOST.CALENDAR)
-                ? "bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-300"
-                : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
-            }`}
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <Calendar className="w-5 h-5" />
-            <span className="font-medium">Calendar</span>
-          </Link>
-        )}
-
-        <div className="border-t border-slate-700/50 my-2"></div>
-
-        <button
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200 text-left"
-          onClick={handleLogout}
-        >
-          <LogOut className="w-5 h-5" />
-          <span className="font-medium">Logout</span>
-        </button>
-      </div>
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium">Logout</span>
+            </button>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
   );
+};
+
+// Custom hook for responsive layout
+const useResponsiveDatePicker = () => {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return {
+    months: isMobile ? 1 : 2,
+    direction: "horizontal",
+  };
 };
 
 // Guest Tab Navigation Component - Airbnb Style
@@ -1156,6 +1218,7 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const responsiveConfig = useResponsiveDatePicker();
   const [activeFilter, setActiveFilter] = useState(
     searchParams.get("type") || "stays"
   );
@@ -1164,7 +1227,29 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
     checkIn: searchParams.get("checkIn") || "",
     checkOut: searchParams.get("checkOut") || "",
     guests: searchParams.get("guests") || "1",
+    serviceType: searchParams.get("serviceType") || "",
   });
+
+  const [showDateRangePicker, setShowDateRangePicker] = useState(false);
+
+  // Helper function to parse date string to local date
+  const parseLocalDate = (dateString) => {
+    if (!dateString) return new Date();
+    const [year, month, day] = dateString.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  const [dateRange, setDateRange] = useState([
+    {
+      startDate: searchParams.get("checkIn")
+        ? parseLocalDate(searchParams.get("checkIn"))
+        : new Date(),
+      endDate: searchParams.get("checkOut")
+        ? parseLocalDate(searchParams.get("checkOut"))
+        : new Date(),
+      key: "selection",
+    },
+  ]);
 
   // Tabs for guest navigation
   const guestTabs = [
@@ -1223,6 +1308,28 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
     setIsSearchExpanded(false);
   };
 
+  // Handle date range selection
+  const handleDateRangeChange = (ranges) => {
+    setDateRange([ranges.selection]);
+
+    // Format date as YYYY-MM-DD using local time (no UTC conversion)
+    const formatLocalDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const checkInDate = formatLocalDate(ranges.selection.startDate);
+    const checkOutDate = formatLocalDate(ranges.selection.endDate);
+
+    setSearchData({
+      ...searchData,
+      checkIn: checkInDate,
+      checkOut: checkOutDate,
+    });
+  };
+
   // Handle search submission
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -1231,10 +1338,12 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
     if (searchData.checkIn) newParams.set("checkIn", searchData.checkIn);
     if (searchData.checkOut) newParams.set("checkOut", searchData.checkOut);
     if (searchData.guests) newParams.set("guests", searchData.guests);
+    if (searchData.serviceType) newParams.set("serviceType", searchData.serviceType);
     newParams.set("type", activeFilter);
 
     setSearchParams(newParams);
     setIsSearchExpanded(false);
+    setShowDateRangePicker(false);
   };
 
   return (
@@ -1434,64 +1543,88 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
           </div>
         </div>
 
-        {/* Search Bar Row - Below tabs (smooth animation) */}
+        {/* Search Bar - Below navbar (smooth animation) */}
         <div
           className={`max-w-full mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-500 ease-out overflow-hidden ${
             isScrolled
               ? "opacity-0 max-h-0 py-0"
-              : "opacity-100 max-h-20 py-2.5"
+              : "opacity-100 max-h-20 py-3"
           }`}
         >
-          <button
-            onClick={handleSearchClick}
-            className="w-full max-w-3xl lg:mx-auto lg:flex lg:justify-center flex items-center bg-white rounded-full px-3 lg:px-4 py-1.5 lg:py-2 text-gray-700 shadow-md gap-2 lg:gap-3 transition-all hover:shadow-lg"
-          >
-            <div className="flex-1 flex items-center gap-2 min-w-0">
-              <MapPin className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
-              <input
-                type="text"
-                placeholder="Where?"
-                readOnly
-                className="outline-none bg-transparent text-xs lg:text-sm flex-1 min-w-0"
-              />
-            </div>
-
-            <div className="hidden md:block border-l h-5 border-gray-300"></div>
-
-            <div className="hidden md:flex flex-1 items-center gap-2 min-w-0">
-              <Calendar className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
-              <input
-                type="text"
-                placeholder="When?"
-                readOnly
-                className="outline-none bg-transparent text-xs lg:text-sm flex-1 min-w-0"
-              />
-            </div>
-
-            <div className="hidden lg:block border-l h-5 border-gray-300"></div>
-
-            <div className="hidden lg:flex flex-1 items-center gap-2 min-w-0">
-              <Users className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
-              <input
-                type="text"
-                placeholder="Who?"
-                readOnly
-                className="outline-none bg-transparent text-xs lg:text-sm flex-1 min-w-0"
-              />
-            </div>
-
+          <div className="flex justify-center">
             <button
-              type="button"
-              className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0"
+              onClick={handleSearchClick}
+              className="flex items-center bg-white rounded-full px-4 lg:px-6 py-2.5 lg:py-3 text-gray-700 shadow-md gap-2 lg:gap-3 transition-all hover:shadow-lg max-w-2xl w-full"
             >
-              <Search className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
+              <div className="flex-1 flex items-center gap-2 min-w-0">
+                <MapPin className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Where?"
+                  readOnly
+                  value={searchData.location}
+                  className="outline-none bg-transparent text-xs lg:text-sm flex-1 min-w-0 cursor-pointer"
+                />
+              </div>
+
+              <div className="hidden md:block border-l h-5 border-gray-300"></div>
+
+              <div className="hidden md:flex items-center gap-2 flex-1 min-w-0">
+                <Calendar className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
+                <input
+                  type="text"
+                  placeholder="When?"
+                  readOnly
+                  value={
+                    searchData.checkIn && searchData.checkOut
+                      ? `${new Date(searchData.checkIn).toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${new Date(searchData.checkOut).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                      : ""
+                  }
+                  className="outline-none bg-transparent text-xs lg:text-sm flex-1 min-w-0 cursor-pointer"
+                />
+              </div>
+
+              <div className="hidden lg:block border-l h-5 border-gray-300"></div>
+
+              <div className="hidden lg:flex items-center gap-2 flex-1 min-w-0">
+                {activeFilter === "services" ? (
+                  <>
+                    <Briefcase className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
+                    <input
+                      type="text"
+                      placeholder="What type?"
+                      readOnly
+                      value={searchData.serviceType}
+                      className="outline-none bg-transparent text-xs lg:text-sm flex-1 min-w-0 cursor-pointer"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Users className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
+                    <input
+                      type="text"
+                      placeholder="Who?"
+                      readOnly
+                      value={searchData.guests > 1 ? `${searchData.guests} guests` : ""}
+                      className="outline-none bg-transparent text-xs lg:text-sm flex-1 min-w-0 cursor-pointer"
+                    />
+                  </>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0"
+              >
+                <Search className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
+              </button>
             </button>
-          </button>
+          </div>
         </div>
 
         {/* Search Bar Row When Scrolled - In top row */}
         <div
-          className={`hidden md:flex lg:flex flex-1 items-center justify-center px-4 sm:px-6 lg:px-8 transition-all duration-500 ease-out absolute inset-0 ${
+          className={`hidden lg:flex flex-1 items-center justify-center px-4 sm:px-6 lg:px-8 transition-all duration-500 ease-out absolute inset-0 ${
             isScrolled
               ? "opacity-100 pointer-events-auto"
               : "opacity-0 pointer-events-none"
@@ -1524,7 +1657,7 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
             <Users className="hidden lg:block w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
             <input
               type="text"
-              placeholder="Who?"
+              placeholder={activeFilter === "services" ? "What type?" : "Who?"}
               readOnly
               className="hidden lg:block outline-none bg-transparent text-xs lg:text-sm flex-1 min-w-0"
             />
@@ -1552,9 +1685,10 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
             {/* Close Button */}
             <button
               onClick={handleSearchClose}
-              className="absolute top-4 right-4 p-2 text-slate-300 hover:text-white transition-colors"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 sm:p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700 text-slate-300 hover:text-white transition-all duration-200 hover:scale-110"
+              title="Close search"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
 
             {/* Expanded Content */}
@@ -1579,48 +1713,481 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                 />
               </div>
 
-              {/* Check-in & Check-out & Guests */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              {/* Date Range & Guests */}
+              <div className="space-y-4 sm:space-y-6">
+                {/* Date Range Picker */}
                 <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-2">
-                    Check in
+                  <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-3">
+                    <Calendar className="w-4 h-4 inline mr-2" />
+                    Select Dates
                   </label>
-                  <input
-                    type="date"
-                    value={searchData.checkIn}
-                    onChange={(e) =>
-                      setSearchData({ ...searchData, checkIn: e.target.value })
-                    }
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm sm:text-base"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowDateRangePicker(!showDateRangePicker)}
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white hover:border-indigo-500 transition-colors text-sm sm:text-base text-left"
+                  >
+                    {searchData.checkIn && searchData.checkOut
+                      ? `${new Date(searchData.checkIn).toLocaleDateString(
+                          "en-US",
+                          {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          }
+                        )} - ${new Date(searchData.checkOut).toLocaleDateString(
+                          "en-US",
+                          {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          }
+                        )}`
+                      : "Click to select dates"}
+                  </button>
+
+                  {/* Styled Date Range Picker - Mobile Responsive */}
+                  {showDateRangePicker && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className="mt-3 p-4 sm:p-6 bg-slate-800 border border-slate-700 rounded-xl overflow-visible"
+                    >
+                      <style>{`
+  /* Compact Calendar Wrapper - Light Mode */
+                          .rdrCalendarWrapper {
+                            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%) !important;
+                            border: 1px solid #e2e8f0 !important;
+                            font-family: inherit !important;
+                            width: 100% !important;
+                            max-width: 100% !important;
+                            border-radius: 0.75rem !important;
+                            padding: 1rem !important;
+                            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+                          }
+
+                          /* Month Container - Compact */
+                          .rdrMonth {
+                            width: auto !important;
+                            padding: 0 0.5rem !important;
+                            margin: 0 !important;
+                            flex: 1 !important;
+                            min-width: auto !important;
+                          }
+
+                          /* Month and Year Selectors - Compact */
+                          .rdrMonthAndYearPickers {
+                            background: linear-gradient(90deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%) !important;
+                            padding: 0.5rem 0 !important;
+                            justify-content: center !important;
+                            gap: 0.75rem !important;
+                            display: flex !important;
+                            width: 100% !important;
+                            border-radius: 0.5rem !important;
+                            margin-bottom: 0.5rem !important;
+                          }
+
+                          .rdrMonthPicker,
+                          .rdrYearPicker {
+                            position: relative !important;
+                            display: flex !important;
+                            gap: 0.25rem !important;
+                            align-items: center !important;
+                          }
+
+                          .rdrMonthPicker select,
+                          .rdrYearPicker select {
+                            background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+                            border: 1px solid #cbd5e1 !important;
+                            color: #1e293b !important;
+                            padding: 0.375rem 0.5rem !important;
+                            border-radius: 0.375rem !important;
+                            font-size: 0.75rem !important;
+                            cursor: pointer !important;
+                            font-weight: 500 !important;
+                            transition: all 0.2s !important;
+                            min-width: 90px !important;
+                          }
+
+                          .rdrMonthPicker select:hover,
+                          .rdrYearPicker select:hover {
+                            border-color: #6366f1 !important;
+                            background: linear-gradient(135deg, #eef2ff 0%, #f3e8ff 100%) !important;
+                          }
+
+                          .rdrMonthPicker select:focus,
+                          .rdrYearPicker select:focus {
+                            outline: none !important;
+                            border-color: #6366f1 !important;
+                            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+                          }
+
+                          /* Navigation Buttons - Compact */
+                          .rdrNextPrevButton {
+                            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+                            border: 1px solid #cbd5e1 !important;
+                            color: #1e293b !important;
+                            border-radius: 0.375rem !important;
+                            padding: 0.375rem !important;
+                            height: 1.75rem !important;
+                            width: 1.75rem !important;
+                            display: flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
+                            transition: all 0.2s !important;
+                            cursor: pointer !important;
+                            font-size: 0.9rem !important;
+                          }
+
+                          .rdrNextPrevButton:hover {
+                            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+                            border-color: #6366f1 !important;
+                            color: #ffffff !important;
+                            transform: scale(1.05) !important;
+                          }
+
+                          /* Date Display Section - Compact */
+                          .rdrDateDisplayWrapper {
+                            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+                            border: 1px solid #cbd5e1 !important;
+                            border-radius: 0.5rem !important;
+                            padding: 0.625rem !important;
+                            margin-bottom: 0.75rem !important;
+                            display: flex !important;
+                            justify-content: center !important;
+                            flex-wrap: wrap !important;
+                            gap: 0.5rem !important;
+                          }
+
+                          .rdrDateDisplay {
+                            display: flex !important;
+                            gap: 0.5rem !important;
+                            justify-content: center !important;
+                            flex-wrap: wrap !important;
+                            width: 100% !important;
+                          }
+
+                          .rdrDateDisplayItem {
+                            background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+                            border: 1px solid #cbd5e1 !important;
+                            border-radius: 0.375rem !important;
+                            padding: 0.375rem 0.625rem !important;
+                            font-size: 0.7rem !important;
+                            display: flex !important;
+                            align-items: center !important;
+                          }
+
+                          .rdrDateDisplayItem input {
+                            background-color: transparent !important;
+                            color: #1e293b !important;
+                            border: none !important;
+                            padding: 0 !important;
+                            font-size: 0.7rem !important;
+                            width: auto !important;
+                            min-width: 100px !important;
+                          }
+
+                          .rdrDateDisplayItem input:focus {
+                            outline: none !important;
+                          }
+
+                          /* Caption - Compact */
+                          .rdrCaption {
+                            color: #1e293b !important;
+                            font-size: 0.8rem !important;
+                            font-weight: 600 !important;
+                            padding: 0.4rem 0 !important;
+                            text-align: center !important;
+                          }
+
+                          /* Week Days - Compact */
+                          .rdrWeekDays {
+                            display: flex !important;
+                            justify-content: center !important;
+                            gap: 0 !important;
+                            padding: 0.4rem 0 !important;
+                            margin-bottom: 0.4rem !important;
+                            border-bottom: 1px solid #cbd5e1 !important;
+                            visibility: visible !important;
+                          }
+
+                          .rdrWeekDay {
+                            color: #64748b !important;
+                            font-size: 0.65rem !important;
+                            font-weight: 700 !important;
+                            width: 2.5rem !important;
+                            height: 1.5rem !important;
+                            display: flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
+                            visibility: visible !important;
+                            opacity: 1 !important;
+                          }
+
+                          /* Days Container */
+                          .rdrDays {
+                            display: flex !important;
+                            flex-wrap: wrap !important;
+                            justify-content: center !important;
+                            gap: 0 !important;
+                            visibility: visible !important;
+                          }
+
+                          /* Individual Day - Compact */
+                          .rdrDay {
+                            width: 2.5rem !important;
+                            height: 2rem !important;
+                            display: flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
+                            border-radius: 0.375rem !important;
+                            cursor: pointer !important;
+                            transition: all 0.2s !important;
+                            font-size: 0.75rem !important;
+                            font-weight: 600 !important;
+                            visibility: visible !important;
+                            background-color: transparent !important;
+                          }
+
+                          .rdrDay:hover:not(.rdrDayPassive) {
+                            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%) !important;
+                          }
+
+                          .rdrDayNumber {
+                            color: #1e293b !important;
+                            font-size: 0.75rem !important;
+                            font-weight: 600 !important;
+                          }
+
+                          .rdrDay.rdrDayPassive {
+                            background-color: transparent !important;
+                          }
+
+                          .rdrDay.rdrDayPassive .rdrDayNumber {
+                            color: #cbd5e1 !important;
+                            font-size: 0.75rem !important;
+                            font-weight: 500 !important;
+                          }
+
+                          /* In Range - Gradient Background */
+                          .rdrDay.rdrInRange {
+                            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+                            color: #ffffff !important;
+                          }
+
+                          .rdrDay.rdrInRange .rdrDayNumber {
+                            color: #ffffff !important;
+                            font-weight: 600 !important;
+                          }
+
+                          /* Start and End Edges - Enhanced Gradient */
+                          .rdrDay.rdrStartEdge,
+                          .rdrDay.rdrEndEdge {
+                            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%) !important;
+                            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25) !important;
+                          }
+
+                          .rdrDay.rdrStartEdge .rdrDayNumber,
+                          .rdrDay.rdrEndEdge .rdrDayNumber {
+                            color: #ffffff !important;
+                            font-weight: 700 !important;
+                          }
+
+                          /* Previews */
+                          .rdrDayStartPreview,
+                          .rdrDayInPreview,
+                          .rdrDayEndPreview {
+                            background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%) !important;
+                            opacity: 1 !important;
+                          }
+
+                          /* Force White Text and Gradient for Selected Range */
+                          .rdrDay.rdrInRange,
+                          .rdrDay.rdrStartEdge,
+                          .rdrDay.rdrEndEdge {
+                            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+                            color: #ffffff !important;
+                            position: relative !important;
+                            z-index: 1 !important;
+                          }
+
+                          .rdrDay.rdrInRange .rdrDayNumber,
+                          .rdrDay.rdrStartEdge .rdrDayNumber,
+                          .rdrDay.rdrEndEdge .rdrDayNumber {
+                            color: #ffffff !important;
+                            font-weight: 700 !important;
+                            position: relative !important;
+                            z-index: 2 !important;
+                          }
+
+                          /* Today's Date Special Styling */
+                          .rdrDay.rdrDayToday:not(.rdrInRange) .rdrDayNumber::after {
+                            content: '' !important;
+                            position: absolute !important;
+                            bottom: 2px !important;
+                            left: 50% !important;
+                            transform: translateX(-50%) !important;
+                            width: 4px !important;
+                            height: 4px !important;
+                            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+                            border-radius: 50% !important;
+                          }
+
+                          /* Hover feedback for selected days */
+                          .rdrDay.rdrInRange:hover,
+                          .rdrDay.rdrStartEdge:hover,
+                          .rdrDay.rdrEndEdge:hover {
+                            background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%) !important;
+                            transform: scale(1.05) !important;
+                          }
+
+                          .rdrStartEdge {
+                            border-radius: 0.375rem 0 0 0.375rem !important;
+                          }
+
+                          .rdrEndEdge {
+                            border-radius: 0 0.375rem 0.375rem 0 !important;
+                          }
+
+                          /* Hide unnecessary elements */
+                          .rdrDefinedRangesWrapper,
+                          .rdrPresets {
+                            display: none !important;
+                          }
+
+                          /* Mobile Responsive */
+                          @media (max-width: 768px) {
+                            .rdrMonth {
+                              padding: 0 0.25rem !important;
+                            }
+
+                            .rdrDay {
+                              width: 2.25rem !important;
+                              height: 1.75rem !important;
+                              font-size: 0.7rem !important;
+                            }
+
+                            .rdrWeekDay {
+                              width: 2.25rem !important;
+                              height: 1.4rem !important;
+                              font-size: 0.6rem !important;
+                            }
+
+                            .rdrCaption {
+                              font-size: 0.75rem !important;
+                              padding: 0.3rem 0 !important;
+                            }
+
+                            .rdrNextPrevButton {
+                              height: 1.5rem !important;
+                              width: 1.5rem !important;
+                              font-size: 0.8rem !important;
+                            }
+
+                            .rdrDateDisplayWrapper {
+                              padding: 0.5rem !important;
+                              margin-bottom: 0.6rem !important;
+                            }
+                          }
+
+                          @media (max-width: 640px) {
+                            .rdrDay {
+                              width: 2rem !important;
+                              height: 1.6rem !important;
+                              font-size: 0.65rem !important;
+                            }
+
+                            .rdrWeekDay {
+                              width: 2rem !important;
+                              height: 1.3rem !important;
+                              font-size: 0.55rem !important;
+                            }
+
+                            .rdrCaption {
+                              font-size: 0.7rem !important;
+                            }
+
+                            .rdrMonthAndYearPickers {
+                              gap: 0.5rem !important;
+                              padding: 0.3rem 0 !important;
+                            }
+
+                            .rdrMonthPicker select,
+                            .rdrYearPicker select {
+                              padding: 0.25rem 0.375rem !important;
+                              font-size: 0.65rem !important;
+                              min-width: 70px !important;
+                            }
+
+                            .rdrDateDisplayItem {
+                              padding: 0.25rem 0.5rem !important;
+                              font-size: 0.65rem !important;
+                            }
+
+                            .rdrDateDisplayItem input {
+                              font-size: 0.65rem !important;
+                              min-width: 90px !important;
+                            }
+
+                            .rdrNextPrevButton {
+                              height: 1.4rem !important;
+                              width: 1.4rem !important;
+                              font-size: 0.75rem !important;
+                            }
+                          }
+                        `}</style>
+
+                      <DateRange
+                        ranges={dateRange}
+                        onChange={handleDateRangeChange}
+                        rangeColors={["#6366f1"]}
+                        showMonthAndYearPickers={true}
+                        staticRanges={[]}
+                        inputRanges={[]}
+                        editableDateInputs={true}
+                        moveRangeOnFirstSelection={false}
+                        months={responsiveConfig.months}
+                        direction={responsiveConfig.direction}
+                      />
+                    </motion.div>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-2">
-                    Check out
-                  </label>
-                  <input
-                    type="date"
-                    value={searchData.checkOut}
-                    onChange={(e) =>
-                      setSearchData({ ...searchData, checkOut: e.target.value })
-                    }
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm sm:text-base"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-2">
-                    Guests
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={searchData.guests}
-                    onChange={(e) =>
-                      setSearchData({ ...searchData, guests: e.target.value })
-                    }
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm sm:text-base"
-                  />
-                </div>
+
+                {/* Guests or Service Type */}
+                {activeFilter === "services" ? (
+                  <div>
+                    <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-2">
+                      <Briefcase className="w-4 h-4 inline mr-2" />
+                      Type of Service
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Deep Cleaning, Repair, etc."
+                      value={searchData.serviceType || ""}
+                      onChange={(e) =>
+                        setSearchData({ ...searchData, serviceType: e.target.value })
+                      }
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm sm:text-base"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-2">
+                      <Users className="w-4 h-4 inline mr-2" />
+                      Number of Guests
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={searchData.guests}
+                      onChange={(e) =>
+                        setSearchData({ ...searchData, guests: e.target.value })
+                      }
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm sm:text-base"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Search Button */}
@@ -1780,8 +2347,207 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
 };
 
 // Guest Simple Navigation Component - For non-home pages (Messages, Bookings, Favorites, etc.)
+// Host Simple NavBar Component
+const HostSimpleNavBar = ({ user, userData, handleLogout }) => {
+  const navigate = useNavigate();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  return (
+    <nav className="fixed top-0 left-0 right-0 z-50 text-white bg-slate-900/95 backdrop-blur-sm shadow-md border-b border-white/10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <div className="flex items-center justify-between h-14">
+          {/* Left - Back Button and Logo */}
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            <button
+              onClick={() => navigate(ROUTES.HOST.DASHBOARD)}
+              className="p-2 hover:bg-slate-700/50 rounded-lg transition-all duration-200"
+              title="Back to dashboard"
+            >
+              <ArrowLeft className="w-5 h-5 text-slate-300 hover:text-white" />
+            </button>
+            <Link
+              to={ROUTES.HOST.DASHBOARD}
+              className="flex items-center cursor-pointer"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="white"
+                className="w-6 h-6 hidden sm:block"
+              >
+                <path d="M7 2v2H5a2 2 0 0 0-2 2v2h18V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zm13 8H4v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10zm-4 4h-4v4h4v-4z" />
+              </svg>
+            </Link>
+          </div>
+
+          {/* Right - Profile Menu */}
+          <div className="relative">
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200"
+            >
+              {userData?.photoURL ? (
+                <img
+                  src={userData.photoURL}
+                  alt="Profile"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-slate-600 hover:border-indigo-500 transition-colors"
+                />
+              ) : (
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs sm:text-sm font-semibold">
+                  {user?.fullName
+                    ? user.fullName
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .substring(0, 2)
+                        .toUpperCase()
+                    : "H"}
+                </div>
+              )}
+              <span className="text-xs sm:text-sm font-medium text-slate-200 hover:text-white whitespace-nowrap hidden sm:inline">
+                Profile
+              </span>
+            </button>
+
+            {/* Profile Dropdown */}
+            {dropdownOpen && (
+              <div className="absolute right-0 mt-3 w-72 bg-slate-800 backdrop-blur-xl text-slate-200 rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden z-50 transition-all duration-200">
+                {/* User Info Header */}
+                <div className="px-5 py-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-700/50">
+                  <p className="text-sm font-semibold text-white truncate">
+                    {user?.fullName || "Host"}
+                  </p>
+                  <p className="text-xs text-slate-400 truncate">
+                    {user?.email || ""}
+                  </p>
+                </div>
+
+                {/* Profile Section */}
+                <div className="border-b border-slate-700/50 my-1">
+                  <Link
+                    to={ROUTES.HOST.PROFILE}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
+                  >
+                    <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    My Profile
+                  </Link>
+                </div>
+
+                {/* Host Listings Section */}
+                <div className="border-b border-slate-700/50 my-1">
+                  <Link
+                    to={ROUTES.HOST.DASHBOARD}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-indigo-500/20 hover:to-indigo-500/20 hover:text-indigo-300"
+                  >
+                    <BarChart3 className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    Dashboard
+                  </Link>
+
+                  <Link
+                    to={ROUTES.HOST.STAYS}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-cyan-500/20 hover:text-cyan-300"
+                  >
+                    <Home className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    My Stays
+                  </Link>
+
+                  <Link
+                    to={ROUTES.HOST.EXPERIENCES}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
+                  >
+                    <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    My Experiences
+                  </Link>
+
+                  <Link
+                    to={ROUTES.HOST.SERVICES}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-green-500/20 hover:to-green-500/20 hover:text-green-300"
+                  >
+                    <Briefcase className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    My Services
+                  </Link>
+                </div>
+
+                {/* Account Section */}
+                <div className="border-b border-slate-700/50 my-1">
+                  <Link
+                    to={ROUTES.HOST.SETTINGS}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-green-500/20 hover:to-green-500/20 hover:text-green-300"
+                  >
+                    <Settings className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    Account Settings
+                  </Link>
+
+                  <Link
+                    to={ROUTES.HOST.E_WALLET}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
+                  >
+                    <Wallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    E-wallet
+                  </Link>
+
+                  <Link
+                    to={ROUTES.HOST.CALENDAR}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
+                  >
+                    <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    Calendar
+                  </Link>
+
+                  <Link
+                    to={ROUTES.HOST.DRAFTS}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-orange-500/20 hover:to-orange-500/20 hover:text-orange-300"
+                  >
+                    <FileEdit className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    Drafts
+                  </Link>
+                </div>
+
+                {/* Communication Section */}
+                <div className="border-b border-slate-700/50 my-1">
+                  <Link
+                    to={ROUTES.HOST.MESSAGES}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
+                  >
+                    <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    Messages
+                  </Link>
+                </div>
+
+                <button
+                  className="w-full flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item text-left hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-500/20 hover:text-red-300"
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    handleLogout();
+                  }}
+                >
+                  <LogOut className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+};
+
 const GuestSimpleNavBar = ({ user, userData, handleLogout }) => {
   const navigate = useNavigate();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 text-white bg-slate-900/95 backdrop-blur-sm shadow-md border-b border-white/10">
@@ -1814,13 +2580,16 @@ const GuestSimpleNavBar = ({ user, userData, handleLogout }) => {
           </div>
 
           {/* Right - Profile Menu */}
-          <div className="relative group">
-            <button className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200">
+          <div className="relative">
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200"
+            >
               {userData?.photoURL ? (
                 <img
                   src={userData.photoURL}
                   alt="Profile"
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-slate-600 group-hover:border-indigo-500 transition-colors"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-slate-600 hover:border-indigo-500 transition-colors"
                 />
               ) : (
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs sm:text-sm font-semibold">
@@ -1834,78 +2603,88 @@ const GuestSimpleNavBar = ({ user, userData, handleLogout }) => {
                     : "G"}
                 </div>
               )}
-              <span className="text-xs sm:text-sm font-medium text-slate-200 group-hover:text-white whitespace-nowrap hidden sm:inline">
+              <span className="text-xs sm:text-sm font-medium text-slate-200 hover:text-white whitespace-nowrap hidden sm:inline">
                 Profile
               </span>
             </button>
 
             {/* Profile Dropdown */}
-            <div className="absolute right-0 mt-3 w-72 bg-slate-800 backdrop-blur-xl text-slate-200 rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-              {/* User Info Header */}
-              <div className="px-5 py-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-700/50">
-                <p className="text-sm font-semibold text-white truncate">
-                  {user?.fullName || "Guest"}
-                </p>
-                <p className="text-xs text-slate-400 truncate">
-                  {user?.email || ""}
-                </p>
+            {dropdownOpen && (
+              <div className="absolute right-0 mt-3 w-72 bg-slate-800 backdrop-blur-xl text-slate-200 rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden z-50 transition-all duration-200">
+                {/* User Info Header */}
+                <div className="px-5 py-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-700/50">
+                  <p className="text-sm font-semibold text-white truncate">
+                    {user?.fullName || "Guest"}
+                  </p>
+                  <p className="text-xs text-slate-400 truncate">
+                    {user?.email || ""}
+                  </p>
+                </div>
+
+                {/* Menu Items */}
+                <div className="border-b border-slate-700/50 my-1">
+                  <Link
+                    to={ROUTES.GUEST.PROFILE}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
+                  >
+                    <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    My Profile
+                  </Link>
+
+                  <Link
+                    to={ROUTES.GUEST.FAVORITES}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-pink-500/20 hover:to-pink-500/20 hover:text-pink-300"
+                  >
+                    <Heart className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    Favorites
+                  </Link>
+                </div>
+
+                <div className="border-b border-slate-700/50 my-1">
+                  <Link
+                    to={ROUTES.GUEST.MY_BOOKINGS}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-cyan-500/20 hover:text-cyan-300"
+                  >
+                    <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    My Bookings
+                  </Link>
+
+                  <Link
+                    to={ROUTES.GUEST.MESSAGES}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
+                  >
+                    <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    Messages
+                  </Link>
+                </div>
+
+                <div className="border-b border-slate-700/50 my-1">
+                  <Link
+                    to={ROUTES.GUEST.E_WALLET}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
+                  >
+                    <LucideWallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    E-Wallet
+                  </Link>
+                </div>
+
+                <button
+                  className="w-full flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item text-left hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-500/20 hover:text-red-300"
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    handleLogout();
+                  }}
+                >
+                  <LogOut className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                  Logout
+                </button>
               </div>
-
-              {/* Menu Items */}
-              <div className="border-b border-slate-700/50 my-1">
-                <Link
-                  to={ROUTES.GUEST.PROFILE}
-                  className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
-                >
-                  <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                  My Profile
-                </Link>
-
-                <Link
-                  to={ROUTES.GUEST.FAVORITES}
-                  className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-pink-500/20 hover:to-pink-500/20 hover:text-pink-300"
-                >
-                  <Heart className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                  Favorites
-                </Link>
-              </div>
-
-              <div className="border-b border-slate-700/50 my-1">
-                <Link
-                  to={ROUTES.GUEST.MY_BOOKINGS}
-                  className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-cyan-500/20 hover:text-cyan-300"
-                >
-                  <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                  My Bookings
-                </Link>
-
-                <Link
-                  to={ROUTES.GUEST.MESSAGES}
-                  className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
-                >
-                  <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                  Messages
-                </Link>
-              </div>
-
-              <div className="border-b border-slate-700/50 my-1">
-                <Link
-                  to={ROUTES.GUEST.E_WALLET}
-                  className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
-                >
-                  <LucideWallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                  E-Wallet
-                </Link>
-              </div>
-
-              <button
-                className="w-full flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item text-left hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-500/20 hover:text-red-300"
-                onClick={handleLogout}
-              >
-                <LogOut className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                Logout
-              </button>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -2333,15 +3112,22 @@ export default function NavigationBar({
     );
   }
 
-  // ========== SIMPLE NAVBAR (for profile, messages, and notifications pages, or guest non-home pages) ==========
+  // ========== SIMPLE NAVBAR (for profile, messages, notifications, and my-bookings pages, or guest non-home pages) ==========
   if (
     (user &&
       (location.pathname.includes("/profile") ||
         location.pathname.includes("/messages") ||
-        location.pathname.includes("/notifications"))) ||
+        location.pathname.includes("/notifications") ||
+        location.pathname.includes("/my-bookings"))) ||
     forceSimpleNavBar
   ) {
-    return (
+    return isHost ? (
+      <HostSimpleNavBar
+        user={user}
+        userData={userData}
+        handleLogout={handleLogout}
+      />
+    ) : (
       <GuestSimpleNavBar
         user={user}
         userData={userData}

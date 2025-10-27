@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { Link, useLocation, Outlet } from "react-router-dom";
+import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
+import { signOut } from "firebase/auth";
+import { auth } from "../../firebase/firebase";
+import { toast } from "react-toastify";
 import {
   LayoutDashboard,
   DollarSign,
@@ -18,6 +21,17 @@ export default function AdminLayout({ user, userData }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast.success("Logged out successfully");
+      navigate("/");
+    } catch (error) {
+      toast.error("Error logging out: " + error.message);
+    }
+  };
 
   const menuItems = [
     {
@@ -176,7 +190,8 @@ export default function AdminLayout({ user, userData }) {
           {/* Sidebar Footer */}
           <div className="border-t border-slate-800 p-4">
             <button
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all w-full ${
+              onClick={handleLogout}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all w-full ${
                 !isSidebarOpen && "justify-center"
               }`}
             >
@@ -232,7 +247,10 @@ export default function AdminLayout({ user, userData }) {
               </div>
 
               <div className="border-t border-slate-800 p-4">
-                <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all w-full">
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all w-full"
+                >
                   <LogOut className="w-5 h-5" />
                   <span className="text-sm font-medium">Logout</span>
                 </button>

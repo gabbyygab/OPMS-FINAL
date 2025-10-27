@@ -25,6 +25,8 @@ import {
   Palette,
   Mountain,
   Waves,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   MapContainer,
@@ -211,6 +213,8 @@ export default function HostMyExperiences() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -230,6 +234,8 @@ export default function HostMyExperiences() {
     thingsToKnow: [],
     activities: [],
     availableDates: [],
+    discount: { type: "percentage", value: "" },
+    promoCode: "",
   });
 
   // Image upload states
@@ -260,7 +266,7 @@ export default function HostMyExperiences() {
         const experiencesRef = collection(db, "listings");
         const q = query(
           experiencesRef,
-          where("host_id", "==", userData.id),
+          where("hostId", "==", userData.id),
           where("type", "==", "experiences"),
           where("isDraft", "==", false)
         );
@@ -297,7 +303,7 @@ export default function HostMyExperiences() {
     getHostExperiences();
   }, [userData]);
   console.log(experiences);
-  console.log("host_id: " + userData.id);
+  console.log("hostId: " + userData.id);
 
   // Image upload handlers
   const handleImageChange = (e) => {
@@ -495,6 +501,17 @@ export default function HostMyExperiences() {
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
+  // Reset to first page when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus, filterCategory]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredExperiences.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedExperiences = filteredExperiences.slice(startIndex, endIndex);
+
   // Handle Add Experience
   const handleAddExperience = async (isDraft = false) => {
     try {
@@ -549,11 +566,16 @@ export default function HostMyExperiences() {
         included: Array.isArray(formData.included) ? formData.included : [],
         toBring: Array.isArray(formData.toBring) ? formData.toBring : [],
         photos: imageUrls && imageUrls.length > 0 ? imageUrls : [],
+        discount: {
+          type: formData.discount?.type || "percentage",
+          value: Number(formData.discount?.value) || 0,
+        },
+        promoCode: formData.promoCode || null,
         rating: 0,
         isDraft: !!isDraft,
         status: "active",
         type: "experiences",
-        host_id: userData.id || "unknown",
+        hostId: userData.id || "unknown",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -644,6 +666,11 @@ export default function HostMyExperiences() {
           ? formData.thingsToKnow
           : [],
         photos: allPhotos,
+        discount: {
+          type: formData.discount?.type || "percentage",
+          value: Number(formData.discount?.value) || 0,
+        },
+        promoCode: formData.promoCode || null,
         updatedAt: serverTimestamp(),
       };
 
@@ -750,6 +777,8 @@ export default function HostMyExperiences() {
       included: Array.isArray(exp.included) ? exp.included : [],
       toBring: Array.isArray(exp.toBring) ? exp.toBring : [],
       photos: Array.isArray(exp.photos) ? exp.photos : [],
+      discount: exp.discount || { type: "percentage", value: "" },
+      promoCode: exp.promoCode || "",
     });
     setShowEditModal(true);
   };
@@ -779,6 +808,8 @@ export default function HostMyExperiences() {
       included: [],
       toBring: [],
       photos: [],
+      discount: { type: "percentage", value: "" },
+      promoCode: "",
     });
     setPreviewImages([]);
     setMarker(null);
@@ -956,16 +987,17 @@ export default function HostMyExperiences() {
               )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredExperiences.map((exp) => (
-              <div
-                key={exp.id}
-                className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm overflow-hidden hover:shadow-xl transition group"
-              >
-                {/* Image */}
-                <div className="relative h-48 overflow-hidden">
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+              {paginatedExperiences.map((exp) => (
+                <div
+                  key={exp.id}
+                  className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-lg shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm overflow-hidden hover:shadow-xl transition group"
+                >
+                  {/* Image */}
+                  <div className="relative h-40 overflow-hidden">
                   <img
-                    src={exp.photos[0]}
+                    src={exp.photos?.[0] || exp.images?.[0] || "https://via.placeholder.com/400x300?text=No+Image"}
                     alt={exp.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
                   />
@@ -1026,7 +1058,7 @@ export default function HostMyExperiences() {
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-indigo-100">
-                        ₱{exp.price}
+                        ₱{(exp.price || 0).toFixed(2)}
                       </p>
                       <p className="text-xs text-indigo-300/60">per person</p>
                     </div>
@@ -1085,8 +1117,46 @@ export default function HostMyExperiences() {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-8">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  <ChevronLeft className="w-5 h-5 text-indigo-300" />
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-10 h-10 rounded-lg font-semibold transition ${
+                        currentPage === page
+                          ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/30"
+                          : "bg-slate-700/50 border border-indigo-500/30 text-indigo-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  <ChevronRight className="w-5 h-5 text-indigo-300" />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -1433,6 +1503,74 @@ export default function HostMyExperiences() {
                 )}
               </div>
 
+              {/* Discount */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
+                    Discount Type
+                  </label>
+                  <select
+                    value={formData.discount?.type || "percentage"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        discount: {
+                          ...formData.discount,
+                          type: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 transition"
+                  >
+                    <option value="percentage" className="bg-slate-800 text-indigo-100">
+                      Percentage
+                    </option>
+                    <option value="fixed" className="bg-slate-800 text-indigo-100">
+                      Fixed
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
+                    Discount Value
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.discount?.value || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        discount: {
+                          ...formData.discount,
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                  />
+                </div>
+              </div>
+
+              {/* Promo Code */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
+                  Promo Code (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.promoCode}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      promoCode: e.target.value.toUpperCase(),
+                    })
+                  }
+                  placeholder="e.g., SUMMER20"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Photos
@@ -1477,7 +1615,7 @@ export default function HostMyExperiences() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 z-[999] bg-slate-900/50 border-t border-indigo-500/20 p-6 flex gap-3">
+            <div className="sticky bottom-0 z-[999] bg-slate-900 border-t border-indigo-500/20 p-6 flex gap-3">
               <button
                 onClick={() => {
                   setShowAddModal(false);
@@ -1738,6 +1876,70 @@ export default function HostMyExperiences() {
                 )}
               </div>
 
+              {/* Discount */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
+                    Discount Type
+                  </label>
+                  <select
+                    value={formData.discount?.type || "percentage"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        discount: {
+                          ...formData.discount,
+                          type: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100"
+                  >
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="fixed">Fixed Amount</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-indigo-300 mb-2">
+                    Discount Value
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.discount?.value || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        discount: {
+                          ...formData.discount,
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="Enter discount value"
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                  />
+                </div>
+              </div>
+
+              {/* Promo Code */}
+              <div>
+                <label className="block text-sm font-medium text-indigo-300 mb-2">
+                  Promo Code (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.promoCode || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      promoCode: e.target.value.toUpperCase(),
+                    })
+                  }
+                  placeholder="e.g., SAVE10"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-indigo-300 mb-2">
                   Available Dates & Times
@@ -1923,7 +2125,7 @@ export default function HostMyExperiences() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 z-[999] bg-slate-900/50 border-t border-indigo-500/20 p-6 flex gap-3">
+            <div className="sticky bottom-0 z-[999] bg-slate-900 border-t border-indigo-500/20 p-6 flex gap-3">
               <button
                 onClick={() => {
                   setShowEditModal(false);
