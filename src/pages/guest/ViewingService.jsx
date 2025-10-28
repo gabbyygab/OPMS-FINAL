@@ -35,6 +35,7 @@ import { useAuth } from "../../context/AuthContext";
 import VerificationBanner from "../../components/Verification";
 import { sendOtpToUser } from "../../utils/sendOtpToUser";
 import { toast } from "react-toastify";
+import ServiceLocationMap from "../../components/ServiceLocationMap";
 
 const reviews = [
   {
@@ -499,6 +500,19 @@ export default function ServiceDetailPage() {
                   </div>
                 </div>
               )}
+
+            {/* Service Location Map */}
+            {serviceData?.location && (
+              <div className="pb-8 border-b border-slate-700">
+                <h3 className="text-xl font-semibold text-white mb-4">
+                  Service location
+                </h3>
+                <ServiceLocationMap
+                  location={serviceData.location}
+                  serviceTitle={serviceData.title}
+                />
+              </div>
+            )}
 
             {/* Certifications */}
             {Array.isArray(serviceData?.certifications) &&

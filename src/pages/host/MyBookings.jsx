@@ -64,7 +64,7 @@ export default function HostMyBookings() {
         const listingsRef = collection(db, "listings");
         const listingsQuery = query(
           listingsRef,
-          where("host_id", "==", userData.id)
+          where("hostId", "==", userData.id)
         );
         const listingsSnap = await getDocs(listingsQuery);
         const listingIds = listingsSnap.docs.map((doc) => doc.id);
@@ -76,17 +76,24 @@ export default function HostMyBookings() {
           return;
         }
 
-        // Get all bookings for these listings
+        // Chunk listingIds to handle Firestore 'in' query limit of 30
+        const bookingPromises = [];
         const bookingsRef = collection(db, "bookings");
-        const bookingsQuery = query(
-          bookingsRef,
-          where("listing_id", "in", listingIds)
-        );
-        const bookingsSnap = await getDocs(bookingsQuery);
+        for (let i = 0; i < listingIds.length; i += 30) {
+          const chunk = listingIds.slice(i, i + 30);
+          const bookingsQuery = query(
+            bookingsRef,
+            where("listing_id", "in", chunk)
+          );
+          bookingPromises.push(getDocs(bookingsQuery));
+        }
+
+        const bookingSnapshots = await Promise.all(bookingPromises);
+        const bookingsDocs = bookingSnapshots.flatMap(snap => snap.docs);
 
         // Enrich bookings with listing and guest data
         const enrichedBookings = await Promise.all(
-          bookingsSnap.docs.map(async (bookingDoc) => {
+          bookingsDocs.map(async (bookingDoc) => {
             const bookingData = bookingDoc.data();
 
             // Fetch listing data
@@ -227,6 +234,21 @@ export default function HostMyBookings() {
         wallet_id: guestWalletDoc.id,
       });
 
+      // Create notification for guest about payment deduction
+      await addDoc(collection(db, "notifications"), {
+        guest_id: bookingToAction.guest_id,
+        type: "payment",
+        title: "Payment Successful",
+        message: `An amount of ₱${bookingToAction.totalAmount.toLocaleString()} has been deducted from your wallet for your booking of "${
+          bookingToAction.listing?.title
+        }".`,
+        listing_id: bookingToAction.listing_id,
+        booking_id: bookingToAction.id,
+        read: false,
+        isRead: false,
+        createdAt: serverTimestamp(),
+      });
+
       // Update host wallet (add)
       if (!hostWalletSnap.empty) {
         const hostWalletDoc = hostWalletSnap.docs[0];
@@ -265,7 +287,6 @@ export default function HostMyBookings() {
         message: `Your booking for ${bookingToAction.listing?.title} has been confirmed!`,
         listing_id: bookingToAction.listing_id,
         booking_id: bookingToAction.id,
-        host_id: userData.id,
         read: false,
         isRead: false,
         createdAt: serverTimestamp(),

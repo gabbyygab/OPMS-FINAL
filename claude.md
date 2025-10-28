@@ -179,7 +179,10 @@ The application supports three listing types, each with specific fields stored i
   category: string,                    // e.g., "Adventure", "Culture", "Food", "Wellness"
   language: string,                    // Language spoken during experience
   ageMin: number,                      // Minimum age requirement
-  availableTimes: string[],            // Available time slots
+  availableTimes: [{                   // Array of available dates with time slots
+    date: string,                      // "YYYY-MM-DD"
+    time: string                       // "HH:MM" (e.g., "09:00", "14:30")
+  }],
   availableDates: [{                   // Array of availability ranges
     startDate: string,                 // "YYYY-MM-DD"
     endDate: string                    // "YYYY-MM-DD"

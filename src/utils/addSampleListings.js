@@ -3,904 +3,420 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 const SAMPLE_HOST_ID = "WMdkYEhTTrYUsHw9XpeH3xw1T9s2";
 
-// Sample Stays Listings (10 records)
-const staysListings = [
-  {
-    type: "stays",
-    title: "Cozy Downtown Apartment",
-    description: "Modern apartment in the heart of downtown with great views and easy access to restaurants.",
-    location: "123 Main Street, New York, NY 10001",
-    price: 120,
-    numberOfGuests: 4,
-    bedrooms: 2,
-    bathrooms: 1,
-    beds: 2,
-    amenities: ["WiFi", "Kitchen", "Air Conditioning", "Washer/Dryer"],
-    houseRules: ["No Smoking", "No Parties"],
-    photos: ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-11-15" },
-      { startDate: "2025-11-20", endDate: "2025-12-10" }
-    ],
-    bookedDates: [],
-    promoCode: null,
-    discount: { type: "percentage", value: 0 },
-    ratings: 4.8,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "stays",
-    title: "Luxury Beachfront Villa",
-    description: "Stunning beachfront villa with private pool and ocean view. Perfect for families.",
-    location: "456 Beach Lane, Miami, FL 33139",
-    price: 350,
-    numberOfGuests: 8,
-    bedrooms: 4,
-    bathrooms: 3,
-    beds: 6,
-    amenities: ["WiFi", "Pool", "Hot Tub", "Kitchen", "Beach Access", "Air Conditioning"],
-    houseRules: ["No Smoking", "Respect Neighbors"],
-    photos: ["https://images.unsplash.com/photo-1570129477492-45a003537e1f?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-12-31" },
-      { startDate: "2026-01-05", endDate: "2026-02-28" }
-    ],
-    bookedDates: [],
-    promoCode: null,
-    discount: { type: "percentage", value: 10 },
-    ratings: 4.9,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "stays",
-    title: "Mountain Cabin Retreat",
-    description: "Peaceful mountain cabin surrounded by nature. Great for hiking and relaxation.",
-    location: "789 Pine Road, Boulder, CO 80301",
-    price: 95,
-    numberOfGuests: 6,
-    bedrooms: 3,
-    bathrooms: 2,
-    beds: 4,
-    amenities: ["WiFi", "Fireplace", "Kitchen", "Deck", "Mountain View"],
-    houseRules: ["No Pets", "Quiet Hours After 10 PM"],
-    photos: ["https://images.unsplash.com/photo-1465146072230-91cabc968266?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-11-30" },
-      { startDate: "2025-12-15", endDate: "2026-01-31" }
-    ],
-    bookedDates: [],
-    promoCode: null,
-    discount: { type: "percentage", value: 0 },
-    ratings: 4.7,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "stays",
-    title: "Historic Brownstone",
-    description: "Beautiful historic brownstone in Brooklyn with original hardwood floors and modern amenities.",
-    location: "321 Prospect Park West, Brooklyn, NY 11215",
-    price: 180,
-    numberOfGuests: 5,
-    bedrooms: 3,
-    bathrooms: 2,
-    beds: 3,
-    amenities: ["WiFi", "Kitchen", "Garden", "Hardwood Floors", "Heating"],
-    houseRules: ["No Smoking", "Check-out by 11 AM"],
-    photos: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-12-20" },
-      { startDate: "2026-01-10", endDate: "2026-03-15" }
-    ],
-    bookedDates: [],
-    promoCode: null,
-    discount: { type: "percentage", value: 5 },
-    ratings: 4.6,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "stays",
-    title: "Stylish Loft in Arts District",
-    description: "Industrial-style loft in trendy arts district with high ceilings and exposed brick.",
-    location: "567 Gallery Street, Los Angeles, CA 90012",
-    price: 140,
-    numberOfGuests: 4,
-    bedrooms: 2,
-    bathrooms: 1,
-    beds: 2,
-    amenities: ["WiFi", "Kitchen", "Rooftop Access", "Exposed Brick", "Air Conditioning"],
-    houseRules: ["No Smoking", "No Large Parties"],
-    photos: ["https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-11-25" },
-      { startDate: "2025-12-05", endDate: "2026-01-30" }
-    ],
-    bookedDates: [],
-    promoCode: null,
-    discount: { type: "percentage", value: 0 },
-    ratings: 4.5,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "stays",
-    title: "Charming Victorian Home",
-    description: "Beautifully restored Victorian home with vintage charm and modern comfort.",
-    location: "892 Oak Avenue, San Francisco, CA 94102",
-    price: 200,
-    numberOfGuests: 6,
-    bedrooms: 3,
-    bathrooms: 2,
-    beds: 4,
-    amenities: ["WiFi", "Kitchen", "Fireplace", "Garden", "Heating"],
-    houseRules: ["No Smoking", "Respect Historic Property"],
-    photos: ["https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-12-31" },
-      { startDate: "2026-01-15", endDate: "2026-04-30" }
-    ],
-    bookedDates: [],
-    promoCode: null,
-    discount: { type: "percentage", value: 15 },
-    ratings: 4.8,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "stays",
-    title: "Modern City Penthouse",
-    description: "Sleek penthouse with floor-to-ceiling windows and panoramic city views.",
-    location: "234 Tower Avenue, Chicago, IL 60601",
-    price: 280,
-    numberOfGuests: 5,
-    bedrooms: 3,
-    bathrooms: 2,
-    beds: 3,
-    amenities: ["WiFi", "Kitchen", "Concierge", "Gym Access", "City View"],
-    houseRules: ["No Smoking", "Check-in After 3 PM"],
-    photos: ["https://images.unsplash.com/photo-1571508601596-6f8fc0d90a57?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-11-20" },
-      { startDate: "2025-12-01", endDate: "2026-02-15" }
-    ],
-    bookedDates: [],
-    promoCode: null,
-    discount: { type: "percentage", value: 0 },
-    ratings: 4.9,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "stays",
-    title: "Rustic Farm House",
-    description: "Peaceful farm stay with organic gardens and farm-fresh breakfast included.",
-    location: "123 Country Lane, Napa, CA 94558",
-    price: 150,
-    numberOfGuests: 6,
-    bedrooms: 3,
-    bathrooms: 2,
-    beds: 4,
-    amenities: ["WiFi", "Kitchen", "Garden", "Breakfast Included", "Scenic Views"],
-    houseRules: ["No Smoking", "Respect Farm Animals"],
-    photos: ["https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2026-01-31" },
-      { startDate: "2026-02-15", endDate: "2026-05-30" }
-    ],
-    bookedDates: [],
-    promoCode: null,
-    discount: { type: "percentage", value: 0 },
-    ratings: 4.7,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "stays",
-    title: "Waterfront Cottage",
-    description: "Charming cottage right on the water with private dock and kayak access.",
-    location: "456 Lake View Drive, Seattle, WA 98101",
-    price: 165,
-    numberOfGuests: 4,
-    bedrooms: 2,
-    bathrooms: 1,
-    beds: 2,
-    amenities: ["WiFi", "Kitchen", "Dock", "Kayak Access", "Water View"],
-    houseRules: ["No Smoking", "Quiet Evenings"],
-    photos: ["https://images.unsplash.com/photo-1570129477992-45667601a3ee?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-12-15" },
-      { startDate: "2026-01-05", endDate: "2026-03-31" }
-    ],
-    bookedDates: [],
-    promoCode: null,
-    discount: { type: "percentage", value: 10 },
-    ratings: 4.8,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "stays",
-    title: "Desert Oasis Villa",
-    description: "Stunning villa in the desert with pool, hot tub, and breathtaking sunset views.",
-    location: "789 Desert Rose Lane, Phoenix, AZ 85001",
-    price: 220,
-    numberOfGuests: 7,
-    bedrooms: 3,
-    bathrooms: 3,
-    beds: 4,
-    amenities: ["WiFi", "Pool", "Hot Tub", "Kitchen", "Desert View"],
-    houseRules: ["No Smoking", "Pool Rules Apply"],
-    photos: ["https://images.unsplash.com/photo-1501877442353-cebf8dd7f001?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-12-31" },
-      { startDate: "2026-01-10", endDate: "2026-04-15" }
-    ],
-    bookedDates: [],
-    promoCode: null,
-    discount: { type: "percentage", value: 20 },
-    ratings: 4.9,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  }
+// Unsplash image URLs for variety
+const staysPhotos = [
+  "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80",
+  "https://images.unsplash.com/photo-1570129477492-45a003537e1f?w=800&q=80",
+  "https://images.unsplash.com/photo-1465146072230-91cabc968266?w=800&q=80",
+  "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80",
+  "https://images.unsplash.com/photo-1502672260066-6bc35f0a1f2c?w=800&q=80",
+  "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=800&q=80",
 ];
 
-// Sample Experiences Listings (10 records)
-const experiencesListings = [
-  {
-    type: "experiences",
-    title: "NYC Food Tour",
-    description: "Explore the best street food and local restaurants with a professional guide.",
-    location: "Times Square, New York, NY 10036",
-    price: 85,
-    duration: 3,
-    maxGuests: 12,
-    category: "Food",
-    language: "English",
-    ageMin: 10,
-    activities: ["Street Food Tasting", "Local Restaurant Visit", "Cultural Stories", "Food Photography"],
-    thingsToKnow: ["Comfortable walking shoes required", "Bring water bottle", "Tours run rain or shine"],
-    included: ["All tastings", "Local guide", "Walking tour", "City map"],
-    toBring: ["Camera", "Comfortable shoes", "Water bottle"],
-    photos: ["https://images.unsplash.com/photo-1504674900761-655147302605?w=800&q=80"],
-    availableTimes: ["10:00", "14:00", "18:00"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-11-30" },
-      { startDate: "2025-12-05", endDate: "2026-01-31" }
-    ],
-    discount: { type: "percentage", value: 0 },
-    promoCode: null,
-    rating: 4.8,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  },
-  {
-    type: "experiences",
-    title: "Surfing Lessons in Hawaii",
-    description: "Learn to surf with experienced instructors on beautiful Hawaiian beaches.",
-    location: "Waikiki Beach, Honolulu, HI 96815",
-    price: 65,
-    duration: 2,
-    maxGuests: 8,
-    category: "Adventure",
-    language: "English",
-    ageMin: 8,
-    activities: ["Surfing Instruction", "Beach Safety", "Wave Reading", "Photo Session"],
-    thingsToKnow: ["Swimwear required", "Can you swim?", "Bring sunscreen"],
-    included: ["Surfboard rental", "Instructor", "Equipment", "Photos"],
-    toBring: ["Swimwear", "Towel", "Sunscreen", "Cash for tips"],
-    photos: ["https://images.unsplash.com/photo-1571888677073-e62d0236c7be?w=800&q=80"],
-    availableTimes: ["06:00", "10:00", "14:00"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2026-02-28" },
-      { startDate: "2026-03-15", endDate: "2026-05-31" }
-    ],
-    discount: { type: "percentage", value: 5 },
-    promoCode: null,
-    rating: 4.9,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  },
-  {
-    type: "experiences",
-    title: "Wine Tasting in Napa Valley",
-    description: "Visit 3 local wineries with expert sommelier and gourmet lunch included.",
-    location: "Napa Valley, CA 94558",
-    price: 150,
-    duration: 5,
-    maxGuests: 10,
-    category: "Food",
-    language: "English",
-    ageMin: 21,
-    activities: ["Winery Tour", "Wine Tasting", "Sommelier Talk", "Gourmet Lunch"],
-    thingsToKnow: ["Minimum age 21", "Driver recommended", "Wear comfortable shoes"],
-    included: ["3 winery visits", "Tastings", "Lunch", "Transportation"],
-    toBring: ["ID", "Camera", "Comfortable clothes"],
-    photos: ["https://images.unsplash.com/photo-1510812431401-41d2bd2e3868?w=800&q=80"],
-    availableTimes: ["09:00", "13:00"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-12-20" },
-      { startDate: "2026-01-10", endDate: "2026-04-30" }
-    ],
-    discount: { type: "percentage", value: 0 },
-    promoCode: null,
-    rating: 4.9,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  },
-  {
-    type: "experiences",
-    title: "Hot Air Balloon Ride",
-    description: "Experience breathtaking views from a hot air balloon at sunrise.",
-    location: "Scottsdale, AZ 85251",
-    price: 200,
-    duration: 1,
-    maxGuests: 4,
-    category: "Adventure",
-    language: "English",
-    ageMin: 5,
-    activities: ["Balloon Setup", "Flight Experience", "Sunrise Views", "Champagne Toast"],
-    thingsToKnow: ["Early morning", "Wear layers", "Not for acrophobics"],
-    included: ["Balloon ride", "Pilot", "Champagne", "Photos"],
-    toBring: ["Comfortable clothes", "Light jacket", "Camera"],
-    photos: ["https://images.unsplash.com/photo-1578575437980-ba2b2fac3c6d?w=800&q=80"],
-    availableTimes: ["06:00"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-11-30" },
-      { startDate: "2026-01-05", endDate: "2026-03-31" }
-    ],
-    discount: { type: "percentage", value: 10 },
-    promoCode: null,
-    rating: 4.95,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  },
-  {
-    type: "experiences",
-    title: "Cooking Class with Michelin Chef",
-    description: "Learn cooking techniques from a Michelin-starred chef in an intimate setting.",
-    location: "Mission District, San Francisco, CA 94103",
-    price: 120,
-    duration: 3,
-    maxGuests: 8,
-    category: "Food",
-    language: "English",
-    ageMin: 16,
-    activities: ["Hands-On Cooking", "Chef Instruction", "Meal Preparation", "Tasting"],
-    thingsToKnow: ["Apron provided", "Basic cooking skills", "Dietary restrictions noted"],
-    included: ["All ingredients", "Equipment", "Apron", "Meal to eat"],
-    toBring: ["Nothing needed"],
-    photos: ["https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80"],
-    availableTimes: ["11:00", "15:00"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-12-31" },
-      { startDate: "2026-01-15", endDate: "2026-03-30" }
-    ],
-    discount: { type: "percentage", value: 0 },
-    promoCode: null,
-    rating: 4.8,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  },
-  {
-    type: "experiences",
-    title: "Historical Walking Tour",
-    description: "Discover the rich history and hidden gems of the city with a knowledgeable guide.",
-    location: "Downtown Boston, MA 02108",
-    price: 45,
-    duration: 2.5,
-    maxGuests: 15,
-    category: "Culture",
-    language: "English",
-    ageMin: 0,
-    activities: ["Historical Sites", "Local Stories", "Architecture Tour", "Photo Stops"],
-    thingsToKnow: ["Moderate walking", "Comfortable shoes", "Weather dependent"],
-    included: ["Guided tour", "Historical facts", "Maps"],
-    toBring: ["Comfortable shoes", "Water", "Camera"],
-    photos: ["https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80"],
-    availableTimes: ["10:00", "14:00"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-12-31" },
-      { startDate: "2026-01-05", endDate: "2026-05-31" }
-    ],
-    discount: { type: "percentage", value: 0 },
-    promoCode: null,
-    rating: 4.7,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  },
-  {
-    type: "experiences",
-    title: "Yoga Retreat in Bali",
-    description: "5-day yoga retreat with meditation, spa, and tropical island experience.",
-    location: "Ubud, Bali, Indonesia",
-    price: 450,
-    duration: 5,
-    maxGuests: 20,
-    category: "Wellness",
-    language: "English",
-    ageMin: 18,
-    activities: ["Yoga Sessions", "Meditation", "Spa Treatments", "Beach Visit", "Cultural Tour"],
-    thingsToKnow: ["Accommodation included", "Flexible schedule", "Bring yoga mat"],
-    included: ["Accommodation", "All meals", "Yoga classes", "Spa", "Excursions"],
-    toBring: ["Yoga clothes", "Mat", "Toiletries", "Light clothes"],
-    photos: ["https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&q=80"],
-    availableTimes: ["08:00"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-11-30" },
-      { startDate: "2026-01-10", endDate: "2026-02-28" }
-    ],
-    discount: { type: "percentage", value: 15 },
-    promoCode: null,
-    rating: 4.9,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  },
-  {
-    type: "experiences",
-    title: "Rock Climbing Adventure",
-    description: "Guided rock climbing experience for beginners and experienced climbers.",
-    location: "Moab, UT 84532",
-    price: 95,
-    duration: 4,
-    maxGuests: 6,
-    category: "Adventure",
-    language: "English",
-    ageMin: 12,
-    activities: ["Climbing", "Belay Training", "Safety Brief", "Nature Exploration"],
-    thingsToKnow: ["Physical activity", "Climbing shoes provided", "Fear of heights okay"],
-    included: ["Equipment", "Guide", "Instruction", "Harness"],
-    toBring: ["Water", "Snacks", "Comfortable clothes"],
-    photos: ["https://images.unsplash.com/photo-1551958219-acbc608c6be4?w=800&q=80"],
-    availableTimes: ["08:00", "13:00"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-11-30" },
-      { startDate: "2025-12-10", endDate: "2026-01-31" }
-    ],
-    discount: { type: "percentage", value: 0 },
-    promoCode: null,
-    rating: 4.8,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  },
-  {
-    type: "experiences",
-    title: "Safari Adventure",
-    description: "3-day guided safari with wildlife viewing and luxury lodge accommodation.",
-    location: "Serengeti, Tanzania",
-    price: 650,
-    duration: 3,
-    maxGuests: 8,
-    category: "Adventure",
-    language: "English",
-    ageMin: 6,
-    activities: ["Game Drives", "Wildlife Viewing", "Photography", "Nature Walks"],
-    thingsToKnow: ["Accommodation included", "Early starts", "Bring binoculars"],
-    included: ["Lodge", "All meals", "Game drives", "Guide", "Transportation"],
-    toBring: ["Camera", "Binoculars", "Sun protection", "Neutral colors"],
-    photos: ["https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&q=80"],
-    availableTimes: ["06:00"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-12-15" },
-      { startDate: "2026-01-20", endDate: "2026-03-31" }
-    ],
-    discount: { type: "percentage", value: 20 },
-    promoCode: null,
-    rating: 4.95,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  },
-  {
-    type: "experiences",
-    title: "Art Workshop and Gallery Tour",
-    description: "Create your own art piece with a professional artist and tour local galleries.",
-    location: "Chelsea, New York, NY 10011",
-    price: 75,
-    duration: 3,
-    maxGuests: 10,
-    category: "Culture",
-    language: "English",
-    ageMin: 10,
-    activities: ["Art Creation", "Professional Guidance", "Gallery Tour", "Art Discussion"],
-    thingsToKnow: ["No art experience needed", "Materials provided", "Wear old clothes"],
-    included: ["Art supplies", "Instruction", "Gallery admission", "Snacks"],
-    toBring: ["Nothing required"],
-    photos: ["https://images.unsplash.com/photo-1561214115-6d2f1b0609fa?w=800&q=80"],
-    availableTimes: ["10:00", "14:00"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2026-01-31" },
-      { startDate: "2026-02-15", endDate: "2026-04-30" }
-    ],
-    discount: { type: "percentage", value: 5 },
-    promoCode: null,
-    rating: 4.7,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  }
+const experiencesPhotos = [
+  "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80",
+  "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&q=80",
+  "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&q=80",
+  "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&q=80",
+  "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&q=80",
+  "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80",
 ];
 
-// Sample Services Listings (10 records)
-const servicesListings = [
-  {
-    type: "services",
-    title: "Professional House Cleaning",
-    description: "Thorough house cleaning with eco-friendly products and professional team.",
-    location: "Los Angeles, CA 90001",
-    price: 45,
-    duration: 3,
-    category: "Home Services",
-    responseTime: "within 2 hours",
-    serviceTypes: ["Deep Cleaning", "Regular Cleaning", "Move-Out Cleaning"],
-    highlights: ["Eco-friendly products", "Experienced team", "Quick turnaround"],
-    serviceAreas: ["Los Angeles", "Santa Monica", "Beverly Hills"],
-    certifications: ["Certified Cleaner", "Bio-Safe Certified"],
-    terms: ["Minimum 3 hours", "Cancellation 24 hours notice"],
-    experienceYears: 8,
-    completedJobs: 450,
-    photos: ["https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-12-31" },
-      { startDate: "2026-01-05", endDate: "2026-06-30" }
-    ],
-    discount: { type: "percentage", value: 10 },
-    promoCode: null,
-    isVerified: true,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "services",
-    title: "Plumbing Services",
-    description: "Emergency and scheduled plumbing repairs, installations, and maintenance.",
-    location: "New York, NY 10001",
-    price: 75,
-    duration: 2,
-    category: "Home Services",
-    responseTime: "within 1 hour",
-    serviceTypes: ["Repairs", "Installation", "Maintenance", "Emergency Service"],
-    highlights: ["24/7 Emergency service", "Licensed", "Guaranteed work"],
-    serviceAreas: ["New York", "New Jersey", "Connecticut"],
-    certifications: ["Licensed Plumber", "Master Plumber"],
-    terms: ["Emergency fees apply", "Estimates provided"],
-    experienceYears: 15,
-    completedJobs: 800,
-    photos: ["https://images.unsplash.com/photo-1559056199-641a0ac8b8d5?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-12-31" },
-      { startDate: "2026-01-05", endDate: "2026-06-30" }
-    ],
-    discount: { type: "percentage", value: 0 },
-    promoCode: null,
-    isVerified: true,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "services",
-    title: "Personal Training",
-    description: "Customized fitness training programs tailored to your goals and fitness level.",
-    location: "Chicago, IL 60601",
-    price: 55,
-    duration: 1,
-    category: "Fitness",
-    responseTime: "within 24 hours",
-    serviceTypes: ["Weight Training", "Cardio", "HIIT", "Yoga", "Flexibility"],
-    highlights: ["Personalized plans", "Nutrition advice", "Progress tracking"],
-    serviceAreas: ["Chicago", "Suburbs"],
-    certifications: ["ACE Certified", "CPT Certified"],
-    terms: ["Minimum 1 hour session", "Flexible scheduling"],
-    experienceYears: 6,
-    completedJobs: 350,
-    photos: ["https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2026-01-31" },
-      { startDate: "2026-02-15", endDate: "2026-06-30" }
-    ],
-    discount: { type: "percentage", value: 5 },
-    promoCode: null,
-    isVerified: false,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "services",
-    title: "Electrical Services",
-    description: "Professional electrical installation, repairs, and maintenance services.",
-    location: "Houston, TX 77002",
-    price: 65,
-    duration: 2,
-    category: "Home Services",
-    responseTime: "within 4 hours",
-    serviceTypes: ["Installation", "Repairs", "Maintenance", "Troubleshooting"],
-    highlights: ["Licensed electrician", "Fast service", "Code compliant"],
-    serviceAreas: ["Houston", "Surrounding areas"],
-    certifications: ["Licensed Electrician", "Master Electrician"],
-    terms: ["Minimum 1 hour", "Estimates free"],
-    experienceYears: 12,
-    completedJobs: 620,
-    photos: ["https://images.unsplash.com/photo-1581578731548-c64695c952952?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-12-31" },
-      { startDate: "2026-01-05", endDate: "2026-06-30" }
-    ],
-    discount: { type: "percentage", value: 0 },
-    promoCode: null,
-    isVerified: true,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "services",
-    title: "Pet Care and Dog Walking",
-    description: "Daily dog walking, pet sitting, and care services for your beloved pets.",
-    location: "San Francisco, CA 94102",
-    price: 25,
-    duration: 0.5,
-    category: "Pet Services",
-    responseTime: "within 3 hours",
-    serviceTypes: ["Dog Walking", "Pet Sitting", "Feeding", "Play Sessions"],
-    highlights: ["Insured", "Loving care", "Photo updates"],
-    serviceAreas: ["San Francisco", "Oakland"],
-    certifications: ["Pet First Aid", "Dog Behavior Certified"],
-    terms: ["Minimum 30 minutes", "Same-day booking available"],
-    experienceYears: 4,
-    completedJobs: 520,
-    photos: ["https://images.unsplash.com/photo-1560244018-be2dfc253c82?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2026-03-31" },
-      { startDate: "2026-04-15", endDate: "2026-08-31" }
-    ],
-    discount: { type: "percentage", value: 0 },
-    promoCode: null,
-    isVerified: true,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "services",
-    title: "Photography Services",
-    description: "Professional photography for portraits, events, and special occasions.",
-    location: "Seattle, WA 98101",
-    price: 80,
-    duration: 2,
-    category: "Creative Services",
-    responseTime: "within 24 hours",
-    serviceTypes: ["Portrait", "Event", "Wedding", "Product Photography"],
-    highlights: ["Professional equipment", "Quick editing", "Digital copies"],
-    serviceAreas: ["Seattle", "Pacific Northwest"],
-    certifications: ["Professional Photographer", "Adobe Certified"],
-    terms: ["Minimum 2 hours", "Deposit required"],
-    experienceYears: 9,
-    completedJobs: 380,
-    photos: ["https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-12-31" },
-      { startDate: "2026-01-15", endDate: "2026-06-30" }
-    ],
-    discount: { type: "percentage", value: 15 },
-    promoCode: null,
-    isVerified: true,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "services",
-    title: "Tutoring and Academic Help",
-    description: "Expert tutoring in math, science, languages, and SAT/ACT prep.",
-    location: "Boston, MA 02108",
-    price: 50,
-    duration: 1,
-    category: "Education",
-    responseTime: "within 2 hours",
-    serviceTypes: ["Math", "Science", "Languages", "Test Prep"],
-    highlights: ["Expert instructors", "Flexible scheduling", "Proven results"],
-    serviceAreas: ["Boston", "Suburbs", "Online"],
-    certifications: ["Subject Matter Expert", "Teaching Certified"],
-    terms: ["Minimum 1 hour", "30-minute free trial"],
-    experienceYears: 7,
-    completedJobs: 420,
-    photos: ["https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2026-02-28" },
-      { startDate: "2026-03-15", endDate: "2026-06-30" }
-    ],
-    discount: { type: "percentage", value: 0 },
-    promoCode: null,
-    isVerified: false,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "services",
-    title: "Hair and Beauty Services",
-    description: "Professional hair styling, coloring, and beauty treatments.",
-    location: "Miami, FL 33139",
-    price: 60,
-    duration: 1.5,
-    category: "Beauty Services",
-    responseTime: "within 6 hours",
-    serviceTypes: ["Hair Cut", "Coloring", "Styling", "Makeup", "Treatments"],
-    highlights: ["Premium products", "Latest trends", "Luxury experience"],
-    serviceAreas: ["Miami", "South Beach"],
-    certifications: ["Master Stylist", "Color Expert"],
-    terms: ["Consultation available", "Rescheduling allowed"],
-    experienceYears: 11,
-    completedJobs: 890,
-    photos: ["https://images.unsplash.com/photo-1566613535308-ee0db6cb3808?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2025-12-31" },
-      { startDate: "2026-01-05", endDate: "2026-06-30" }
-    ],
-    discount: { type: "percentage", value: 10 },
-    promoCode: null,
-    isVerified: true,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "services",
-    title: "HVAC and Air Conditioning",
-    description: "HVAC installation, repair, and maintenance services year-round.",
-    location: "Phoenix, AZ 85001",
-    price: 70,
-    duration: 2,
-    category: "Home Services",
-    responseTime: "within 2 hours",
-    serviceTypes: ["Installation", "Repair", "Maintenance", "Emergency Service"],
-    highlights: ["24/7 service", "Licensed technician", "Warranty"],
-    serviceAreas: ["Phoenix", "Scottsdale", "Arizona"],
-    certifications: ["EPA Certified", "HVAC Licensed"],
-    terms: ["Emergency surcharge", "Maintenance plans available"],
-    experienceYears: 13,
-    completedJobs: 750,
-    photos: ["https://images.unsplash.com/photo-1580828343064-fde4fc206bc6?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2026-01-31" },
-      { startDate: "2026-02-15", endDate: "2026-06-30" }
-    ],
-    discount: { type: "percentage", value: 0 },
-    promoCode: null,
-    isVerified: true,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  },
-  {
-    type: "services",
-    title: "Virtual Assistant Services",
-    description: "Remote administrative support, scheduling, email management, and more.",
-    location: "Remote Service",
-    price: 35,
-    duration: 4,
-    category: "Business Services",
-    responseTime: "within 12 hours",
-    serviceTypes: ["Email Management", "Scheduling", "Data Entry", "Customer Service"],
-    highlights: ["Reliable", "Efficient", "Discreet"],
-    serviceAreas: ["Remote (Worldwide)"],
-    certifications: ["Administrative Professional", "Virtual Assistant Certified"],
-    terms: ["Minimum 4 hours", "Monthly packages available"],
-    experienceYears: 5,
-    completedJobs: 280,
-    photos: ["https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=80"],
-    availableDates: [
-      { startDate: "2025-10-28", endDate: "2026-03-31" },
-      { startDate: "2026-04-15", endDate: "2026-08-31" }
-    ],
-    discount: { type: "percentage", value: 5 },
-    promoCode: null,
-    isVerified: false,
-    isDraft: false,
-    status: "active",
-    hostId: SAMPLE_HOST_ID,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
-  }
+const servicesPhotos = [
+  "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80",
+  "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=80",
+  "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80",
+  "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=80",
+  "https://images.unsplash.com/photo-1543269865-cbf427effbad?w=800&q=80",
+  "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=80",
 ];
 
-// Function to add all sample listings to Firestore
-export const addSampleListings = async () => {
+// Helper function to generate random date ranges
+const generateDateRanges = () => {
+  const ranges = [];
+  const startDate = new Date(2025, 9, 28); // October 28, 2025
+
+  for (let i = 0; i < 2; i++) {
+    const start = new Date(startDate);
+    start.setDate(start.getDate() + i * 45);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 30 + Math.floor(Math.random() * 15));
+
+    ranges.push({
+      startDate: start.toISOString().split("T")[0],
+      endDate: end.toISOString().split("T")[0],
+    });
+  }
+  return ranges;
+};
+
+// Helper function to generate random time slots
+const generateTimeSlots = (count = 3) => {
+  const slots = [];
+  const startDate = new Date(2025, 9, 28);
+  const hours = [9, 10, 14, 15, 16];
+
+  for (let i = 0; i < count; i++) {
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + Math.floor(Math.random() * 60));
+    const hour = hours[Math.floor(Math.random() * hours.length)];
+
+    slots.push({
+      date: date.toISOString().split("T")[0],
+      time: `${String(hour).padStart(2, "0")}:00`,
+    });
+  }
+  return slots;
+};
+
+// Helper function to pick random items from array
+const pickRandom = (arr, count = 3) => {
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    result.push(arr[Math.floor(Math.random() * arr.length)]);
+  }
+  return [...new Set(result)];
+};
+
+// Sample data for Stays (20 listings)
+const generateStaysListings = () => {
+  const staysTitles = [
+    "Cozy Downtown Apartment",
+    "Luxury Beachfront Villa",
+    "Mountain Cabin Retreat",
+    "Historic Brownstone",
+    "Stylish Loft in Arts District",
+    "Charming Victorian Home",
+    "Modern City Penthouse",
+    "Rustic Farm House",
+    "Waterfront Cottage",
+    "Desert Oasis Villa",
+    "Urban Studio Apartment",
+    "Coastal Beach House",
+    "Forest Retreat Cabin",
+    "Elegant City Condo",
+    "Contemporary Smart Home",
+    "Secluded Villa with Pool",
+    "Trendy Warehouse Loft",
+    "Peaceful Countryside Manor",
+    "Skyline View Penthouse",
+    "Charming Cottage by the Lake",
+  ];
+
+  const locations = [
+    "New York, NY",
+    "Miami, FL",
+    "Boulder, CO",
+    "Brooklyn, NY",
+    "San Francisco, CA",
+    "Los Angeles, CA",
+    "Austin, TX",
+    "Denver, CO",
+    "Seattle, WA",
+    "Portland, OR",
+    "Chicago, IL",
+    "Boston, MA",
+    "Philadelphia, PA",
+    "Nashville, TN",
+    "New Orleans, LA",
+    "Miami Beach, FL",
+    "Aspen, CO",
+    "Santa Fe, NM",
+    "Charleston, SC",
+    "Savannah, GA",
+  ];
+
+  const amenities = [
+    "WiFi",
+    "Kitchen",
+    "Air Conditioning",
+    "Washer/Dryer",
+    "Pool",
+    "Hot Tub",
+    "Beach Access",
+    "Fireplace",
+    "Deck",
+    "Mountain View",
+    "Garden",
+    "Parking",
+    "TV",
+    "Heating",
+    "Balcony",
+    "Gym",
+    "Sauna",
+  ];
+
+  const houseRules = [
+    "No Smoking",
+    "No Parties",
+    "No Pets",
+    "Quiet Hours After 10 PM",
+    "Check-out by 11 AM",
+    "Respect Neighbors",
+    "No Loud Music",
+    "Keep Clean",
+  ];
+
+  const listings = [];
+  for (let i = 0; i < 20; i++) {
+    listings.push({
+      type: "stays",
+      title: staysTitles[i],
+      description: `Beautiful and comfortable ${staysTitles[i].toLowerCase()}. Perfect for your next vacation. Enjoy our ${pickRandom(amenities, 3).join(", ").toLowerCase()} and relax in style.`,
+      location: locations[i],
+      price: Math.floor(Math.random() * 250) + 80,
+      numberOfGuests: Math.floor(Math.random() * 5) + 2,
+      bedrooms: Math.floor(Math.random() * 4) + 1,
+      bathrooms: Math.floor(Math.random() * 3) + 1,
+      beds: Math.floor(Math.random() * 4) + 1,
+      amenities: pickRandom(amenities, 4),
+      houseRules: pickRandom(houseRules, 3),
+      photos: [staysPhotos[i % staysPhotos.length]],
+      availableDates: generateDateRanges(),
+      bookedDates: [],
+      promoCode: null,
+      discount: { type: "percentage", value: Math.floor(Math.random() * 15) },
+      ratings: Math.floor(Math.random() * 20 + 80) / 10,
+      isDraft: false,
+      status: "active",
+      hostId: SAMPLE_HOST_ID,
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    });
+  }
+  return listings;
+};
+
+// Sample data for Experiences (20 listings)
+const generateExperiencesListings = () => {
+  const experiencesTitles = [
+    "NYC Food Tour",
+    "Surfing Lessons in Hawaii",
+    "Wine Tasting in Napa Valley",
+    "Hot Air Balloon Ride",
+    "Cooking Class with Local Chef",
+    "Historical Walking Tour",
+    "Yoga Retreat",
+    "Rock Climbing Adventure",
+    "Safari Adventure",
+    "Art Workshop and Gallery Tour",
+    "Scuba Diving Expedition",
+    "Mountain Hiking Trek",
+    "Photography Tour",
+    "Cooking Experience",
+    "Dance Class",
+    "Meditation Retreat",
+    "Water Sports Adventure",
+    "Cultural Museum Tour",
+    "Comedy Show Night",
+    "Jazz Concert Experience",
+  ];
+
+  const categories = [
+    "Adventure",
+    "Culture",
+    "Food",
+    "Wellness",
+    "Arts",
+    "Sports",
+    "Nature",
+    "Music",
+  ];
+
+  const languages = ["English", "Spanish", "French", "German", "Italian"];
+
+  const activities = [
+    "Hiking",
+    "Swimming",
+    "Photography",
+    "Cooking",
+    "Dancing",
+    "Meditation",
+    "Painting",
+    "Reading",
+    "Touring",
+    "Tasting",
+    "Climbing",
+    "Diving",
+  ];
+
+  const included = [
+    "Drinks",
+    "Snacks",
+    "Equipment",
+    "Guide",
+    "Transportation",
+    "Insurance",
+  ];
+
+  const toBring = [
+    "Comfortable Shoes",
+    "Sunscreen",
+    "Water Bottle",
+    "Camera",
+    "Swimwear",
+    "Hat",
+    "Light Jacket",
+  ];
+
+  const listings = [];
+  for (let i = 0; i < 20; i++) {
+    listings.push({
+      type: "experiences",
+      title: experiencesTitles[i],
+      description: `Join us for an unforgettable ${experiencesTitles[i].toLowerCase()}. Our expert guides will ensure you have the best experience ever. Learn new skills and create lasting memories.`,
+      location: ["Paris, France", "Tokyo, Japan", "Barcelona, Spain", "Rome, Italy", "Amsterdam, Netherlands"][i % 5],
+      price: Math.floor(Math.random() * 300) + 50,
+      duration: Math.floor(Math.random() * 6) + 1,
+      maxGuests: Math.floor(Math.random() * 20) + 4,
+      category: categories[i % categories.length],
+      language: languages[i % languages.length],
+      ageMin: Math.floor(Math.random() * 10),
+      availableTimes: generateTimeSlots(4),
+      availableDates: generateDateRanges(),
+      activities: pickRandom(activities, 3),
+      thingsToKnow: [
+        "Bring comfortable shoes",
+        "Arrive 15 minutes early",
+        "Weather dependent",
+      ],
+      included: pickRandom(included, 3),
+      toBring: pickRandom(toBring, 3),
+      photos: [experiencesPhotos[i % experiencesPhotos.length]],
+      discount: { type: "percentage", value: Math.floor(Math.random() * 15) },
+      promoCode: null,
+      rating: Math.floor(Math.random() * 20 + 80) / 10,
+      isDraft: false,
+      status: "active",
+      hostId: SAMPLE_HOST_ID,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  }
+  return listings;
+};
+
+// Sample data for Services (20 listings)
+const generateServicesListings = () => {
+  const servicesTitles = [
+    "Professional House Cleaning",
+    "Plumbing Services",
+    "Personal Training",
+    "Electrical Services",
+    "Pet Care and Dog Walking",
+    "Photography Services",
+    "Tutoring and Academic Help",
+    "Hair and Beauty Services",
+    "HVAC and Air Conditioning",
+    "Virtual Assistant Services",
+    "Massage Therapy",
+    "Web Design Services",
+    "Graphic Design",
+    "Home Renovation",
+    "Landscaping Services",
+    "Pest Control",
+    "Car Detailing",
+    "Event Planning",
+    "Bookkeeping Services",
+    "Consulting Services",
+  ];
+
+  const serviceTypes = [
+    "Deep Cleaning",
+    "Regular Cleaning",
+    "Repair",
+    "Installation",
+    "Maintenance",
+    "Coaching",
+    "Training",
+    "Consultation",
+    "Design",
+    "Development",
+  ];
+
+  const highlights = [
+    "Certified Professional",
+    "5+ Years Experience",
+    "Affordable Prices",
+    "Quick Response",
+    "High Quality",
+    "Eco-Friendly",
+    "Insured",
+    "Licensed",
+  ];
+
+  const certifications = [
+    "Professional License",
+    "Insurance Coverage",
+    "Background Check",
+    "Certification",
+    "Training Course",
+  ];
+
+  const terms = [
+    "Free Consultation",
+    "Flexible Scheduling",
+    "Money Back Guarantee",
+    "Professional Service",
+  ];
+
+  const listings = [];
+  for (let i = 0; i < 20; i++) {
+    listings.push({
+      type: "services",
+      title: servicesTitles[i],
+      description: `Professional ${servicesTitles[i].toLowerCase()} with years of experience. We provide high-quality service with customer satisfaction guaranteed. Contact us for more information.`,
+      location: ["New York, NY", "Los Angeles, CA", "Chicago, IL", "Houston, TX", "Phoenix, AZ"][i % 5],
+      price: Math.floor(Math.random() * 100) + 30,
+      duration: Math.floor(Math.random() * 6) + 1,
+      category: "Home Services",
+      responseTime: ["within 1 hour", "within 2 hours", "within 4 hours"][Math.floor(Math.random() * 3)],
+      serviceTypes: pickRandom(serviceTypes, 3),
+      highlights: pickRandom(highlights, 3),
+      serviceAreas: ["Downtown", "Suburbs", "Surrounding Areas"],
+      certifications: pickRandom(certifications, 2),
+      terms: pickRandom(terms, 2),
+      experienceYears: Math.floor(Math.random() * 15) + 2,
+      completedJobs: Math.floor(Math.random() * 500) + 50,
+      photos: [servicesPhotos[i % servicesPhotos.length]],
+      availableDates: generateDateRanges(),
+      discount: { type: "percentage", value: Math.floor(Math.random() * 15) },
+      promoCode: null,
+      isVerified: Math.random() > 0.3,
+      isDraft: false,
+      status: "active",
+      hostId: SAMPLE_HOST_ID,
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    });
+  }
+  return listings;
+};
+
+export async function addSampleListings() {
   try {
-    console.log("Starting to add sample listings...");
-
-    const allListings = [...staysListings, ...experiencesListings, ...servicesListings];
+    console.log("🚀 Starting to add sample listings...");
     let successCount = 0;
     let errorCount = 0;
 
+    // Generate all listings
+    const allListings = [
+      ...generateStaysListings(),
+      ...generateExperiencesListings(),
+      ...generateServicesListings(),
+    ];
+
+    console.log(`📦 Adding ${allListings.length} sample listings to Firestore...`);
+
+    // Add each listing
     for (const listing of allListings) {
       try {
-        const docRef = await addDoc(collection(db, "listings"), listing);
-        console.log(`Added ${listing.type} listing:`, docRef.id);
+        const listingsCollection = collection(db, "listings");
+        const docRef = await addDoc(listingsCollection, listing);
+        console.log(`✅ Added ${listing.type} listing: ${listing.title}`);
         successCount++;
       } catch (error) {
-        console.error(`Error adding ${listing.type} listing:`, error);
+        console.error(`❌ Error adding ${listing.type} listing:`, error);
         errorCount++;
       }
     }
@@ -908,9 +424,9 @@ export const addSampleListings = async () => {
     console.log(
       `✅ Successfully added ${successCount} listings. Errors: ${errorCount}`
     );
-    return { success: true, successCount, errorCount };
+    return { success: true, successCount, errorCount, total: successCount + errorCount };
   } catch (error) {
-    console.error("Error adding sample listings:", error);
+    console.error("❌ Error adding sample listings:", error);
     return { success: false, error: error.message };
   }
-};
+}

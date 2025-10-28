@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
   MapPin,
   Star,
@@ -25,7 +25,7 @@ import {
   Gift,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { DateRange } from "react-date-range";
@@ -51,6 +51,17 @@ import VerificationBanner from "../../components/Verification";
 import { sendOtpToUser } from "../../utils/sendOtpToUser";
 import { getCoordinatesFromLocation } from "../../utils/geocoding";
 import { toast } from "react-toastify";
+
+// Component to change map view when center state changes
+function ChangeMapView({ center, zoom }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.setView(center, zoom);
+    }
+  }, [center, zoom, map]);
+  return null;
+}
 
 // Sample listing data - replace with your Firebase data
 // const listingData = {
@@ -157,7 +168,6 @@ export default function ListingDetailPage() {
   const [isLoadingVerification, setIsLoadingVerification] = useState(false);
   const [userData, setUserData] = useState(null);
   const [mapCenter, setMapCenter] = useState([14.5994, 120.9842]);
-  const mapRef = useRef(null);
 
   const { user, isVerified } = useAuth();
   //navigation
@@ -307,14 +317,11 @@ export default function ListingDetailPage() {
         host_id: listingData.hostId,
         type: "booking",
         title: "New Booking",
-        message: `${userData.fullName || "A guest"} has booked your ${
-          listingData.title
-        } for ${checkIn} to ${checkOut}`,
+        message: `${userData.fullName || "A guest"} has booked your ${listingData.title} for ${checkIn} to ${checkOut}`,
         listing_id: listing_id,
         booking_id: bookingRef.id,
         guest_id: userData.id,
         guest_avatar: userData.photoURL || null,
-        read: false,
         isRead: false,
         createdAt: serverTimestamp(),
       };
@@ -451,6 +458,14 @@ export default function ListingDetailPage() {
 
         const data = listingSnap.data();
 
+        // Set map center immediately if coordinates exist in the listing
+        if (data.coordinates?.lat && data.coordinates?.lng) {
+          setMapCenter([data.coordinates.lat, data.coordinates.lng]);
+          console.log(
+            `📍 Map centered at coordinates: ${data.coordinates.lat}, ${data.coordinates.lng}`
+          );
+        }
+
         // Fetch reviews with user data
         const reviewsRef = collection(db, "reviews");
         const reviewQuery = query(
@@ -513,23 +528,37 @@ export default function ListingDetailPage() {
     const fetchCoordinatesFromLocation = async () => {
       if (!listingData?.location) return;
 
-      // If coordinates already exist, don't fetch
+      // If coordinates already exist in listingData, use them
       if (listingData?.coordinates?.lat && listingData?.coordinates?.lng) {
         setMapCenter([
           listingData.coordinates.lat,
           listingData.coordinates.lng,
         ]);
+        console.log(
+          `📍 Map centered using stored coordinates: ${listingData.location}`
+        );
         return;
       }
 
+      // Fallback: fetch coordinates from location string
       try {
+        console.log(
+          `📍 Fetching coordinates for location: ${listingData.location}`
+        );
         const coords = await getCoordinatesFromLocation(listingData.location);
         if (coords) {
           setMapCenter([coords.lat, coords.lng]);
-          console.log(`📍 Map centered at: ${listingData.location}`);
+          console.log(
+            `📍 Map centered at geocoded location: ${listingData.location} (${coords.lat}, ${coords.lng})`
+          );
+        } else {
+          console.warn(`Could not geocode location: ${listingData.location}`);
         }
       } catch (error) {
-        console.error("Error fetching coordinates:", error);
+        console.error(
+          `Error fetching coordinates for ${listingData.location}:`,
+          error
+        );
       }
     };
 
@@ -663,8 +692,8 @@ export default function ListingDetailPage() {
                 zoom={15}
                 scrollWheelZoom={false}
                 style={{ width: "100%", height: "100%", zIndex: 0 }}
-                ref={mapRef}
               >
+                <ChangeMapView center={mapCenter} zoom={15} />
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

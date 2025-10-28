@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
 import { toast } from "react-toastify";
-import { getDoc, doc, onSnapshot } from "firebase/firestore";
+import { getDoc, doc, onSnapshot, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import { useRef } from "react";
 
@@ -12,7 +12,7 @@ import {
   sendMessage,
   getUserConversations,
 } from "../firebase/messagesService";
-import { Send, Search, ArrowLeft } from "lucide-react";
+import { Send, Search, ArrowLeft, Trash2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { listenToMessages } from "../firebase/messagesService";
 
@@ -204,6 +204,62 @@ export default function MessagesPage() {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  const handleDeleteConversation = async (conversationIdToDelete) => {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this conversation? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      // Assuming messages are in a top-level 'messages' collection
+      const messagesQuery = query(
+        collection(db, "messages"),
+        where("conversationId", "==", conversationIdToDelete)
+      );
+      const messagesSnapshot = await getDocs(messagesQuery);
+      const deletePromises = messagesSnapshot.docs.map((doc) =>
+        deleteDoc(doc.ref)
+      );
+      await Promise.all(deletePromises);
+
+      // Delete the conversation document itself
+      await deleteDoc(doc(db, "conversations", conversationIdToDelete));
+
+      toast.success("Conversation deleted successfully.");
+
+      // Update UI
+      const oldSelectedConvId = conversations[selectedChat]?.id;
+      const newConversations = conversations.filter(
+        (c) => c.id !== conversationIdToDelete
+      );
+      setConversations(newConversations);
+
+      if (newConversations.length === 0) {
+        setSelectedChat(null);
+        setMessages([]);
+        setHostData({});
+        setConversationId(null);
+        setShowMobileChat(false);
+      } else {
+        if (oldSelectedConvId === conversationIdToDelete) {
+          // If the deleted conversation was the selected one, select the first one
+          setSelectedChat(0);
+        } else {
+          // Otherwise, find the new index of the previously selected conversation
+          const newIndex = newConversations.findIndex(c => c.id === oldSelectedConvId);
+          setSelectedChat(newIndex !== -1 ? newIndex : 0);
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+      toast.error("Failed to delete conversation.");
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-slate-900">
       <NavigationBar user={user} userData={userData} forceSimpleNavBar={true} />
@@ -225,43 +281,57 @@ export default function MessagesPage() {
 
           <div className="flex-1 overflow-y-auto">
             {conversations.map((conv, index) => (
-              <button
+              <div
                 key={conv.id}
-                onClick={() => {
-                  setSelectedChat(index);
-                  setShowMobileChat(true);
-                }}
-                className={`w-full p-3 lg:p-4 flex items-start gap-3 hover:bg-slate-700/50 transition-all border-b border-slate-700 ${
-                  selectedChat === index
-                    ? "bg-indigo-600/20 border-l-4 border-l-indigo-500"
-                    : ""
-                }`}
+                className="relative group"
               >
-                <img
-                  src={conv.avatar || "/profile-placeholder.png"}
-                  alt={conv.name || ""}
-                  className="w-12 lg:w-14 h-12 lg:h-14 rounded-full object-cover flex-shrink-0"
-                />
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-bold text-white truncate text-sm lg:text-base">
-                      {conv.name}
-                    </h3>
-                    <span className="text-xs text-slate-400 ml-2 flex-shrink-0">
-                      {conv.time || ""}
-                    </span>
+                <button
+                  onClick={() => {
+                    setSelectedChat(index);
+                    setShowMobileChat(true);
+                  }}
+                  className={`w-full p-3 lg:p-4 flex items-start gap-3 hover:bg-slate-700/50 transition-all border-b border-slate-700 ${
+                    selectedChat === index
+                      ? "bg-indigo-600/20 border-l-4 border-l-indigo-500"
+                      : ""
+                  }`}
+                >
+                  <img
+                    src={conv.avatar || "/profile-placeholder.png"}
+                    alt={conv.name || ""}
+                    className="w-12 lg:w-14 h-12 lg:h-14 rounded-full object-cover flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-bold text-white truncate text-sm lg:text-base">
+                        {conv.name}
+                      </h3>
+                      <span className="text-xs text-slate-400 ml-2 flex-shrink-0">
+                        {conv.time || ""}
+                      </span>
+                    </div>
+                    <p
+                      className={`text-xs lg:text-sm truncate ${
+                        conv.unread > 0
+                          ? "font-semibold text-slate-200"
+                          : "text-slate-400"
+                      }`}
+                    >
+                      {conv.lastMessage || ""}
+                    </p>
                   </div>
-                  <p
-                    className={`text-xs lg:text-sm truncate ${
-                      conv.unread > 0
-                        ? "font-semibold text-slate-200"
-                        : "text-slate-400"
-                    }`}
-                  >
-                    {conv.lastMessage || ""}
-                  </p>
-                </div>
-              </button>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteConversation(conv.id);
+                  }}
+                  className="absolute top-1/2 -translate-y-1/2 right-3 p-2 rounded-full text-slate-400 hover:bg-red-500 hover:text-white opacity-0 group-hover:opacity-100 transition-all z-10"
+                  title="Delete Conversation"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             ))}
           </div>
         </div>

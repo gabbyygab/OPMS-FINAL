@@ -557,6 +557,15 @@ const HostUserActions = ({
             </Link>
 
             <Link
+              to={ROUTES.HOST.MY_BOOKINGS}
+              className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-indigo-500/20 hover:to-indigo-500/20 hover:text-indigo-300"
+              onClick={() => setProfileDropdownOpen(false)}
+            >
+              <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+              My Bookings
+            </Link>
+
+            <Link
               to={ROUTES.HOST.CALENDAR}
               className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
               onClick={() => setProfileDropdownOpen(false)}
@@ -914,6 +923,19 @@ const HostMobileMenuDrawer = ({
               </Link>
 
               <Link
+                to={ROUTES.HOST.MY_BOOKINGS}
+                className={`flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-indigo-500/20 hover:to-indigo-500/20 rounded-lg transition-all duration-200 ${
+                  isRouteActive(ROUTES.HOST.MY_BOOKINGS)
+                    ? "bg-gradient-to-r from-indigo-500/20 to-indigo-500/20 text-indigo-300"
+                    : ""
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Calendar className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm font-medium">My Bookings</span>
+              </Link>
+
+              <Link
                 to={ROUTES.HOST.CALENDAR}
                 className={`flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-orange-500/20 hover:to-orange-500/20 rounded-lg transition-all duration-200 ${
                   isRouteActive(ROUTES.HOST.CALENDAR)
@@ -1159,18 +1181,33 @@ const StreamlinedMobileMenu = ({
             </Link>
 
             {userData?.role === "host" && (
-              <Link
-                to={ROUTES.HOST.CALENDAR}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                  isRouteActive(ROUTES.HOST.CALENDAR)
-                    ? "bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-300"
-                    : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
-                }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Calendar className="w-5 h-5" />
-                <span className="font-medium">Calendar</span>
-              </Link>
+              <>
+                <Link
+                  to={ROUTES.HOST.MY_BOOKINGS}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    isRouteActive(ROUTES.HOST.MY_BOOKINGS)
+                      ? "bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-300"
+                      : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Calendar className="w-5 h-5" />
+                  <span className="font-medium">My Bookings</span>
+                </Link>
+
+                <Link
+                  to={ROUTES.HOST.CALENDAR}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    isRouteActive(ROUTES.HOST.CALENDAR)
+                      ? "bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-300"
+                      : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Calendar className="w-5 h-5" />
+                  <span className="font-medium">Calendar</span>
+                </Link>
+              </>
             )}
 
             <div className="border-t border-slate-700/50 my-2"></div>
@@ -1255,7 +1292,7 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
   const guestTabs = [
     {
       id: "stays",
-      label: "Homes",
+      label: "Stays",
       icon: Home,
       color: "from-cyan-400 to-blue-400",
     },
@@ -1516,6 +1553,15 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                       <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
                       Messages
                     </Link>
+
+                    <Link
+                      to={ROUTES.GUEST.NOTIFICATIONS}
+                      className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
+                      onClick={() => {}}
+                    >
+                      <Bell className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                      Notifications
+                    </Link>
                   </div>
 
                   {/* Wallet */}
@@ -1543,18 +1589,44 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
           </div>
         </div>
 
-        {/* Search Bar - Below navbar (smooth animation) */}
+        {/* Mobile Tab Navigation - Only on mobile */}
         <div
-          className={`max-w-full mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-500 ease-out overflow-hidden ${
+          className={`lg:hidden max-w-full mx-auto px-2 sm:px-4 transition-all duration-500 ease-out overflow-hidden ${
+            isScrolled
+              ? "opacity-0 max-h-0 py-0"
+              : "opacity-100 max-h-12 py-2"
+          }`}
+        >
+          <div className="flex gap-1 justify-center flex-nowrap">
+            {guestTabs.map(({ id, label, icon: Icon, color }) => (
+              <button
+                key={id}
+                onClick={() => handleTabClick(id)}
+                className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-300 flex items-center gap-1 flex-1 justify-center whitespace-nowrap ${
+                  activeFilter === id
+                    ? `bg-gradient-to-r ${color} text-white shadow-lg`
+                    : "bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 hover:text-white"
+                }`}
+              >
+                <Icon className="w-3 h-3 flex-shrink-0" />
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Search Bar - Desktop Only (smooth animation) */}
+        <div
+          className={`hidden lg:block max-w-full mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-500 ease-out overflow-hidden ${
             isScrolled
               ? "opacity-0 max-h-0 py-0"
               : "opacity-100 max-h-20 py-3"
           }`}
         >
           <div className="flex justify-center">
-            <button
+            <div
               onClick={handleSearchClick}
-              className="flex items-center bg-white rounded-full px-4 lg:px-6 py-2.5 lg:py-3 text-gray-700 shadow-md gap-2 lg:gap-3 transition-all hover:shadow-lg max-w-2xl w-full"
+              className="flex items-center bg-white rounded-full px-4 lg:px-6 py-2.5 lg:py-3 text-gray-700 shadow-md gap-2 lg:gap-3 transition-all hover:shadow-lg max-w-2xl w-full cursor-pointer"
             >
               <div className="flex-1 flex items-center gap-2 min-w-0">
                 <MapPin className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
@@ -1612,13 +1684,12 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                 )}
               </div>
 
-              <button
-                type="button"
-                className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0"
+              <div
+                className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0 flex items-center justify-center"
               >
                 <Search className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
-              </button>
-            </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1630,9 +1701,9 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
               : "opacity-0 pointer-events-none"
           }`}
         >
-          <button
+          <div
             onClick={handleSearchClick}
-            className="flex-1 max-w-lg flex items-center bg-white rounded-full px-3 lg:px-4 py-1.5 lg:py-2 text-gray-700 shadow-md gap-1.5 lg:gap-2.5 transition-all hover:shadow-lg"
+            className="flex-1 max-w-lg flex items-center bg-white rounded-full px-3 lg:px-4 py-1.5 lg:py-2 text-gray-700 shadow-md gap-1.5 lg:gap-2.5 transition-all hover:shadow-lg cursor-pointer"
           >
             <MapPin className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
             <input
@@ -1662,13 +1733,12 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
               className="hidden lg:block outline-none bg-transparent text-xs lg:text-sm flex-1 min-w-0"
             />
 
-            <button
-              type="button"
-              className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0"
+            <div
+              className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0 flex items-center justify-center"
             >
               <Search className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
-            </button>
-          </button>
+            </div>
+          </div>
         </div>
       </nav>
 

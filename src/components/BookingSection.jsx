@@ -518,7 +518,7 @@ export default function BookingsSection({ userData, isFavoritePage }) {
   };
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
+  const itemsPerPage = 8;
 
   // ✅ Decide which list to paginate based on the page type
   const activeList = isFavoritePage ? filteredFavoriteItems : filteredItems;
@@ -529,7 +529,7 @@ export default function BookingsSection({ userData, isFavoritePage }) {
   const currentListings = activeList.slice(indexOfFirst, indexOfLast);
 
   return (
-    <div className="relative w-screen min-h-screen bg-slate-900 overflow-x-hidden -ml-[calc((100vw-100%)/2)] -mt-32">
+    <div className="relative w-screen min-h-screen bg-slate-900 overflow-x-hidden -ml-[calc((100vw-100%)/2)] -mt-32 pt-32 lg:pt-0">
       {/* Interactive Mouse-Following Gradient Background */}
       <div
         className="absolute inset-0 transition-all duration-100 ease-out"
@@ -547,9 +547,9 @@ export default function BookingsSection({ userData, isFavoritePage }) {
 
       {/* Static gradient overlay for depth */}
       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-transparent to-slate-900/30"></div>
-      <div className="mt-28 sm:mt-32">
+      <div className="lg:mt-28 sm:mt-32">
         <main className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-          <div className="pt-6 sm:pt-12 md:pt-20 lg:pt-28 pb-8 sm:pb-12">
+          <div className="pt-8 sm:pt-12 md:pt-20 lg:pt-28 pb-8 sm:pb-12">
             {!isVerified && (
               <VerificationBanner
                 handleVerification={handleVerification}
@@ -640,28 +640,29 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                 </div>
               </div>
             ) : currentListings.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
                 {currentListings.map((listing) => {
-                  const availabilityText = formatAvailability(listing);
-
                   return (
                     <div
                       key={listing.id}
-                      className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 overflow-hidden hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 flex flex-col h-full group"
+                      className="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-lg border border-slate-700 overflow-hidden hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 flex flex-col h-full group"
                     >
-                      <div className="relative overflow-hidden">
+                      {/* Image Container - Compact */}
+                      <div className="relative overflow-hidden h-32 sm:h-40 md:h-48">
                         {listing.photos && listing.photos.length > 0 ? (
                           <img
                             src={listing.photos[0]}
                             alt={listing.title || "Listing"}
-                            className="w-full h-60 object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         ) : (
-                          <div className="w-full h-60 bg-slate-900 flex items-center justify-center text-slate-500">
+                          <div className="w-full h-full bg-slate-900 flex items-center justify-center text-slate-500 text-xs">
                             No Image
                           </div>
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                        {/* Favorite Button */}
                         <button
                           onClick={() =>
                             toggleFavorite(
@@ -671,90 +672,60 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                               isFavoritePage
                             )
                           }
-                          className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-sm p-2.5 rounded-full hover:bg-slate-900 transition-all hover:scale-110"
+                          className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur-sm p-1.5 sm:p-2 rounded-full hover:bg-slate-900 transition-all hover:scale-110"
                         >
                           <Heart
-                            className={`w-5 h-5 transition-all ${
+                            className={`w-3 h-3 sm:w-4 sm:h-4 transition-all ${
                               listing.isFavorite
                                 ? "fill-red-500 text-red-500"
                                 : "text-slate-300 hover:text-red-400"
                             }`}
                           />
                         </button>
+
+                        {/* Rating Badge */}
+                        <div className="absolute bottom-2 left-2 flex items-center bg-amber-500/90 px-2 py-1 rounded-lg border border-amber-500/50">
+                          <Star className="w-3 h-3 mr-0.5 fill-white text-white" />
+                          <span className="text-white font-semibold text-xs">
+                            {listing.rating || "New"}
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="p-3 sm:p-5 flex flex-col h-full">
-                        <div className="flex-1">
-                          <h3 className="text-base sm:text-lg font-bold text-white truncate mb-2">
-                            {listing.title || "Untitled Listing"}
-                          </h3>
-                          <div className="flex items-center text-slate-300 text-sm mt-2">
-                            <MapPin className="w-4 h-4 mr-1.5 text-indigo-400" />
-                            {listing.location || "Unknown Location"}
-                          </div>
-                          <div className="text-slate-400 text-sm mt-2">
-                            <div className="flex items-center mb-1">
-                              <Calendar className="w-4 h-4 mr-1.5 text-emerald-400" />
-                              <span className="font-medium">Available Dates</span>
-                            </div>
-                            {availabilityText.length > 0 ? (
-                              <div className="space-y-1 ml-5">
-                                {availabilityText.map((date, idx) => (
-                                  <div key={idx} className="text-slate-300 text-xs">
-                                    • {date}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="text-slate-500 text-xs ml-5">
-                                No availability
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center text-slate-400 text-sm mt-2">
-                            <Users className="w-4 h-4 mr-1.5 text-amber-400" />
-                            Max Guests: {listing.numberOfGuests || 1}
-                          </div>
+                      {/* Content - Minimal */}
+                      <div className="p-2 sm:p-3 flex flex-col flex-1">
+                        {/* Title */}
+                        <h3 className="text-xs sm:text-sm font-bold text-white line-clamp-2 mb-2">
+                          {listing.title || "Untitled"}
+                        </h3>
+
+                        {/* Price */}
+                        <div className="flex items-baseline gap-1 mb-3 flex-1">
+                          <span className="text-lg sm:text-xl font-bold text-white">
+                            ₱{(parseFloat(listing.price) || 0).toFixed(0)}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            {listing.type === "stays" ? "/night" : listing.type === "experiences" ? "/person" : "/hr"}
+                          </span>
                         </div>
 
-                        <div className="mt-4 pt-4 border-t border-slate-700">
-                          <div className="flex items-center justify-between mb-4">
-                            <div>
-                              <span className="text-xs text-slate-400 block">
-                                Starting at
-                              </span>
-                              <span className="text-2xl font-bold text-white">
-                                ₱
-                                {(parseFloat(listing.price) || 0).toFixed(
-                                  2
-                                )}
-                              </span>
-                            </div>
-                            <div className="flex items-center bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">
-                              <Star className="w-4 h-4 mr-1 fill-amber-400 text-amber-400" />
-                              <span className="text-amber-400 font-semibold text-sm">
-                                {listing.rating || "New"}
-                              </span>
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={() => {
-                              if (!isVerified) {
-                                return toast.warning(
-                                  "Please verify to use this feature!",
-                                  { position: "top-right" }
-                                );
-                              }
-                              navigate(
-                                `/guest/listing-details/${listing.type}/${listing.id}`
+                        {/* Book Now Button */}
+                        <button
+                          onClick={() => {
+                            if (!isVerified) {
+                              return toast.warning(
+                                "Please verify to use this feature!",
+                                { position: "top-right" }
                               );
-                            }}
-                            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40"
-                          >
-                            Book Now
-                          </button>
-                        </div>
+                            }
+                            navigate(
+                              `/guest/listing-details/${listing.type}/${listing.id}`
+                            );
+                          }}
+                          className="w-full bg-indigo-600 text-white py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40"
+                        >
+                          Book Now
+                        </button>
                       </div>
                     </div>
                   );

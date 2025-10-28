@@ -39,41 +39,48 @@ export default function NotificationsPage() {
   // Fetch notifications from Firestore
   useEffect(() => {
     const fetchNotifications = async () => {
-      if (!user) return;
+      if (!user || !userData) return;
 
       try {
         setLoading(true);
         const notificationsRef = collection(db, "notifications");
+
+        // For hosts: fetch notifications where host_id matches
+        // For guests: fetch notifications where guest_id matches
+        const whereField = userData.role === "host" ? "host_id" : "guest_id";
+
         const q = query(
           notificationsRef,
-          where("host_id", "==", user.uid),
+          where(whereField, "==", userData.id),
           orderBy("createdAt", "desc")
         );
         const querySnapshot = await getDocs(q);
 
         const notificationsData = await Promise.all(
-          querySnapshot.docs.map(async (doc) => {
-            const data = doc.data();
-            let guestData = null;
+          querySnapshot.docs.map(async (docSnapshot) => {
+            const data = docSnapshot.data();
+            let relatedUserData = null;
 
-            // Fetch guest info if available
-            if (data.guest_id) {
+            // For hosts: fetch guest info; For guests: fetch host info
+            const relatedUserId = userData.role === "host" ? data.guest_id : data.host_id;
+
+            if (relatedUserId) {
               try {
-                const guestRef = doc(db, "users", data.guest_id);
-                const guestSnap = await getDoc(guestRef);
-                if (guestSnap.exists()) {
-                  guestData = guestSnap.data();
+                const userRef = doc(db, "users", relatedUserId);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) {
+                  relatedUserData = userSnap.data();
                 }
               } catch (error) {
-                console.error("Error fetching guest data:", error);
+                console.error("Error fetching related user data:", error);
               }
             }
 
             return {
-              id: doc.id,
+              id: docSnapshot.id,
               ...data,
-              avatar: guestData?.photoURL || data.guest_avatar || null,
-              timestamp: data.createdAt
+              avatar: relatedUserData?.photoURL || null,
+              timestamp: data.createdAt && typeof data.createdAt.toDate === 'function'
                 ? new Date(data.createdAt.toDate()).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
@@ -82,9 +89,13 @@ export default function NotificationsPage() {
                   })
                 : "Recently",
               actionUrl:
-                data.type === "booking"
-                  ? `/host/bookings/${data.booking_id}`
-                  : `/host/messages/${data.guest_id}`,
+                userData.role === "host"
+                  ? data.type === "booking"
+                    ? `/host/my-bookings/${data.booking_id}`
+                    : `/host/messages/${data.guest_id}`
+                  : data.type === "booking_confirmed" || data.type === "booking_rejected"
+                  ? `/guest/my-bookings`
+                  : `/guest/messages/${data.host_id}`,
             };
           })
         );
@@ -98,22 +109,22 @@ export default function NotificationsPage() {
     };
 
     fetchNotifications();
-  }, [user]);
+  }, [user, userData]);
 
   const filteredNotifications =
     filterType === "all"
       ? notifications
       : notifications.filter((notif) => notif.type === filterType);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const markAsRead = async (id) => {
     try {
       const notificationRef = doc(db, "notifications", id);
-      await updateDoc(notificationRef, { read: true });
+      await updateDoc(notificationRef, { isRead: true });
       setNotifications(
         notifications.map((notif) =>
-          notif.id === id ? { ...notif, read: true } : notif
+          notif.id === id ? { ...notif, isRead: true } : notif
         )
       );
     } catch (error) {
@@ -123,13 +134,13 @@ export default function NotificationsPage() {
 
   const markAllAsRead = async () => {
     try {
-      const unreadNotifs = notifications.filter((n) => !n.read);
+      const unreadNotifs = notifications.filter((n) => !n.isRead);
       await Promise.all(
         unreadNotifs.map((notif) =>
-          updateDoc(doc(db, "notifications", notif.id), { read: true })
+          updateDoc(doc(db, "notifications", notif.id), { isRead: true })
         )
       );
-      setNotifications(notifications.map((notif) => ({ ...notif, read: true })));
+      setNotifications(notifications.map((notif) => ({ ...notif, isRead: true })));
     } catch (error) {
       console.error("Error marking all as read:", error);
     }
@@ -179,7 +190,10 @@ export default function NotificationsPage() {
   const getNotificationIcon = (type) => {
     switch (type) {
       case "booking":
+      case "booking_confirmed":
         return <Calendar className="w-5 h-5 text-indigo-400" />;
+      case "booking_rejected":
+        return <X className="w-5 h-5 text-red-400" />;
       case "review":
         return <Star className="w-5 h-5 text-yellow-400" />;
       case "message":
@@ -250,7 +264,7 @@ export default function NotificationsPage() {
 
         {/* Filter Tabs */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {["all", "booking", "review", "message", "payment", "alert"].map(
+          {["all", "booking", "booking_confirmed", "booking_rejected", "review", "message", "payment", "alert"].map(
             (type) => (
               <button
                 key={type}
@@ -264,7 +278,11 @@ export default function NotificationsPage() {
                     : "bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700"
                 }`}
               >
-                {type.charAt(0).toUpperCase() + type.slice(1)}
+                {type === "booking_confirmed"
+                  ? "Confirmed"
+                  : type === "booking_rejected"
+                  ? "Rejected"
+                  : type.charAt(0).toUpperCase() + type.slice(1)}
               </button>
             )
           )}
@@ -289,7 +307,7 @@ export default function NotificationsPage() {
               <div
                 key={notification.id}
                 className={`bg-slate-800 rounded-lg border border-slate-700 p-4 transition hover:border-slate-600 ${
-                  !notification.read ? "border-indigo-500 bg-slate-800/50" : ""
+                  !notification.isRead ? "border-indigo-500 bg-slate-800/50" : ""
                 }`}
               >
                 <div className="flex items-start gap-4">
@@ -322,7 +340,7 @@ export default function NotificationsPage() {
                       <h3 className="font-semibold text-white">
                         {notification.title}
                       </h3>
-                      {!notification.read && (
+                      {!notification.isRead && (
                         <span className="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0 mt-2"></span>
                       )}
                     </div>
@@ -336,7 +354,7 @@ export default function NotificationsPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    {!notification.read && (
+                    {!notification.isRead && (
                       <button
                         onClick={() => markAsRead(notification.id)}
                         className="p-2 rounded-lg hover:bg-slate-700 transition text-slate-400 hover:text-slate-200"

@@ -10,6 +10,8 @@ import {
   X,
   AlertCircle,
   RefreshCw,
+  Trash2,
+  CheckCircle,
 } from "lucide-react";
 import { db } from "../firebase/firebase";
 import {
@@ -24,6 +26,7 @@ import {
   arrayRemove,
   addDoc,
   serverTimestamp,
+  orderBy,
 } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-toastify";
@@ -67,7 +70,11 @@ export default function MyBookingsSection() {
       try {
         setLoading(true);
         const bookingsRef = collection(db, "bookings");
-        const q = query(bookingsRef, where("guest_id", "==", user.uid));
+        const q = query(
+          bookingsRef,
+          where("guest_id", "==", user.uid),
+          orderBy("createdAt", "desc")
+        );
         const querySnapshot = await getDocs(q);
 
         const bookingsData = await Promise.all(
@@ -129,6 +136,29 @@ export default function MyBookingsSection() {
       }, 500); // Wait for animations to settle
     }
   }, [highlightedBookingId, bookings]);
+
+  // Handle cancellation for pending bookings
+  const handleCancelBooking = async () => {
+    if (!selectedBooking) return;
+
+    try {
+      const loadingToast = toast.loading("Cancelling booking...");
+
+      // Delete booking
+      await deleteDoc(doc(db, "bookings", selectedBooking.id));
+
+      // Update local state
+      setBookings(bookings.filter((b) => b.id !== selectedBooking.id));
+
+      toast.dismiss(loadingToast);
+      toast.success("Booking cancelled successfully!");
+      setShowRefundModal(false);
+      setSelectedBooking(null);
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      toast.error("Failed to cancel booking. Please try again.");
+    }
+  };
 
   // Handle refund
   const handleRefund = async () => {
@@ -456,7 +486,11 @@ export default function MyBookingsSection() {
                   {currentBookings.map((booking) => (
                     <div
                       key={booking.id}
-                      ref={highlightedBookingId === booking.id ? highlightedBookingRef : null}
+                      ref={
+                        highlightedBookingId === booking.id
+                          ? highlightedBookingRef
+                          : null
+                      }
                       className={`backdrop-blur-sm rounded-2xl shadow-lg border overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group ${
                         highlightedBookingId === booking.id
                           ? "bg-indigo-600/20 border-indigo-500 shadow-xl shadow-indigo-500/30"
@@ -751,33 +785,64 @@ export default function MyBookingsSection() {
                 </div>
               </div>
 
-              {canRefund(selectedBooking) && (
-                <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+              {selectedBooking.status === "pending" && (
+                <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                   <div className="flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-amber-300">
-                      You can request a full refund for this booking since the
-                      check-in date hasn't arrived yet.
+                    <AlertCircle className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-blue-300">
+                      Your booking is pending. You can cancel it anytime before
+                      the host confirms.
                     </p>
                   </div>
                 </div>
               )}
 
+              {selectedBooking.status === "confirmed" &&
+                canRefund(selectedBooking) && (
+                  <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-amber-300">
+                        You can request a full refund for this booking since the
+                        check-in date hasn't arrived yet.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
               <div className="flex gap-3">
-                {canRefund(selectedBooking) ? (
+                {selectedBooking.status === "pending" ? (
                   <button
                     onClick={() => setShowRefundModal(true)}
                     className="flex-1 bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40 flex items-center justify-center gap-2"
                   >
-                    <RefreshCw className="w-4 h-4" />
-                    Request Refund
+                    <Trash2 className="w-4 h-4" />
+                    Cancel Booking
                   </button>
+                ) : selectedBooking.status === "confirmed" ? (
+                  canRefund(selectedBooking) ? (
+                    <button
+                      onClick={() => setShowRefundModal(true)}
+                      className="flex-1 bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40 flex items-center justify-center gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Request Refund
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="flex-1 bg-slate-700 text-slate-500 py-3 rounded-lg font-semibold cursor-not-allowed border border-slate-600 flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Completed
+                    </button>
+                  )
                 ) : (
                   <button
                     disabled
                     className="flex-1 bg-slate-700 text-slate-500 py-3 rounded-lg font-semibold cursor-not-allowed border border-slate-600"
                   >
-                    Refund Not Available
+                    Unavailable
                   </button>
                 )}
                 <button className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40">
@@ -788,7 +853,7 @@ export default function MyBookingsSection() {
           </div>
         )}
 
-        {/* Refund Confirmation Modal */}
+        {/* Cancel/Refund Confirmation Modal */}
         {showRefundModal && selectedBooking && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start justify-center z-50 px-4 mt-[110px]">
             <div className="bg-slate-800/90 backdrop-blur-lg border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
@@ -800,15 +865,30 @@ export default function MyBookingsSection() {
               </button>
 
               <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-amber-500/10 border-2 border-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <AlertCircle className="w-8 h-8 text-amber-400" />
+                <div
+                  className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border-2 ${
+                    selectedBooking.status === "pending"
+                      ? "bg-blue-500/10 border-blue-500/20"
+                      : "bg-amber-500/10 border-amber-500/20"
+                  }`}
+                >
+                  <AlertCircle
+                    className={`w-8 h-8 ${
+                      selectedBooking.status === "pending"
+                        ? "text-blue-400"
+                        : "text-amber-400"
+                    }`}
+                  />
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-2">
-                  Confirm Refund Request
+                  {selectedBooking.status === "pending"
+                    ? "Cancel Booking?"
+                    : "Request Refund?"}
                 </h2>
                 <p className="text-slate-400 text-sm">
-                  Are you sure you want to cancel this booking and request a
-                  refund?
+                  {selectedBooking.status === "pending"
+                    ? "Are you sure you want to cancel this booking? This action cannot be undone."
+                    : "Are you sure you want to cancel this booking and request a refund?"}
                 </p>
               </div>
 
@@ -826,41 +906,58 @@ export default function MyBookingsSection() {
                       {formatDate(selectedBooking.checkIn)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Refund Amount:</span>
-                    <span className="font-bold text-emerald-400 text-lg">
-                      ₱
-                      {selectedBooking.totalAmount?.toFixed(2) ||
-                        selectedBooking.price?.toFixed(2) ||
-                        0}
-                    </span>
-                  </div>
+                  {selectedBooking.status === "confirmed" && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Refund Amount:</span>
+                      <span className="font-bold text-emerald-400 text-lg">
+                        ₱
+                        {selectedBooking.totalAmount?.toFixed(2) ||
+                          selectedBooking.price?.toFixed(2) ||
+                          0}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-6">
-                <p className="text-xs text-amber-300 flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <span>
-                    The refund will be processed to your wallet immediately. The
-                    amount will be deducted from the host's wallet.
-                  </span>
-                </p>
-              </div>
+              {selectedBooking.status === "confirmed" && (
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-6">
+                  <p className="text-xs text-amber-300 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span>
+                      The refund will be processed to your wallet immediately.
+                      The amount will be deducted from the host's wallet.
+                    </span>
+                  </p>
+                </div>
+              )}
 
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowRefundModal(false)}
                   className="flex-1 bg-slate-700 text-white py-3 rounded-lg font-semibold hover:bg-slate-600 transition-all border border-slate-600"
                 >
-                  Cancel
+                  Keep Booking
                 </button>
                 <button
-                  onClick={handleRefund}
+                  onClick={
+                    selectedBooking.status === "pending"
+                      ? handleCancelBooking
+                      : handleRefund
+                  }
                   className="flex-1 bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40 flex items-center justify-center gap-2"
                 >
-                  <RefreshCw className="w-4 h-4" />
-                  Confirm Refund
+                  {selectedBooking.status === "pending" ? (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      Confirm Cancel
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      Confirm Refund
+                    </>
+                  )}
                 </button>
               </div>
             </div>

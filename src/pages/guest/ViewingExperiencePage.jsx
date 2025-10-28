@@ -19,7 +19,7 @@ import {
   Instagram,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { db } from "../../firebase/firebase";
@@ -40,6 +40,17 @@ import VerificationBanner from "../../components/Verification";
 import { sendOtpToUser } from "../../utils/sendOtpToUser";
 import { getCoordinatesFromLocation } from "../../utils/geocoding";
 import { toast } from "react-toastify";
+
+// Component to change map view when center state changes
+function ChangeMapView({ center, zoom }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.setView(center, zoom);
+    }
+  }, [center, zoom, map]);
+  return null;
+}
 
 const reviews = [
   {
@@ -85,13 +96,13 @@ export default function ExperienceDetailPage() {
   const [isLoadingVerification, setIsLoadingVerification] = useState(false);
   const [userData, setUserData] = useState(null);
   const [mapCenter, setMapCenter] = useState([14.5994, 120.9842]);
-  const mapRef = useRef(null);
 
   const { user, isVerified } = useAuth();
   const navigate = useNavigate();
   const { listing_id } = useParams();
 
-  const handleVerification = async () => {``
+  const handleVerification = async () => {
+    ``;
     try {
       setIsLoadingVerification(true);
       await sendOtpToUser(user);
@@ -164,8 +175,8 @@ export default function ExperienceDetailPage() {
         listing_id: listing_id,
         guest_id: user.uid,
         host_id: experienceData.hostId,
-        selectedDate: selectedDateTime.date,
-        selectedTime: selectedDateTime.time,
+        selectedDate: selectedDateTime?.date || selectedDateTime,
+        selectedTime: selectedDateTime?.time || "",
         guests: guests,
         totalAmount: grandTotal,
         serviceFee: serviceFee,
@@ -179,7 +190,9 @@ export default function ExperienceDetailPage() {
         host_id: experienceData.hostId,
         type: "booking",
         title: "New Booking",
-        message: `${user.fullName || "A guest"} has booked your ${experienceData.title} for ${selectedDateTime.date} at ${selectedDateTime.time}`,
+        message: `${user.fullName || "A guest"} has booked your ${
+          experienceData.title
+        } for ${selectedDateTime.date} at ${selectedDateTime.time}`,
         listing_id: listing_id,
         booking_id: bookingRef.id,
         guest_id: user.uid,
@@ -194,7 +207,9 @@ export default function ExperienceDetailPage() {
       // This allows the host to accept or reject the booking before payment is taken
 
       toast.dismiss(loadingToast);
-      toast.success("Booking request sent successfully! Awaiting host confirmation...");
+      toast.success(
+        "Booking request sent successfully! Awaiting host confirmation..."
+      );
       setShowBookingModal(false);
       navigate("/guest/my-bookings");
     } catch (error) {
@@ -293,13 +308,21 @@ export default function ExperienceDetailPage() {
       if (!experienceData?.location) return;
 
       // If coordinates already exist, don't fetch
-      if (experienceData?.coordinates?.lat && experienceData?.coordinates?.lng) {
-        setMapCenter([experienceData.coordinates.lat, experienceData.coordinates.lng]);
+      if (
+        experienceData?.coordinates?.lat &&
+        experienceData?.coordinates?.lng
+      ) {
+        setMapCenter([
+          experienceData.coordinates.lat,
+          experienceData.coordinates.lng,
+        ]);
         return;
       }
 
       try {
-        const coords = await getCoordinatesFromLocation(experienceData.location);
+        const coords = await getCoordinatesFromLocation(
+          experienceData.location
+        );
         if (coords) {
           setMapCenter([coords.lat, coords.lng]);
           console.log(`📍 Map centered at: ${experienceData.location}`);
@@ -446,8 +469,8 @@ export default function ExperienceDetailPage() {
                 zoom={15}
                 scrollWheelZoom={false}
                 style={{ width: "100%", height: "100%", zIndex: 0 }}
-                ref={mapRef}
               >
+                <ChangeMapView center={mapCenter} zoom={15} />
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -645,7 +668,6 @@ export default function ExperienceDetailPage() {
                 ))}
               </div>
             </div>
-
           </div>
 
           {/* Booking Card */}
@@ -664,7 +686,9 @@ export default function ExperienceDetailPage() {
                     SELECT DATE & TIME
                   </label>
                   <select
-                    value={selectedDateTime ? JSON.stringify(selectedDateTime) : ""}
+                    value={
+                      selectedDateTime ? JSON.stringify(selectedDateTime) : ""
+                    }
                     onChange={(e) => {
                       if (e.target.value) {
                         setSelectedDateTime(JSON.parse(e.target.value));
@@ -675,8 +699,9 @@ export default function ExperienceDetailPage() {
                     <option value="" disabled>
                       Select a date and time
                     </option>
-                    {experienceData?.availableDates && experienceData.availableDates.length > 0 ? (
-                      experienceData.availableDates.map((dateTime, idx) => {
+                    {experienceData?.availableTimes &&
+                    experienceData.availableTimes.length > 0 ? (
+                      experienceData.availableTimes.map((dateTime, idx) => {
                         const dateStr = dateTime.date || "";
                         const timeStr = dateTime.time || "";
                         const displayDate = dateStr
@@ -859,11 +884,14 @@ export default function ExperienceDetailPage() {
                 <span className="text-slate-400">Date & Time</span>
                 <span className="font-medium text-white">
                   {selectedDateTime
-                    ? `${new Date(selectedDateTime.date).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })} at ${selectedDateTime.time}`
+                    ? `${new Date(selectedDateTime.date).toLocaleDateString(
+                        "en-US",
+                        {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        }
+                      )} at ${selectedDateTime.time}`
                     : "Not selected"}
                 </span>
               </div>
@@ -887,7 +915,8 @@ export default function ExperienceDetailPage() {
 
             <div className="mb-4 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
               <p className="text-xs text-blue-300">
-                Payment will be processed only when the host confirms your booking. No charges will be made now.
+                Payment will be processed only when the host confirms your
+                booking. No charges will be made now.
               </p>
             </div>
 
@@ -920,13 +949,19 @@ export default function ExperienceDetailPage() {
               <X className="w-5 h-5" />
             </button>
 
-            <h2 className="text-2xl font-bold text-white mb-6">Share this experience</h2>
+            <h2 className="text-2xl font-bold text-white mb-6">
+              Share this experience
+            </h2>
 
             <div className="space-y-3">
               <button
                 onClick={() => {
                   const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
-                  const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(experienceData?.title || "Check out this experience")}`;
+                  const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+                    shareUrl
+                  )}&quote=${encodeURIComponent(
+                    experienceData?.title || "Check out this experience"
+                  )}`;
                   window.open(facebookUrl, "_blank", "width=600,height=400");
                   setShowShareModal(false);
                 }}
@@ -939,13 +974,21 @@ export default function ExperienceDetailPage() {
               <button
                 onClick={() => {
                   const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
-                  const twitterUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(experienceData?.title || "Check out this experience")}`;
+                  const twitterUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(
+                    shareUrl
+                  )}&text=${encodeURIComponent(
+                    experienceData?.title || "Check out this experience"
+                  )}`;
                   window.open(twitterUrl, "_blank", "width=600,height=400");
                   setShowShareModal(false);
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition font-medium"
               >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2s9 5 20 5a9.5 9.5 0 00-9-5.5c4.75 2.25 9 0 11-4s1-8.5 0-11.5a4.5 4.5 0 00-.5-.5z" />
                 </svg>
                 Share on Twitter
@@ -954,9 +997,13 @@ export default function ExperienceDetailPage() {
               <button
                 onClick={() => {
                   const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
-                  const instagramUrl = `https://www.instagram.com/?url=${encodeURIComponent(shareUrl)}`;
+                  const instagramUrl = `https://www.instagram.com/?url=${encodeURIComponent(
+                    shareUrl
+                  )}`;
                   navigator.clipboard.writeText(shareUrl);
-                  toast.success("Link copied! You can paste it in Instagram DM");
+                  toast.success(
+                    "Link copied! You can paste it in Instagram DM"
+                  );
                   window.open(instagramUrl, "_blank", "width=600,height=400");
                   setShowShareModal(false);
                 }}
@@ -969,7 +1016,9 @@ export default function ExperienceDetailPage() {
               <button
                 onClick={() => {
                   const shareUrl = `https://bookingnest.vercel.app${window.location.pathname}`;
-                  const messengerUrl = `https://www.facebook.com/dialog/send?app_id=YOUR_APP_ID&link=${encodeURIComponent(shareUrl)}&redirect_uri=${encodeURIComponent(shareUrl)}`;
+                  const messengerUrl = `https://www.facebook.com/dialog/send?app_id=YOUR_APP_ID&link=${encodeURIComponent(
+                    shareUrl
+                  )}&redirect_uri=${encodeURIComponent(shareUrl)}`;
                   window.open(messengerUrl, "_blank", "width=600,height=400");
                   setShowShareModal(false);
                 }}

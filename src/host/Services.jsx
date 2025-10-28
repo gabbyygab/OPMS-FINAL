@@ -45,6 +45,9 @@ import L from "leaflet";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 import { uploadToCloudinary } from "../cloudinary/uploadFunction";
+import { DateRange } from "react-date-range";
+import "react-date-range/dist/styles.css";
+import "react-date-range/dist/theme/default.css";
 import {
   collection,
   addDoc,
@@ -79,6 +82,13 @@ function parseNominatimAddress(addressData) {
     components.push(address.road || address.street);
   } else if (address.house_number) {
     components.push(address.house_number);
+  }
+
+  // Add barangay (Filipino subdivision) if available
+  if (address.barangay || address.neighbourhood) {
+    components.push(address.barangay || address.neighbourhood);
+  } else if (address.suburb || address.village) {
+    components.push(address.suburb || address.village);
   }
 
   // Add city/municipality
@@ -198,6 +208,14 @@ export default function HostMyServices() {
   // Date range state
   const [newDateRangeStart, setNewDateRangeStart] = useState("");
   const [newDateRangeEnd, setNewDateRangeEnd] = useState("");
+  const [showDateRangeModal, setShowDateRangeModal] = useState(false);
+  const [dateRangeState, setDateRangeState] = useState([
+    {
+      startDate: new Date(),
+      endDate: new Date(),
+      key: "selection",
+    },
+  ]);
 
   // Map-related state
   const [marker, setMarker] = useState(null);
@@ -714,7 +732,7 @@ export default function HostMyServices() {
     setFormData({
       title: service.title || "",
       location: service.location || "",
-      basePrice: service.basePrice || "",
+      basePrice: service.price || "",
       duration: service.duration || "",
       category: service.category || "Home Services",
       description: service.description || "",
@@ -793,6 +811,47 @@ export default function HostMyServices() {
     });
   };
 
+  // Handler for adding date range from modal picker
+  const addDateRangeFromModal = () => {
+    const startDate = dateRangeState[0]?.startDate;
+    const endDate = dateRangeState[0]?.endDate;
+
+    if (!startDate || !endDate) {
+      toast.warning("Please select both start and end dates");
+      return;
+    }
+
+    if (startDate > endDate) {
+      toast.warning("Start date must be before end date");
+      return;
+    }
+
+    // Convert dates to YYYY-MM-DD format for storage
+    const startStr = startDate.toISOString().split("T")[0];
+    const endStr = endDate.toISOString().split("T")[0];
+
+    const dateRangeObj = {
+      startDate: startStr,
+      endDate: endStr,
+    };
+
+    setFormData({
+      ...formData,
+      availableDates: [...formData.availableDates, dateRangeObj],
+    });
+
+    // Reset the modal state
+    setDateRangeState([
+      {
+        startDate: new Date(),
+        endDate: new Date(),
+        key: "selection",
+      },
+    ]);
+    setShowDateRangeModal(false);
+    toast.success("Date range added");
+  };
+
   const resetForm = () => {
     setFormData({
       title: "",
@@ -825,6 +884,14 @@ export default function HostMyServices() {
     setNewTerm("");
     setNewDateRangeStart("");
     setNewDateRangeEnd("");
+    setShowDateRangeModal(false);
+    setDateRangeState([
+      {
+        startDate: new Date(),
+        endDate: new Date(),
+        key: "selection",
+      },
+    ]);
   };
 
   return (
@@ -1004,138 +1071,141 @@ export default function HostMyServices() {
                 >
                   {/* Image */}
                   <div className="relative h-40 overflow-hidden bg-slate-700">
-                  {(service.photos?.length > 0 || service.images?.length > 0) ? (
-                    <img
-                      src={service.photos?.[0] || service.images?.[0]}
-                      alt={service.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Briefcase className="w-12 h-12 text-indigo-400/30" />
-                    </div>
-                  )}
-                  <div className="absolute top-3 left-3">
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/20">
-                      {service.category}
-                    </span>
-                  </div>
-                  <div className="absolute top-3 right-3">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        service.status === "active"
-                          ? "bg-green-500/20 text-green-300 border border-green-500/30"
-                          : "bg-slate-500/20 text-slate-300 border border-slate-500/30"
-                      }`}
-                    >
-                      {service.status}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-5">
-                  <h3 className="text-lg font-bold text-indigo-100 mb-1">
-                    {service.title}
-                  </h3>
-                  <p className="text-sm text-indigo-300/70 flex items-center gap-1 mb-3">
-                    <MapPin className="w-4 h-4" />
-                    {service.location}
-                  </p>
-
-                  {/* Details */}
-                  <div className="flex items-center gap-4 text-sm text-indigo-300/70 mb-4">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {service.duration || "N/A"}h
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {typeof service.availability === 'string'
-                        ? service.availability
-                        : service.availability
-                          ? "Custom Hours"
-                          : "Flexible"}
-                    </span>
-                  </div>
-
-                  {/* Price & Experience */}
-                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-indigo-500/20">
-                    <div className="flex items-center gap-1">
-                      <Award className="w-4 h-4 text-blue-400" />
-                      <span className="font-semibold text-indigo-100 text-sm">
-                        {service.experienceYears} yrs exp
+                    {service.photos?.length > 0 ||
+                    service.images?.length > 0 ? (
+                      <img
+                        src={service.photos?.[0] || service.images?.[0]}
+                        alt={service.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Briefcase className="w-12 h-12 text-indigo-400/30" />
+                      </div>
+                    )}
+                    <div className="absolute top-3 left-3">
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/20">
+                        {service.category}
                       </span>
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-indigo-100">
-                        ₱{(service.price || 0).toFixed(2)}
-                      </p>
-                      <p className="text-xs text-indigo-300/60">per service</p>
+                    <div className="absolute top-3 right-3">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          service.status === "active"
+                            ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                            : "bg-slate-500/20 text-slate-300 border border-slate-500/30"
+                        }`}
+                      >
+                        {service.status}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Performance */}
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="bg-slate-700/50 border border-indigo-500/20 rounded-lg p-2">
-                      <p className="text-xs text-indigo-300/60">Bookings</p>
-                      <p className="font-semibold text-blue-400">
-                        {service.bookingCount || 0}
-                      </p>
-                    </div>
-                    <div className="bg-slate-700/50 border border-indigo-500/20 rounded-lg p-2">
-                      <p className="text-xs text-indigo-300/60">Revenue</p>
-                      <p className="font-semibold text-green-400">
-                        ₱{Number(service.revenue || 0).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
+                  {/* Content */}
+                  <div className="p-5">
+                    <h3 className="text-lg font-bold text-indigo-100 mb-1">
+                      {service.title}
+                    </h3>
+                    <p className="text-sm text-indigo-300/70 flex items-center gap-1 mb-3">
+                      <MapPin className="w-4 h-4" />
+                      {service.location}
+                    </p>
 
-                  {/* Response Time Badge */}
-                  <div className="mb-4">
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-medium rounded-full">
-                      <Award className="w-3 h-3" />
-                      Responds in {service.responseTime}
-                    </span>
-                  </div>
+                    {/* Details */}
+                    <div className="flex items-center gap-4 text-sm text-indigo-300/70 mb-4">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        {service.duration || "N/A"}h
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        {typeof service.availability === "string"
+                          ? service.availability
+                          : service.availability
+                          ? "Custom Hours"
+                          : "Flexible"}
+                      </span>
+                    </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => toggleStatus(service.id)}
-                      className={`flex-1 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
-                        service.status === "active"
-                          ? "bg-slate-700/50 text-slate-300 hover:bg-slate-700/70 border border-slate-500/30"
-                          : "bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-500/30"
-                      }`}
-                    >
-                      {service.status === "active" ? (
-                        <>
-                          <EyeOff className="w-4 h-4" />
-                          Deactivate
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="w-4 h-4" />
-                          Activate
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => openEditModal(service)}
-                      className="px-4 py-2 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg hover:bg-blue-500/30 transition"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => openDeleteModal(service)}
-                      className="px-4 py-2 bg-red-500/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {/* Price & Experience */}
+                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-indigo-500/20">
+                      <div className="flex items-center gap-1">
+                        <Award className="w-4 h-4 text-blue-400" />
+                        <span className="font-semibold text-indigo-100 text-sm">
+                          {service.experienceYears} yrs exp
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-indigo-100">
+                          ₱{(service.price || 0).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-indigo-300/60">
+                          per service
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Performance */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="bg-slate-700/50 border border-indigo-500/20 rounded-lg p-2">
+                        <p className="text-xs text-indigo-300/60">Bookings</p>
+                        <p className="font-semibold text-blue-400">
+                          {service.bookingCount || 0}
+                        </p>
+                      </div>
+                      <div className="bg-slate-700/50 border border-indigo-500/20 rounded-lg p-2">
+                        <p className="text-xs text-indigo-300/60">Revenue</p>
+                        <p className="font-semibold text-green-400">
+                          ₱{Number(service.revenue || 0).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Response Time Badge */}
+                    <div className="mb-4">
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-medium rounded-full">
+                        <Award className="w-3 h-3" />
+                        Responds in {service.responseTime}
+                      </span>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => toggleStatus(service.id)}
+                        className={`flex-1 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
+                          service.status === "active"
+                            ? "bg-slate-700/50 text-slate-300 hover:bg-slate-700/70 border border-slate-500/30"
+                            : "bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-500/30"
+                        }`}
+                      >
+                        {service.status === "active" ? (
+                          <>
+                            <EyeOff className="w-4 h-4" />
+                            Deactivate
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-4 h-4" />
+                            Activate
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => openEditModal(service)}
+                        className="px-4 py-2 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg hover:bg-blue-500/30 transition"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => openDeleteModal(service)}
+                        className="px-4 py-2 bg-red-500/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
               ))}
             </div>
 
@@ -1151,23 +1221,27 @@ export default function HostMyServices() {
                 </button>
 
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`w-10 h-10 rounded-lg font-semibold transition ${
-                        currentPage === page
-                          ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/30"
-                          : "bg-slate-700/50 border border-indigo-500/30 text-indigo-300 hover:bg-slate-700"
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-10 h-10 rounded-lg font-semibold transition ${
+                          currentPage === page
+                            ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/30"
+                            : "bg-slate-700/50 border border-indigo-500/30 text-indigo-300 hover:bg-slate-700"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )
+                  )}
                 </div>
 
                 <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  onClick={() =>
+                    setCurrentPage(Math.min(totalPages, currentPage + 1))
+                  }
                   disabled={currentPage === totalPages}
                   className="p-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
@@ -1372,51 +1446,54 @@ export default function HostMyServices() {
 
               {/* Available Dates */}
               <div>
-                <label className="block text-sm font-medium text-indigo-300 mb-3">
-                  Available Dates
+                <label className="block text-sm font-medium text-indigo-300 mb-3 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Available Date Ranges
                 </label>
-                <div className="flex gap-2 mb-3">
-                  <input
-                    type="date"
-                    value={newDateRangeStart}
-                    onChange={(e) => setNewDateRangeStart(e.target.value)}
-                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 transition"
-                  />
-                  <input
-                    type="date"
-                    value={newDateRangeEnd}
-                    onChange={(e) => setNewDateRangeEnd(e.target.value)}
-                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 transition"
-                  />
-                  <button
-                    type="button"
-                    onClick={addAvailableDate}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
-                {formData.availableDates.length > 0 && (
+
+                {/* Open Date Range Picker Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowDateRangeModal(true)}
+                  className="w-full mb-4 px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white rounded-lg transition font-medium flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Select Date Range
+                </button>
+
+                {/* Display Date Ranges List */}
+                {formData.availableDates && formData.availableDates.length > 0 ? (
                   <div className="space-y-2">
-                    {formData.availableDates.map((range, i) => (
+                    {formData.availableDates.map((range, index) => (
                       <div
-                        key={i}
-                        className="flex items-center justify-between gap-2 bg-slate-700/50 border border-indigo-500/20 rounded-lg px-4 py-2 text-sm text-indigo-200"
+                        key={index}
+                        className="flex items-center justify-between bg-slate-700/50 border border-indigo-500/20 rounded-lg px-4 py-2"
                       >
-                        <span>
-                          {new Date(range.startDate).toLocaleDateString()} to{" "}
-                          {new Date(range.endDate).toLocaleDateString()}
+                        <span className="text-indigo-200 text-sm">
+                          {new Date(range.startDate).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}{" "}
+                          -{" "}
+                          {new Date(range.endDate).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
                         </span>
                         <button
                           type="button"
-                          onClick={() => removeAvailableDate(i)}
-                          className="hover:text-rose-400"
+                          onClick={() => removeAvailableDate(index)}
+                          className="text-indigo-400/50 hover:text-red-400 transition"
                         >
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                     ))}
                   </div>
+                ) : (
+                  <p className="text-sm text-indigo-300/50">No date ranges added yet</p>
                 )}
               </div>
 
@@ -2004,51 +2081,54 @@ export default function HostMyServices() {
 
               {/* Available Dates */}
               <div>
-                <label className="block text-sm font-medium text-indigo-300 mb-3">
-                  Available Dates
+                <label className="block text-sm font-medium text-indigo-300 mb-3 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Available Date Ranges
                 </label>
-                <div className="flex gap-2 mb-3">
-                  <input
-                    type="date"
-                    value={newDateRangeStart}
-                    onChange={(e) => setNewDateRangeStart(e.target.value)}
-                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 transition"
-                  />
-                  <input
-                    type="date"
-                    value={newDateRangeEnd}
-                    onChange={(e) => setNewDateRangeEnd(e.target.value)}
-                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 transition"
-                  />
-                  <button
-                    type="button"
-                    onClick={addAvailableDate}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
-                {formData.availableDates.length > 0 && (
+
+                {/* Open Date Range Picker Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowDateRangeModal(true)}
+                  className="w-full mb-4 px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white rounded-lg transition font-medium flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Select Date Range
+                </button>
+
+                {/* Display Date Ranges List */}
+                {formData.availableDates && formData.availableDates.length > 0 ? (
                   <div className="space-y-2">
-                    {formData.availableDates.map((range, i) => (
+                    {formData.availableDates.map((range, index) => (
                       <div
-                        key={i}
-                        className="flex items-center justify-between gap-2 bg-slate-700/50 border border-indigo-500/20 rounded-lg px-4 py-2 text-sm text-indigo-200"
+                        key={index}
+                        className="flex items-center justify-between bg-slate-700/50 border border-indigo-500/20 rounded-lg px-4 py-2"
                       >
-                        <span>
-                          {new Date(range.startDate).toLocaleDateString()} to{" "}
-                          {new Date(range.endDate).toLocaleDateString()}
+                        <span className="text-indigo-200 text-sm">
+                          {new Date(range.startDate).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}{" "}
+                          -{" "}
+                          {new Date(range.endDate).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
                         </span>
                         <button
                           type="button"
-                          onClick={() => removeAvailableDate(i)}
-                          className="hover:text-rose-400"
+                          onClick={() => removeAvailableDate(index)}
+                          className="text-indigo-400/50 hover:text-red-400 transition"
                         >
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                     ))}
                   </div>
+                ) : (
+                  <p className="text-sm text-indigo-300/50">No date ranges added yet</p>
                 )}
               </div>
 
@@ -2432,6 +2512,214 @@ export default function HostMyServices() {
               >
                 <Save className="w-5 h-5" />
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Date Range Modal */}
+      {showDateRangeModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-xl p-5 border border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-indigo-400" />
+                Select Date Range
+              </h3>
+              <button
+                onClick={() => setShowDateRangeModal(false)}
+                className="text-indigo-400/60 hover:text-indigo-400 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Date Range Picker */}
+            <div className="mb-4 w-full flex justify-center">
+              <style>{`
+                .rdrCalendarWrapper {
+                  background-color: rgba(15, 23, 42, 0.8);
+                  border-radius: 12px;
+                  width: 100%;
+                  padding: 16px;
+                }
+                .rdrCalendarContainer {
+                  width: 100%;
+                }
+                .rdrMonth {
+                  width: 100%;
+                  padding: 0 10px;
+                }
+                .rdrMonths {
+                  width: 100%;
+                  display: flex;
+                  gap: 20px;
+                }
+                .rdrMonthAndYearWrapper {
+                  background-color: rgba(30, 41, 59, 0.5);
+                  border-radius: 8px;
+                  padding: 10px;
+                  margin-bottom: 12px;
+                  text-align: center;
+                  color: #a5b4fc;
+                  font-weight: 600;
+                  font-size: 14px;
+                }
+                .rdrMonthAndYearPickers button {
+                  color: #a5b4fc;
+                  padding: 2px 6px;
+                }
+                .rdrMonthAndYearPickers button:hover {
+                  background-color: rgba(79, 70, 229, 0.2);
+                }
+                .rdrDayNames {
+                  margin-bottom: 10px;
+                  display: grid;
+                  grid-template-columns: repeat(7, 1fr);
+                  gap: 3px;
+                }
+                .rdrDayName {
+                  color: #c7d2fe;
+                  font-size: 11px;
+                  font-weight: 600;
+                  text-align: center;
+                  padding: 6px 0;
+                }
+                .rdrDays {
+                  display: grid;
+                  grid-template-columns: repeat(7, 1fr);
+                  gap: 3px;
+                }
+                .rdrDayDisabled {
+                  background-color: transparent;
+                }
+                .rdrDay {
+                  height: 42px;
+                  display: flex !important;
+                  align-items: center !important;
+                  justify-content: center !important;
+                  border-radius: 6px;
+                  border: 1px solid transparent !important;
+                  cursor: pointer;
+                  position: relative;
+                  width: 100%;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                }
+                .rdrDayNumber {
+                  color: #cbd5e1;
+                  font-size: 13px;
+                  font-weight: 500;
+                  position: relative;
+                  z-index: 1;
+                  text-decoration: none !important;
+                  border: none !important;
+                  outline: none !important;
+                }
+                .rdrDayNumber span {
+                  color: #cbd5e1;
+                  text-decoration: none !important;
+                  border: none !important;
+                }
+                .rdrDayNumber::before,
+                .rdrDayNumber::after {
+                  content: none !important;
+                }
+                .rdrStartEdge {
+                  border-radius: 6px 0 0 6px !important;
+                  border: 1px solid #818cf8 !important;
+                  border-right: none !important;
+                  background-color: #6366f1 !important;
+                  width: 100% !important;
+                }
+                .rdrStartEdge::after {
+                  content: none !important;
+                }
+                .rdrEndEdge {
+                  border-radius: 0 6px 6px 0 !important;
+                  border: 1px solid #818cf8 !important;
+                  border-left: none !important;
+                  background-color: #6366f1 !important;
+                  width: 100% !important;
+                }
+                .rdrEndEdge::before {
+                  content: none !important;
+                }
+                .rdrDayStartPreview {
+                  background-color: #6366f1 !important;
+                  border-radius: 6px !important;
+                  border: 1px solid #818cf8 !important;
+                  width: 100% !important;
+                }
+                .rdrDayInPreview {
+                  background-color: rgba(99, 102, 241, 0.2) !important;
+                  border: none !important;
+                  width: 100% !important;
+                }
+                .rdrDayInPreview::before,
+                .rdrDayInPreview::after {
+                  content: none !important;
+                }
+                .rdrDayEndPreview {
+                  background-color: #6366f1 !important;
+                  border-radius: 6px !important;
+                  border: 1px solid #818cf8 !important;
+                  width: 100% !important;
+                }
+                .rdrDayInRange {
+                  background-color: rgba(99, 102, 241, 0.2) !important;
+                  border: none !important;
+                  width: 100% !important;
+                }
+                .rdrDayInRange::before,
+                .rdrDayInRange::after {
+                  content: none !important;
+                }
+                .rdrDayStartOfMonth,
+                .rdrDayEndOfMonth {
+                  background-color: transparent;
+                }
+                .rdrDaySelected {
+                  background-color: #6366f1 !important;
+                  color: #ffffff !important;
+                  border-radius: 6px !important;
+                  border: 1px solid #818cf8 !important;
+                }
+                .rdrDaySelected .rdrDayNumber {
+                  color: #ffffff !important;
+                }
+                .rdrDayStartOfWeek,
+                .rdrDayEndOfWeek {
+                  border-radius: 6px;
+                }
+              `}</style>
+              <DateRange
+                editableDateInputs={false}
+                onChange={(item) => setDateRangeState([item.selection])}
+                moveRangeOnFirstSelection={false}
+                ranges={dateRangeState}
+                months={2}
+                direction="horizontal"
+                showMonthAndYearPickers={false}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDateRangeModal(false)}
+                className="flex-1 px-4 py-2 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 hover:border-indigo-500/50 transition font-medium text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addDateRangeFromModal}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition flex items-center justify-center gap-2 font-medium text-sm shadow-lg shadow-indigo-500/20"
+              >
+                <Calendar className="w-4 h-4" />
+                Add Date Range
               </button>
             </div>
           </div>

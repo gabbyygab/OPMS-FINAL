@@ -78,6 +78,13 @@ function parseNominatimAddress(addressData) {
     components.push(address.house_number);
   }
 
+  // Add barangay (Filipino subdivision) if available
+  if (address.barangay || address.neighbourhood) {
+    components.push(address.barangay || address.neighbourhood);
+  } else if (address.suburb || address.village) {
+    components.push(address.suburb || address.village);
+  }
+
   // Add city/municipality
   if (address.city) {
     components.push(address.city);
