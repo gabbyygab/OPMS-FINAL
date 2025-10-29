@@ -22,7 +22,7 @@ import {
   LucideWallet,
   ArrowLeft,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import {
   Link,
   useNavigate,
@@ -31,8 +31,9 @@ import {
 } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { auth, db } from "../firebase/firebase";
+import { AuthModalContext } from "../context/AuthModalContext";
 import { signOut } from "firebase/auth";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
 import { ROUTES } from "../constants/routes";
 import { DateRange } from "react-date-range";
 import "react-date-range/dist/styles.css";
@@ -215,56 +216,64 @@ const HostNavLinks = ({ location }) => {
 };
 
 // Public Auth Dropdown Component
-const PublicAuthDropdown = ({ isScrolled, dropdownOpen, setDropdownOpen }) => (
-  <>
-    <Link
-      to={ROUTES.HOST.SIGNUP}
-      className={`text-sm font-medium ${
-        isScrolled ? "text-slate-300" : "text-slate-200"
-      } hover:text-white transition-colors`}
-    >
-      Become a Host
-    </Link>
+const PublicAuthDropdown = ({ isScrolled, dropdownOpen, setDropdownOpen }) => {
+  const { openSignUp, openSignIn } = useContext(AuthModalContext);
 
-    <div className="relative">
-      <button
+  return (
+    <>
+      <Link
+        to={ROUTES.HOST.SIGNUP}
         className={`text-sm font-medium ${
           isScrolled ? "text-slate-300" : "text-slate-200"
-        } hover:text-white transition-colors flex items-center gap-1`}
-        onClick={() => setDropdownOpen(!dropdownOpen)}
+        } hover:text-white transition-colors`}
       >
-        <User className="w-6 h-6" />
-        Sign In
-      </button>
+        Become a Host
+      </Link>
 
-      {dropdownOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 overflow-hidden z-50">
-          <Link
-            to={ROUTES.LOGIN}
-            className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
-            onClick={() => setDropdownOpen(false)}
-          >
-            <User className="w-4 h-4" /> Sign In
-          </Link>
-          <Link
-            to={ROUTES.GUEST.SIGNUP}
-            className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
-            onClick={() => setDropdownOpen(false)}
-          >
-            <PlusSquare className="w-4 h-4" /> Sign Up
-          </Link>
-          <Link
-            to={ROUTES.HOST.SIGNUP}
-            className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
-            onClick={() => setDropdownOpen(false)}
-          >
-            <Home className="w-4 h-4" /> Become a Host
-          </Link>
-        </div>
-      )}
-    </div>
-  </>
-);
+      <div className="relative">
+        <button
+          className={`text-sm font-medium ${
+            isScrolled ? "text-slate-300" : "text-slate-200"
+          } hover:text-white transition-colors flex items-center gap-1`}
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+        >
+          <User className="w-6 h-6" />
+          Sign In
+        </button>
+
+        {dropdownOpen && (
+          <div className="absolute right-0 mt-2 w-48 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 overflow-hidden z-50">
+            <button
+              onClick={() => {
+                openSignIn();
+                setDropdownOpen(false);
+              }}
+              className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+            >
+              <User className="w-4 h-4" /> Sign In
+            </button>
+            <button
+              onClick={() => {
+                openSignUp();
+                setDropdownOpen(false);
+              }}
+              className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+            >
+              <PlusSquare className="w-4 h-4" /> Sign Up
+            </button>
+            <Link
+              to={ROUTES.HOST.SIGNUP}
+              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
+              onClick={() => setDropdownOpen(false)}
+            >
+              <Home className="w-4 h-4" /> Become a Host
+            </Link>
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
 
 // Guest User Actions Component
 const GuestUserActions = ({
@@ -275,6 +284,7 @@ const GuestUserActions = ({
   userData,
   user,
   handleLogout,
+  unreadNotificationsCount,
 }) => (
   <>
     {/* My Bookings link */}
@@ -288,20 +298,36 @@ const GuestUserActions = ({
 
     {/* Notifications Icon */}
     <div className="relative group">
-      <button
-        type="button"
-        onClick={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
-        className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-slate-700 transition"
+      <Link
+        to={ROUTES.GUEST.NOTIFICATIONS}
+        className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-slate-700 transition text-slate-200 hover:text-white"
         aria-label="Notifications"
       >
-        <Bell className="w-5 h-5 text-slate-200 group-hover:text-white transition" />
-        {/* Unread badge (optional, can be dynamic) */}
-        <span className="absolute top-2 right-2 w-2 h-2 bg-indigo-500 rounded-full"></span>
-      </button>
+        <Bell className="w-5 h-5 transition" />
+        {unreadNotificationsCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold w-5 h-5 rounded-full flex items-center justify-center">
+            {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+          </span>
+        )}
+      </Link>
 
       {notificationDropdownOpen && (
         <div className="absolute right-0 mt-2 w-64 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 p-3">
-          <p className="text-sm text-slate-400">No new notifications</p>
+          {unreadNotificationsCount > 0 ? (
+            <div className="text-sm">
+              <p className="text-slate-300 font-medium mb-2">
+                {unreadNotificationsCount} unread {unreadNotificationsCount === 1 ? "notification" : "notifications"}
+              </p>
+              <Link
+                to={ROUTES.GUEST.NOTIFICATIONS}
+                className="text-indigo-400 hover:text-indigo-300 text-xs font-medium"
+              >
+                View all notifications →
+              </Link>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">No new notifications</p>
+          )}
         </div>
       )}
     </div>
@@ -563,15 +589,6 @@ const HostUserActions = ({
             >
               <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
               My Bookings
-            </Link>
-
-            <Link
-              to={ROUTES.HOST.CALENDAR}
-              className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
-              onClick={() => setProfileDropdownOpen(false)}
-            >
-              <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-              Calendar
             </Link>
 
             <Link
@@ -934,19 +951,6 @@ const HostMobileMenuDrawer = ({
                 <Calendar className="w-5 h-5 flex-shrink-0" />
                 <span className="text-sm font-medium">My Bookings</span>
               </Link>
-
-              <Link
-                to={ROUTES.HOST.CALENDAR}
-                className={`flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-orange-500/20 hover:to-orange-500/20 rounded-lg transition-all duration-200 ${
-                  isRouteActive(ROUTES.HOST.CALENDAR)
-                    ? "bg-gradient-to-r from-orange-500/20 to-orange-500/20 text-orange-300"
-                    : ""
-                }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Calendar className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium">Calendar</span>
-              </Link>
             </div>
 
             {/* Logout Button */}
@@ -1194,19 +1198,6 @@ const StreamlinedMobileMenu = ({
                   <Calendar className="w-5 h-5" />
                   <span className="font-medium">My Bookings</span>
                 </Link>
-
-                <Link
-                  to={ROUTES.HOST.CALENDAR}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                    isRouteActive(ROUTES.HOST.CALENDAR)
-                      ? "bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-300"
-                      : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
-                  }`}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Calendar className="w-5 h-5" />
-                  <span className="font-medium">Calendar</span>
-                </Link>
               </>
             )}
 
@@ -1268,6 +1259,29 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
   });
 
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
+  const [serviceTypeSuggestions, setServiceTypeSuggestions] = useState([]);
+
+  useEffect(() => {
+    const fetchServiceTypes = async () => {
+      try {
+        const listingsRef = collection(db, "listings");
+        const q = query(listingsRef, where("type", "==", "services"));
+        const querySnapshot = await getDocs(q);
+        const allServiceTypes = new Set();
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.serviceTypes && Array.isArray(data.serviceTypes)) {
+            data.serviceTypes.forEach((type) => allServiceTypes.add(type));
+          }
+        });
+        setServiceTypeSuggestions(Array.from(allServiceTypes));
+      } catch (error) {
+        console.error("Error fetching service types:", error);
+      }
+    };
+
+    fetchServiceTypes();
+  }, []);
 
   // Helper function to parse date string to local date
   const parseLocalDate = (dateString) => {
@@ -2240,6 +2254,21 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                       }
                       className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm sm:text-base"
                     />
+                    {serviceTypeSuggestions.length > 0 && (
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <span className="text-xs text-slate-400 font-medium">Suggestions:</span>
+                            {serviceTypeSuggestions.slice(0, 7).map(type => (
+                                <button
+                                    key={type}
+                                    type="button"
+                                    onClick={() => setSearchData({ ...searchData, serviceType: type })}
+                                    className="px-3 py-1 bg-slate-700 text-slate-200 rounded-full text-xs hover:bg-indigo-600 hover:text-white transition-colors"
+                                >
+                                    {type}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                   </div>
                 ) : (
                   <div>
@@ -2801,16 +2830,17 @@ export default function NavigationBar({
     return () => window.removeEventListener("scroll", handleScroll);
   }, [isScrolled]);
 
-  // Set up real-time listener for unread notifications (host only)
+  // Set up real-time listener for unread notifications (both hosts and guests)
   useEffect(() => {
-    if (!isHost || !userData?.id) {
+    if (!userData?.id) {
       setUnreadNotificationsCount(0);
       return;
     }
 
+    // Query using new userId field (supports both hosts and guests)
     const q = query(
       collection(db, "notifications"),
-      where("host_id", "==", userData.id),
+      where("userId", "==", userData.id),
       where("isRead", "==", false)
     );
 
@@ -2818,8 +2848,34 @@ export default function NavigationBar({
       setUnreadNotificationsCount(snapshot.size);
     });
 
-    return () => unsubscribe();
-  }, [userData?.id, isHost]);
+    // Also fetch old notifications with host_id/guest_id for backwards compatibility
+    let unsubscribeOld;
+    try {
+      const oldWhereField = userData.role === "host" ? "host_id" : "guest_id";
+      const qOld = query(
+        collection(db, "notifications"),
+        where(oldWhereField, "==", userData.id),
+        where("isRead", "==", false)
+      );
+
+      unsubscribeOld = onSnapshot(qOld, (snapshot) => {
+        // Only update if we have old notifications and new query hasn't set a count
+        setUnreadNotificationsCount((prev) => {
+          const newCount = snapshot.size;
+          // Use the max count from both queries to avoid double-counting
+          return Math.max(prev, newCount);
+        });
+      });
+    } catch (error) {
+      // If old query fails (index doesn't exist), just use new query result
+      console.log("Old notification format not available");
+    }
+
+    return () => {
+      unsubscribe();
+      if (unsubscribeOld) unsubscribeOld();
+    };
+  }, [userData?.id, userData?.role]);
 
   const getNavbarBg = () => {
     if (user) return "bg-slate-900 shadow-md";
@@ -3188,7 +3244,8 @@ export default function NavigationBar({
       (location.pathname.includes("/profile") ||
         location.pathname.includes("/messages") ||
         location.pathname.includes("/notifications") ||
-        location.pathname.includes("/my-bookings"))) ||
+        location.pathname.includes("/my-bookings") ||
+        location.pathname.includes("/favorites"))) ||
     forceSimpleNavBar
   ) {
     return isHost ? (
@@ -3244,6 +3301,7 @@ export default function NavigationBar({
                   userData={userData}
                   user={user}
                   handleLogout={handleLogout}
+                  unreadNotificationsCount={unreadNotificationsCount}
                 />
               ) : isHost ? (
                 <HostUserActions

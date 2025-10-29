@@ -8,7 +8,7 @@ export default function HeroSection() {
         muted
         className="absolute inset-0 w-full h-full object-cover"
       >
-        <source src="/bg-landing.mp4" type="video/mp4" />
+        <source src="/hero-vid.mp4" type="video/mp4" />
       </video>
 
       {/* Background overlay with gradient for better text readability */}

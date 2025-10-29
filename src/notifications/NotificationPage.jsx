@@ -45,24 +45,58 @@ export default function NotificationsPage() {
         setLoading(true);
         const notificationsRef = collection(db, "notifications");
 
-        // For hosts: fetch notifications where host_id matches
-        // For guests: fetch notifications where guest_id matches
-        const whereField = userData.role === "host" ? "host_id" : "guest_id";
-
+        // Fetch notifications where userId matches current user (new format)
+        // userId field stores who should receive the notification
         const q = query(
           notificationsRef,
-          where(whereField, "==", userData.id),
+          where("userId", "==", userData.id),
           orderBy("createdAt", "desc")
         );
         const querySnapshot = await getDocs(q);
 
+        // Also fetch old notifications with host_id/guest_id for backwards compatibility
+        let oldNotificationsSnapshot = null;
+        try {
+          const oldWhereField = userData.role === "host" ? "host_id" : "guest_id";
+          const qOld = query(
+            notificationsRef,
+            where(oldWhereField, "==", userData.id),
+            orderBy("createdAt", "desc")
+          );
+          oldNotificationsSnapshot = await getDocs(qOld);
+        } catch (error) {
+          // If query fails, it means index doesn't exist or field doesn't exist
+          console.log("Old notification format not available");
+        }
+
+        // Combine both results, avoiding duplicates
+        const allDocs = new Map();
+        querySnapshot.docs.forEach(doc => {
+          allDocs.set(doc.id, doc);
+        });
+
+        if (oldNotificationsSnapshot) {
+          oldNotificationsSnapshot.docs.forEach(doc => {
+            if (!allDocs.has(doc.id)) {
+              allDocs.set(doc.id, doc);
+            }
+          });
+        }
+
+        // Convert map back to array and sort by date
+        const sortedDocs = Array.from(allDocs.values()).sort((a, b) => {
+          const aTime = a.data().createdAt?.toDate?.() || new Date(0);
+          const bTime = b.data().createdAt?.toDate?.() || new Date(0);
+          return bTime - aTime;
+        });
+
         const notificationsData = await Promise.all(
-          querySnapshot.docs.map(async (docSnapshot) => {
+          sortedDocs.map(async (docSnapshot) => {
             const data = docSnapshot.data();
             let relatedUserData = null;
 
-            // For hosts: fetch guest info; For guests: fetch host info
-            const relatedUserId = userData.role === "host" ? data.guest_id : data.host_id;
+            // Handle both new (guestId) and old (guest_id) field formats
+            const relatedUserId = data.guestId || data.guest_id;
 
             if (relatedUserId) {
               try {
@@ -76,10 +110,15 @@ export default function NotificationsPage() {
               }
             }
 
+            // Handle both new and old field names for booking/listing IDs
+            const bookingId = data.bookingId || data.booking_id;
+            const listingId = data.listingId || data.listing_id;
+            const guestAvatar = data.guestAvatar || data.guest_avatar;
+
             return {
               id: docSnapshot.id,
               ...data,
-              avatar: relatedUserData?.photoURL || null,
+              avatar: guestAvatar || relatedUserData?.photoURL || null,
               timestamp: data.createdAt && typeof data.createdAt.toDate === 'function'
                 ? new Date(data.createdAt.toDate()).toLocaleDateString("en-US", {
                     month: "short",
@@ -91,11 +130,11 @@ export default function NotificationsPage() {
               actionUrl:
                 userData.role === "host"
                   ? data.type === "booking"
-                    ? `/host/my-bookings/${data.booking_id}`
-                    : `/host/messages/${data.guest_id}`
+                    ? `/host/my-bookings/${bookingId}`
+                    : `/host/messages/${relatedUserId}`
                   : data.type === "booking_confirmed" || data.type === "booking_rejected"
                   ? `/guest/my-bookings`
-                  : `/guest/messages/${data.host_id}`,
+                  : `/guest/messages/${relatedUserId}`,
             };
           })
         );

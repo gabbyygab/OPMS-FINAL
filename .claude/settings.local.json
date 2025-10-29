@@ -11,7 +11,8 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:react-tailwindcss-datepicker.vercel.app)",
       "WebFetch(domain:ui.shadcn.com)",
-      "WebFetch(domain:bundlephobia.com)"
+      "WebFetch(domain:bundlephobia.com)",
+      "Bash(cd D:Web AppsOPMS-FINAL)"
     ],
     "deny": [],
     "ask": []

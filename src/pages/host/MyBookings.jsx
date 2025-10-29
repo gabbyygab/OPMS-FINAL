@@ -236,15 +236,15 @@ export default function HostMyBookings() {
 
       // Create notification for guest about payment deduction
       await addDoc(collection(db, "notifications"), {
-        guest_id: bookingToAction.guest_id,
+        userId: bookingToAction.guest_id,
+        guestId: bookingToAction.guest_id,
         type: "payment",
         title: "Payment Successful",
         message: `An amount of ₱${bookingToAction.totalAmount.toLocaleString()} has been deducted from your wallet for your booking of "${
           bookingToAction.listing?.title
         }".`,
-        listing_id: bookingToAction.listing_id,
-        booking_id: bookingToAction.id,
-        read: false,
+        listingId: bookingToAction.listing_id,
+        bookingId: bookingToAction.id,
         isRead: false,
         createdAt: serverTimestamp(),
       });
@@ -281,13 +281,13 @@ export default function HostMyBookings() {
 
       // Create notification for guest
       await addDoc(collection(db, "notifications"), {
-        guest_id: bookingToAction.guest_id,
+        userId: bookingToAction.guest_id,
+        guestId: bookingToAction.guest_id,
         type: "booking_confirmed",
         title: "Booking Confirmed",
         message: `Your booking for ${bookingToAction.listing?.title} has been confirmed!`,
-        listing_id: bookingToAction.listing_id,
-        booking_id: bookingToAction.id,
-        read: false,
+        listingId: bookingToAction.listing_id,
+        bookingId: bookingToAction.id,
         isRead: false,
         createdAt: serverTimestamp(),
       });
@@ -336,14 +336,13 @@ export default function HostMyBookings() {
 
       // Create notification for guest
       await addDoc(collection(db, "notifications"), {
-        guest_id: bookingToAction.guest_id,
+        userId: bookingToAction.guest_id,
+        guestId: bookingToAction.guest_id,
         type: "booking_rejected",
         title: "Booking Rejected",
         message: `Your booking for ${bookingToAction.listing?.title} has been rejected. Reason: ${rejectReason}`,
-        listing_id: bookingToAction.listing_id,
-        booking_id: bookingToAction.id,
-        host_id: userData.id,
-        read: false,
+        listingId: bookingToAction.listing_id,
+        bookingId: bookingToAction.id,
         isRead: false,
         createdAt: serverTimestamp(),
       });
@@ -876,8 +875,9 @@ export default function HostMyBookings() {
       {/* Details Modal */}
       {showDetailsModal && selectedBooking && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="bg-slate-800 rounded-2xl shadow-lg w-full max-w-2xl p-6 border border-slate-700 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-slate-800 rounded-2xl shadow-lg w-full max-w-2xl border border-slate-700 flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-700 flex-shrink-0">
               <h2 className="text-2xl font-bold text-white">Booking Details</h2>
               <button
                 onClick={() => {
@@ -890,223 +890,323 @@ export default function HostMyBookings() {
               </button>
             </div>
 
-            {/* Guest Info */}
-            <div className="mb-6 pb-6 border-b border-slate-700">
-              <h3 className="text-lg font-semibold text-white mb-4">
-                Guest Information
-              </h3>
-              <div className="flex items-center gap-4">
-                <img
-                  src={
-                    selectedBooking.guest?.photoURL ||
-                    "https://via.placeholder.com/80"
-                  }
-                  alt={selectedBooking.guest?.fullName}
-                  className="w-16 h-16 rounded-full"
-                />
-                <div className="flex-1 space-y-2">
+            {/* Modal Body */}
+            <div className="overflow-y-auto p-6">
+              {/* Guest Info */}
+              <div className="mb-6 pb-6 border-b border-slate-700">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Guest Information
+                </h3>
+                <div className="flex items-center gap-4">
+                  <img
+                    src={
+                      selectedBooking.guest?.photoURL ||
+                      "https://via.placeholder.com/80"
+                    }
+                    alt={selectedBooking.guest?.fullName}
+                    className="w-16 h-16 rounded-full"
+                  />
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <div className="text-sm text-slate-400">Name</div>
+                      <div className="text-white font-medium">
+                        {selectedBooking.guest?.fullName || "Unknown"}
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div>
+                        <div className="text-sm text-slate-400 flex items-center gap-1">
+                          <Mail className="w-4 h-4" />
+                          Email
+                        </div>
+                        <div className="text-white font-medium">
+                          {selectedBooking.guest?.email || "N/A"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-slate-400 flex items-center gap-1">
+                          <Phone className="w-4 h-4" />
+                          Phone
+                        </div>
+                        <div className="text-white font-medium">
+                          {selectedBooking.guest?.phone || "N/A"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Listing Info */}
+              <div className="mb-6 pb-6 border-b border-slate-700">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Listing Information
+                </h3>
+                <div className="space-y-2">
                   <div>
-                    <div className="text-sm text-slate-400">Name</div>
+                    <div className="text-sm text-slate-400">Title</div>
                     <div className="text-white font-medium">
-                      {selectedBooking.guest?.fullName || "Unknown"}
+                      {selectedBooking.listing?.title || "Unknown"}
                     </div>
                   </div>
-                  <div className="flex gap-4">
-                    <div>
-                      <div className="text-sm text-slate-400 flex items-center gap-1">
-                        <Mail className="w-4 h-4" />
-                        Email
-                      </div>
-                      <div className="text-white font-medium">
-                        {selectedBooking.guest?.email || "N/A"}
-                      </div>
+                  <div>
+                    <div className="text-sm text-slate-400 flex items-center gap-1">
+                      <MapPin className="w-4 h-4" />
+                      Location
                     </div>
-                    <div>
-                      <div className="text-sm text-slate-400 flex items-center gap-1">
-                        <Phone className="w-4 h-4" />
-                        Phone
-                      </div>
-                      <div className="text-white font-medium">
-                        {selectedBooking.guest?.phone || "N/A"}
-                      </div>
+                    <div className="text-white font-medium">
+                      {selectedBooking.listing?.location || "N/A"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-slate-400">Type</div>
+                    <div className="text-white font-medium capitalize">
+                      {selectedBooking.listing?.type || "N/A"}
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Listing Info */}
-            <div className="mb-6 pb-6 border-b border-slate-700">
-              <h3 className="text-lg font-semibold text-white mb-4">
-                Listing Information
-              </h3>
-              <div className="space-y-2">
-                <div>
-                  <div className="text-sm text-slate-400">Title</div>
-                  <div className="text-white font-medium">
-                    {selectedBooking.listing?.title || "Unknown"}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-slate-400 flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    Location
-                  </div>
-                  <div className="text-white font-medium">
-                    {selectedBooking.listing?.location || "N/A"}
-                  </div>
-                </div>
-                <div className="text-sm text-slate-400">Type</div>
-                <div className="text-white font-medium capitalize">
-                  {selectedBooking.listing?.type || "N/A"}
-                </div>
-              </div>
-            </div>
-
-            {/* Booking Details */}
-            <div className="mb-6 pb-6 border-b border-slate-700">
-              <h3 className="text-lg font-semibold text-white mb-4">
-                Booking Details
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm text-slate-400 flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
-                    Check-in
-                  </div>
-                  <div className="text-white font-medium">
-                    {selectedBooking.checkIn
-                      ? formatDate(selectedBooking.checkIn)
-                      : formatDate(selectedBooking.selectedDate)}
-                  </div>
-                </div>
-                {selectedBooking.checkOut && (
+              {/* Booking Details */}
+              <div className="mb-6 pb-6 border-b border-slate-700">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Booking Details
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <div className="text-sm text-slate-400 flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
-                      Check-out
+                      Check-in
                     </div>
                     <div className="text-white font-medium">
-                      {formatDate(selectedBooking.checkOut)}
+                      {selectedBooking.checkIn
+                        ? formatDate(selectedBooking.checkIn)
+                        : formatDate(selectedBooking.selectedDate)}
                     </div>
                   </div>
-                )}
-                {selectedBooking.selectedTime && (
+                  {selectedBooking.checkOut && (
+                    <div>
+                      <div className="text-sm text-slate-400 flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        Check-out
+                      </div>
+                      <div className="text-white font-medium">
+                        {formatDate(selectedBooking.checkOut)}
+                      </div>
+                    </div>
+                  )}
+                  {selectedBooking.selectedTime && (
+                    <div>
+                      <div className="text-sm text-slate-400 flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        Time
+                      </div>
+                      <div className="text-white font-medium">
+                        {selectedBooking.selectedTime}
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <div className="text-sm text-slate-400 flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      Time
+                      <Users className="w-4 h-4" />
+                      Guests
                     </div>
                     <div className="text-white font-medium">
-                      {selectedBooking.selectedTime}
+                      {selectedBooking.guests}{" "}
+                      {selectedBooking.guests === 1 ? "guest" : "guests"}
                     </div>
                   </div>
-                )}
-                <div>
-                  <div className="text-sm text-slate-400 flex items-center gap-1">
-                    <Users className="w-4 h-4" />
-                    Guests
+                </div>
+              </div>
+
+              {/* Price Breakdown */}
+              <div className="mb-6 pb-6 border-b border-slate-700">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Payment Details
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-300">Booking Amount</span>
+                    <span className="text-white font-medium">
+                      ₱{selectedBooking.totalAmount?.toLocaleString() || 0}
+                    </span>
                   </div>
-                  <div className="text-white font-medium">
-                    {selectedBooking.guests}{" "}
-                    {selectedBooking.guests === 1 ? "guest" : "guests"}
+                  <div className="flex justify-between">
+                    <span className="text-slate-300">Service Fee (10%)</span>
+                    <span className="text-white font-medium">
+                      ₱{selectedBooking.serviceFee?.toLocaleString() || 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-slate-700">
+                    <span className="text-white font-semibold">
+                      Total Amount
+                    </span>
+                    <span className="text-white font-bold text-lg">
+                      ₱
+                      {(
+                        (selectedBooking.totalAmount || 0) +
+                        (selectedBooking.serviceFee || 0)
+                      ).toLocaleString()}
+                    </span>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Price Breakdown */}
-            <div className="mb-6 pb-6 border-b border-slate-700">
-              <h3 className="text-lg font-semibold text-white mb-4">
-                Payment Details
-              </h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-slate-300">Booking Amount</span>
-                  <span className="text-white font-medium">
-                    ₱{selectedBooking.totalAmount?.toLocaleString() || 0}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-300">Service Fee (10%)</span>
-                  <span className="text-white font-medium">
-                    ₱{selectedBooking.serviceFee?.toLocaleString() || 0}
-                  </span>
-                </div>
-                <div className="flex justify-between pt-2 border-t border-slate-700">
-                  <span className="text-white font-semibold">Total Amount</span>
-                  <span className="text-white font-bold text-lg">
-                    ₱
-                    {(
-                      (selectedBooking.totalAmount || 0) +
-                      (selectedBooking.serviceFee || 0)
-                    ).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Status */}
-            <div className="mb-6 pb-6 border-b border-slate-700">
-              <h3 className="text-lg font-semibold text-white mb-4">Status</h3>
-              <span
-                className={`inline-block px-4 py-2 rounded-lg text-sm font-medium ${getStatusColor(
-                  selectedBooking.status
-                )}`}
-              >
-                {selectedBooking.status?.charAt(0).toUpperCase() +
-                  selectedBooking.status?.slice(1)}
-              </span>
-            </div>
-
-            {/* Actions */}
-            {selectedBooking.status === "pending" && (
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowConfirmModal(true);
-                    setBookingToAction(selectedBooking);
-                  }}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+              {/* Status */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Status
+                </h3>
+                <span
+                  className={`inline-block px-4 py-2 rounded-lg text-sm font-medium ${getStatusColor(
+                    selectedBooking.status
+                  )}`}
                 >
-                  <Check className="w-5 h-5" />
-                  Confirm Booking
-                </button>
-                <button
-                  onClick={() => {
-                    setShowRejectModal(true);
-                    setBookingToAction(selectedBooking);
-                  }}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
-                >
-                  <X className="w-5 h-5" />
-                  Reject Booking
-                </button>
+                  {selectedBooking.status?.charAt(0).toUpperCase() +
+                    selectedBooking.status?.slice(1)}
+                </span>
               </div>
-            )}
+            </div>
 
-            {selectedBooking.status === "confirmed" && (
-              <div className="text-center py-4 bg-green-500/10 rounded-lg border border-green-500/20">
-                <Check className="w-6 h-6 text-green-400 mx-auto mb-2" />
-                <p className="text-green-300 font-medium">
-                  This booking has been confirmed and payment has been processed.
-                </p>
-              </div>
-            )}
+                        {/* Modal Footer */}
 
-            {selectedBooking.status === "rejected" && (
-              <div className="text-center py-4 bg-red-500/10 rounded-lg border border-red-500/20">
-                <X className="w-6 h-6 text-red-400 mx-auto mb-2" />
-                <p className="text-red-300 font-medium">
-                  This booking has been rejected.
-                </p>
-                {selectedBooking.rejectionReason && (
-                  <p className="text-red-300 text-sm mt-2">
-                    Reason: {selectedBooking.rejectionReason}
-                  </p>
-                )}
-              </div>
-            )}
+                        <div className="p-6 border-t border-slate-700 flex-shrink-0">
+
+                          {selectedBooking.status === "pending" && (
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+
+                              <button
+
+                                onClick={() => {
+
+                                  setShowConfirmModal(true);
+
+                                  setBookingToAction(selectedBooking);
+
+                                }}
+
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+
+                              >
+
+                                <Check className="w-5 h-5" />
+
+                                Confirm Booking
+
+                              </button>
+
+                              <button
+
+                                onClick={() => {
+
+                                  setShowRejectModal(true);
+
+                                  setBookingToAction(selectedBooking);
+
+                                }}
+
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+
+                              >
+
+                                <X className="w-5 h-5" />
+
+                                Reject Booking
+
+                              </button>
+
+                            </div>
+
+                          )}
+
+            
+
+                          {selectedBooking.status === "confirmed" && (
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+
+                                <div className="flex-1 text-center py-3 bg-green-500/10 rounded-lg border border-green-500/20 flex items-center justify-center">
+
+                                    <p className="text-green-300 font-medium">
+
+                                        Booking Confirmed
+
+                                    </p>
+
+                                </div>
+
+                                <button
+
+                                    onClick={() => {
+
+                                        setShowCompleteModal(true);
+
+                                        setBookingToAction(selectedBooking);
+
+                                    }}
+
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+
+                                >
+
+                                    <Check className="w-5 h-5" />
+
+                                    Mark as Completed
+
+                                </button>
+
+                            </div>
+
+                          )}
+
+            
+
+                          {selectedBooking.status === "completed" && (
+
+                            <div className="text-center py-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+
+                                <Check className="w-6 h-6 text-blue-400 mx-auto mb-2" />
+
+                                <p className="text-blue-300 font-medium">
+
+                                This booking has been marked as completed.
+
+                                </p>
+
+                            </div>
+
+                          )}
+
+            
+
+                          {selectedBooking.status === "rejected" && (
+
+                            <div className="text-center py-4 bg-red-500/10 rounded-lg border border-red-500/20">
+
+                              <X className="w-6 h-6 text-red-400 mx-auto mb-2" />
+
+                              <p className="text-red-300 font-medium">
+
+                                This booking has been rejected.
+
+                              </p>
+
+                              {selectedBooking.rejectionReason && (
+
+                                <p className="text-red-300 text-sm mt-2">
+
+                                  Reason: {selectedBooking.rejectionReason}
+
+                                </p>
+
+                              )}
+
+                            </div>
+
+                          )}
+
+                        </div>
           </div>
         </div>
       )}
@@ -1195,6 +1295,39 @@ export default function HostMyBookings() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Complete Booking Modal */}
+      {showCompleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+            <div className="bg-slate-800 rounded-2xl shadow-lg w-full max-w-md p-6 border border-slate-700">
+                <h2 className="text-2xl font-bold text-white mb-4">
+                    Mark as Completed?
+                </h2>
+                <p className="text-slate-300 mb-6">
+                    This will mark the booking as completed and notify the guest to leave a review. This action cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                    <button
+                        onClick={handleCompleteBooking}
+                        disabled={isProcessing}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition"
+                    >
+                        {isProcessing ? "Processing..." : "Confirm"}
+                    </button>
+                    <button
+                        onClick={() => {
+                            setShowCompleteModal(false);
+                            setBookingToAction(null);
+                        }}
+                        disabled={isProcessing}
+                        className="flex-1 border border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold py-3 rounded-lg transition"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
         </div>
       )}
     </div>

@@ -96,6 +96,7 @@ export default function ExperienceDetailPage() {
   const [isLoadingVerification, setIsLoadingVerification] = useState(false);
   const [userData, setUserData] = useState(null);
   const [mapCenter, setMapCenter] = useState([14.5994, 120.9842]);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const { user, isVerified } = useAuth();
   const navigate = useNavigate();
@@ -115,6 +116,10 @@ export default function ExperienceDetailPage() {
   };
 
   const handleActionWithVerification = (action) => {
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
     if (!isVerified) {
       toast.warning("Please verify your account first", {
         position: "top-center",
@@ -125,8 +130,12 @@ export default function ExperienceDetailPage() {
   };
 
   const toggleFavorite = async () => {
-    if (!user || !userData) {
-      toast.error("Please log in to save favorites");
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
+    if (!userData) {
+      toast.error("User data not loaded");
       return;
     }
 
@@ -187,17 +196,17 @@ export default function ExperienceDetailPage() {
 
       // Create notification for host
       const notificationData = {
-        host_id: experienceData.hostId,
+        userId: experienceData.hostId,
+        guestId: user.uid,
         type: "booking",
         title: "New Booking",
         message: `${user.fullName || "A guest"} has booked your ${
           experienceData.title
         } for ${selectedDateTime.date} at ${selectedDateTime.time}`,
-        listing_id: listing_id,
-        booking_id: bookingRef.id,
-        guest_id: user.uid,
-        guest_avatar: null,
-        read: false,
+        listingId: listing_id,
+        bookingId: bookingRef.id,
+        guestName: user.fullName || "A guest",
+        guestAvatar: null,
         isRead: false,
         createdAt: serverTimestamp(),
       };
@@ -1042,6 +1051,37 @@ export default function ExperienceDetailPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+            <div className="bg-slate-800 rounded-2xl shadow-lg w-full max-w-md p-6 border border-slate-700">
+                <h2 className="text-2xl font-bold text-white mb-4">
+                    Please Sign In
+                </h2>
+                <p className="text-slate-300 mb-6">
+                    You need to be logged in to perform this action.
+                </p>
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => {
+                            setShowLoginModal(false);
+                            navigate('/');
+                        }}
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition"
+                    >
+                        Sign In
+                    </button>
+                    <button
+                        onClick={() => setShowLoginModal(false)}
+                        className="flex-1 border border-slate-600 text-slate-300 hover:bg-slate-700 font-semibold py-3 rounded-lg transition"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
         </div>
       )}
     </div>

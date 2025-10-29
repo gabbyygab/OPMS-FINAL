@@ -549,27 +549,27 @@ export default function BookingsSection({ userData, isFavoritePage }) {
       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-transparent to-slate-900/30"></div>
       <div className="lg:mt-28 sm:mt-32">
         <main className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-          <div className="pt-8 sm:pt-12 md:pt-20 lg:pt-28 pb-8 sm:pb-12">
+          <div className="pt-12 sm:pt-20 md:pt-28 lg:pt-36 pb-8 sm:pb-12">
             {!isVerified && (
               <VerificationBanner
                 handleVerification={handleVerification}
                 userData={userData}
               />
             )}
-            <div className="mb-6 sm:mb-8">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">
+            <div className="mb-8 sm:mb-12 text-center">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-3 sm:mb-4 tracking-tight">
                 {isFavoritePage
-                  ? "My Favorites"
+                  ? "Your Favorite Escapes"
                   : activeFilter === "stays"
                   ? "Explore Homes"
                   : activeFilter === "experiences"
                   ? "Explore Experiences"
                   : "Explore Services"}
               </h1>
-              <p className="text-sm sm:text-base text-slate-300">
-                {!isFavoritePage
-                  ? "Browse all available listings from hosts and providers"
-                  : ""}
+              <p className="text-base sm:text-lg text-slate-400 max-w-3xl mx-auto">
+                {isFavoritePage
+                  ? "A curated collection of your most-loved stays, experiences, and services. Ready for your next adventure!"
+                  : "Browse all available listings from hosts and providers"}
               </p>
             </div>
 

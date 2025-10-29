@@ -15,10 +15,6 @@ import LoadingScreen from "./loading/Loading";
 import NotFoundPage from "./error/404Page";
 
 // Auth Components
-import AuthLayout from "./pages/auth/AuthLayout";
-import SignInPage from "./pages/auth/SignInPage";
-import SignUpPage from "./pages/auth/SignUpPage";
-import SignUpPageHost from "./pages/auth/host/SignUpPage";
 import ForgotPasswordPage from "./pages/auth/ForgotPassword";
 import OTPVerificationPage from "./pages/auth/OtpVerificationPage";
 
@@ -45,6 +41,10 @@ import HostProfilePage from "./pages/host/profile/ProfilePage";
 import MessagesPage from "./messages/page";
 import WalletPage from "./e-wallet/page";
 import NotificationsPage from "./notifications/NotificationPage";
+
+// Auth Modal Components
+import SignUpModal from "./components/auth/SignUpModal";
+import SignInModal from "./components/auth/SignInModal";
 
 // Admin Components
 import {
@@ -89,19 +89,11 @@ function App() {
         />
 
         {/* ========== PUBLIC AUTH ROUTES ========== */}
-        <Route element={<PublicRoute user={user} userData={userData} />}>
-          <Route element={<AuthLayout />}>
-            <Route path={ROUTES.LOGIN} element={<SignInPage />} />
-            <Route path={ROUTES.GUEST.SIGNUP} element={<SignUpPage />} />
-            <Route
-              path={ROUTES.FORGOT_PASSWORD}
-              element={<ForgotPasswordPage />}
-            />
-          </Route>
-        </Route>
-
-        {/* Host Signup - Special case, allows access even when logged in */}
-        <Route path={ROUTES.HOST.SIGNUP} element={<SignUpPageHost />} />
+        {/* Forgot Password */}
+        <Route
+          path={ROUTES.FORGOT_PASSWORD}
+          element={<ForgotPasswordPage />}
+        />
 
         {/* ========== PUBLIC LISTING DETAILS ROUTES ========== */}
         {/* Available to all users (logged in or not) */}
@@ -293,6 +285,10 @@ function App() {
         {/* ========== 404 NOT FOUND ========== */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+
+      {/* Auth Modals */}
+      <SignUpModal />
+      <SignInModal />
 
       <ToastContainer />
     </div>
