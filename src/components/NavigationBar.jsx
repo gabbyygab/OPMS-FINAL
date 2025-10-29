@@ -301,9 +301,10 @@ const GuestUserActions = ({
     </Link>
 
     {/* Notifications Icon */}
-    <div className="relative group">
-      <Link
-        to={ROUTES.GUEST.NOTIFICATIONS}
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
         className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-slate-700 transition text-slate-200 hover:text-white"
         aria-label="Notifications"
       >
@@ -313,10 +314,10 @@ const GuestUserActions = ({
             {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
           </span>
         )}
-      </Link>
+      </button>
 
       {notificationDropdownOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 p-3">
+        <div className="absolute right-0 mt-2 w-64 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 p-3 z-50">
           {unreadNotificationsCount > 0 ? (
             <div className="text-sm">
               <p className="text-slate-300 font-medium mb-2">
@@ -325,6 +326,7 @@ const GuestUserActions = ({
               <Link
                 to={ROUTES.GUEST.NOTIFICATIONS}
                 className="text-indigo-400 hover:text-indigo-300 text-xs font-medium"
+                onClick={() => setNotificationDropdownOpen(false)}
               >
                 View all notifications →
               </Link>
@@ -1289,6 +1291,8 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
   const [serviceTypeSuggestions, setServiceTypeSuggestions] = useState([]);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
   // Get auth modal context functions
   const { openSignIn, selectSignUpRole } = useContext(AuthModalContext);
@@ -1380,14 +1384,32 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
     setActiveFilter(typeParam);
   }, [searchParams]);
 
-  // Handle scroll to show/hide tabs
+  // Handle scroll to show/hide tabs and close dropdowns
   useEffect(() => {
     const handleScroll = () => {
       const scrolled = window.scrollY > 50;
       setIsScrolled(scrolled);
+      // Close dropdowns when scrolling
+      setNotificationDropdownOpen(false);
+      setProfileDropdownOpen(false);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      // Check if click is outside dropdowns
+      const navBar = document.querySelector('nav');
+      if (navBar && !navBar.contains(e.target)) {
+        setNotificationDropdownOpen(false);
+        setProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Handle tab click - navigate and set URL param
@@ -1539,27 +1561,55 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
               </button>
 
               {/* Notifications Icon */}
-              <Link
-                to={ROUTES.GUEST.NOTIFICATIONS}
-                className="relative p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200 hover:scale-110 text-slate-300 hover:text-white"
-                title="Notifications"
-              >
-                <Bell className="w-5 h-5" />
-                {unreadNotificationsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold w-5 h-5 rounded-full flex items-center justify-center">
-                    {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
-                  </span>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
+                  className="relative p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200 hover:scale-110 text-slate-300 hover:text-white"
+                  title="Notifications"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadNotificationsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold w-5 h-5 rounded-full flex items-center justify-center">
+                      {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                    </span>
+                  )}
+                </button>
+
+                {notificationDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 p-3 z-50">
+                    {unreadNotificationsCount > 0 ? (
+                      <div className="text-sm">
+                        <p className="text-slate-300 font-medium mb-2">
+                          {unreadNotificationsCount} unread {unreadNotificationsCount === 1 ? "notification" : "notifications"}
+                        </p>
+                        <Link
+                          to={ROUTES.GUEST.NOTIFICATIONS}
+                          className="text-indigo-400 hover:text-indigo-300 text-xs font-medium"
+                          onClick={() => setNotificationDropdownOpen(false)}
+                        >
+                          View all notifications →
+                        </Link>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400">No new notifications</p>
+                    )}
+                  </div>
                 )}
-              </Link>
+              </div>
 
               {/* Profile Menu */}
-              <div className="relative group">
-                <button className="hidden lg:flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className="hidden lg:flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200"
+                >
                   {userData?.photoURL ? (
                     <img
                       src={userData.photoURL}
                       alt="Profile"
-                      className="w-9 h-9 rounded-full object-cover border-2 border-slate-600 group-hover:border-indigo-500 transition-colors"
+                      className="w-9 h-9 rounded-full object-cover border-2 border-slate-600 hover:border-indigo-500 transition-colors"
                     />
                   ) : (
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm font-semibold">
@@ -1573,95 +1623,101 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                         : "G"}
                     </div>
                   )}
-                  <span className="text-sm font-medium text-slate-200 group-hover:text-white whitespace-nowrap">
+                  <span className="text-sm font-medium text-slate-200 hover:text-white whitespace-nowrap">
                     Profile
                   </span>
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                  {profileDropdownOpen ? (
+                    <ChevronUp className="w-4 h-4 text-slate-400" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                  )}
                 </button>
 
                 {/* Profile Dropdown */}
-                <div className="absolute right-0 mt-3 w-72 bg-slate-800 backdrop-blur-xl text-slate-200 rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                  {/* User Info Header */}
-                  <div className="px-5 py-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-700/50">
-                    <p className="text-sm font-semibold text-white truncate">
-                      {user?.fullName || "Guest"}
-                    </p>
-                    <p className="text-xs text-slate-400 truncate">
-                      {user?.email || ""}
-                    </p>
+                {profileDropdownOpen && (
+                  <div className="absolute right-0 mt-3 w-72 bg-slate-800 backdrop-blur-xl text-slate-200 rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden z-50 transition-all duration-200">
+                    {/* User Info Header */}
+                    <div className="px-5 py-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-700/50">
+                      <p className="text-sm font-semibold text-white truncate">
+                        {user?.fullName || "Guest"}
+                      </p>
+                      <p className="text-xs text-slate-400 truncate">
+                        {user?.email || ""}
+                      </p>
+                    </div>
+
+                    {/* Profile Section */}
+                    <div className="border-b border-slate-700/50 my-1">
+                      <Link
+                        to={ROUTES.GUEST.PROFILE}
+                        className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                        My Profile
+                      </Link>
+
+                      <Link
+                        to={ROUTES.GUEST.FAVORITES}
+                        className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-pink-500/20 hover:to-pink-500/20 hover:text-pink-300"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <Heart className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                        Favorites
+                      </Link>
+                    </div>
+
+                    {/* Bookings & Messages */}
+                    <div className="border-b border-slate-700/50 my-1">
+                      <Link
+                        to={ROUTES.GUEST.MY_BOOKINGS}
+                        className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-cyan-500/20 hover:text-cyan-300"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                        My Bookings
+                      </Link>
+
+                      <Link
+                        to={ROUTES.GUEST.MESSAGES}
+                        className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                        Messages
+                      </Link>
+
+                      <Link
+                        to={ROUTES.GUEST.NOTIFICATIONS}
+                        className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <Bell className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                        Notifications
+                      </Link>
+                    </div>
+
+                    {/* Wallet */}
+                    <div className="border-b border-slate-700/50 my-1">
+                      <Link
+                        to={ROUTES.GUEST.E_WALLET}
+                        className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <LucideWallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                        E-Wallet
+                      </Link>
+                    </div>
+
+                    <button
+                      className="w-full flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item text-left hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-500/20 hover:text-red-300"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                      Logout
+                    </button>
                   </div>
-
-                  {/* Profile Section */}
-                  <div className="border-b border-slate-700/50 my-1">
-                    <Link
-                      to={ROUTES.GUEST.PROFILE}
-                      className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
-                      onClick={() => {}}
-                    >
-                      <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                      My Profile
-                    </Link>
-
-                    <Link
-                      to={ROUTES.GUEST.FAVORITES}
-                      className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-pink-500/20 hover:to-pink-500/20 hover:text-pink-300"
-                      onClick={() => {}}
-                    >
-                      <Heart className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                      Favorites
-                    </Link>
-                  </div>
-
-                  {/* Bookings & Messages */}
-                  <div className="border-b border-slate-700/50 my-1">
-                    <Link
-                      to={ROUTES.GUEST.MY_BOOKINGS}
-                      className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-cyan-500/20 hover:text-cyan-300"
-                      onClick={() => {}}
-                    >
-                      <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                      My Bookings
-                    </Link>
-
-                    <Link
-                      to={ROUTES.GUEST.MESSAGES}
-                      className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
-                      onClick={() => {}}
-                    >
-                      <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                      Messages
-                    </Link>
-
-                    <Link
-                      to={ROUTES.GUEST.NOTIFICATIONS}
-                      className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
-                      onClick={() => {}}
-                    >
-                      <Bell className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                      Notifications
-                    </Link>
-                  </div>
-
-                  {/* Wallet */}
-                  <div className="border-b border-slate-700/50 my-1">
-                    <Link
-                      to={ROUTES.GUEST.E_WALLET}
-                      className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
-                      onClick={() => {}}
-                    >
-                      <LucideWallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                      E-Wallet
-                    </Link>
-                  </div>
-
-                  <button
-                    className="w-full flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item text-left hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-500/20 hover:text-red-300"
-                    onClick={handleLogout}
-                  >
-                    <LogOut className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                    Logout
-                  </button>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -2892,10 +2948,28 @@ export default function NavigationBar({
     const handleScroll = () => {
       const scrolled = window.scrollY > 110;
       if (scrolled !== isScrolled) setIsScrolled(scrolled);
+      // Close dropdowns when scrolling
+      setNotificationDropdownOpen(false);
+      setProfileDropdownOpen(false);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, [isScrolled]);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      // Check if click is outside dropdowns
+      const navBar = document.querySelector('nav');
+      if (navBar && !navBar.contains(e.target)) {
+        setNotificationDropdownOpen(false);
+        setProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Set up real-time listener for unread notifications (both hosts and guests)
   useEffect(() => {
