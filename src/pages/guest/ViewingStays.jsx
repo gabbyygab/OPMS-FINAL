@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   MapPin,
   Star,
@@ -63,55 +63,6 @@ function ChangeMapView({ center, zoom }) {
   return null;
 }
 
-// Sample listing data - replace with your Firebase data
-// const listingData = {
-//   id: 1,
-//   title: "Stunning Condo in Tagaytay with Mountain View",
-//   type: "stays",
-//   rating: 5.0,
-//   reviewCount: 24,
-//   location: "Tagaytay, Cavite, Philippines",
-//   host: {
-//     name: "Maria",
-//     avatar: "https://i.pravatar.cc/150?img=5",
-//     joinedDate: "Joined in 2022",
-//     isVerified: true,
-//   },
-//   details: {
-//     guests: 4,
-//     bedrooms: 1,
-//     beds: 2,
-//     bathrooms: 1,
-//   },
-//   photos: [
-//     "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800",
-//     "https://images.unsplash.com/photo-1502672260066-6bc35f0a1f2c?w=800",
-//     "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
-//     "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=800",
-//     "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=800",
-//   ],
-//   price: 3500,
-//   description:
-//     "Experience the perfect getaway in this beautifully designed 1-bedroom condo with breathtaking mountain views. Located in the heart of Tagaytay, this cozy retreat offers modern amenities and a peaceful atmosphere, ideal for couples or small families looking to escape the city.",
-//   amenities: [
-//     { icon: Wifi, label: "Fast WiFi" },
-//     { icon: Tv, label: '55" Smart TV' },
-//     { icon: Wind, label: "Air conditioning" },
-//     { icon: Utensils, label: "Full kitchen" },
-//     { icon: Home, label: "Free parking" },
-//     { icon: Shield, label: "Security 24/7" },
-//   ],
-//   houseRules: [
-//     "Check-in: 2:00 PM - 9:00 PM",
-//     "Checkout: 11:00 AM",
-//     "No smoking",
-//     "No pets",
-//     "No parties or events",
-//   ],
-//   availableFrom: "2025-10-20",
-//   availableTo: "2025-12-31",
-// };
-
 const reviews = [
   {
     id: 1,
@@ -154,8 +105,6 @@ export default function ListingDetailPage() {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showInsufficientBalanceModal, setShowInsufficientBalanceModal] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [dateRange, setDateRange] = useState([
     {
       startDate: new Date(2025, 10, 28),
@@ -188,10 +137,6 @@ export default function ListingDetailPage() {
   };
 
   const handleActionWithVerification = (action) => {
-    if (!user) {
-      setShowLoginModal(true);
-      return;
-    }
     if (!isVerified) {
       toast.warning("Please verify your account first", {
         position: "top-center",
@@ -203,12 +148,8 @@ export default function ListingDetailPage() {
 
   // Toggle Favorite
   const toggleFavorite = async () => {
-    if (!user) {
-      setShowLoginModal(true);
-      return;
-    }
-    if (!userData) {
-      toast.error("User data not loaded");
+    if (!user || !userData) {
+      toast.error("Please log in to save favorites");
       return;
     }
 
@@ -324,15 +265,17 @@ export default function ListingDetailPage() {
 
       // Create notification for host
       const notificationData = {
-        userId: listingData.hostId,
-        guestId: userData.id,
+        host_id: listingData.hostId,
         type: "booking",
         title: "New Booking",
-        message: `${userData.fullName || "A guest"} has booked your ${listingData.title} for ${checkIn} to ${checkOut}`,
-        listingId: listing_id,
-        bookingId: bookingRef.id,
-        guestName: userData.fullName || "A guest",
-        guestAvatar: userData.photoURL || null,
+        message: `${userData.fullName || "A guest"} has booked your ${
+          listingData.title
+        } for ${checkIn} to ${checkOut}`,
+        listing_id: listing_id,
+        booking_id: bookingRef.id,
+        guest_id: userData.id,
+        guest_avatar: userData.photoURL || null,
+        read: false,
         isRead: false,
         createdAt: serverTimestamp(),
       };
@@ -376,32 +319,25 @@ export default function ListingDetailPage() {
   };
 
   const handleApplyDates = () => {
-    // Helper to format date as YYYY-MM-DD without timezone conversion issues
-    const formatLocalDate = (date) => {
+    const start = dateRange[0].startDate;
+    const end = dateRange[0].endDate;
+
+    if (start >= end) {
+      toast.error("Check-out date must be after check-in date.");
+      return;
+    }
+
+    // Helper to format date as YYYY-MM-DD in local timezone to avoid timezone shift issues
+    const toYMD = (date) => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const day = String(date.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
     };
 
-    const start = formatLocalDate(dateRange[0].startDate);
-    const end = formatLocalDate(dateRange[0].endDate);
-
-    if (start < end) {
-      setCheckIn(start);
-      setCheckOut(end);
-      setShowDatePicker(false);
-    } else {
-      toast.error("Check-out date must be after check-in date.");
-    }
-  };
-
-  const handleReserveNow = () => {
-    if (walletBalance < grandTotal) {
-      setShowInsufficientBalanceModal(true);
-    } else {
-      setShowBookingModal(true);
-    }
+    setCheckIn(toYMD(start));
+    setCheckOut(toYMD(end));
+    setShowDatePicker(false);
   };
 
   const nights = calculateNights();
@@ -411,7 +347,11 @@ export default function ListingDetailPage() {
   let discountAmount = 0;
   let isValidPromo = false;
 
-  if (promoCode && listingData.promoCode && promoCode.trim().toUpperCase() === listingData.promoCode.toUpperCase()) {
+  if (
+    promoCode &&
+    listingData.promoCode &&
+    promoCode.trim().toUpperCase() === listingData.promoCode.toUpperCase()
+  ) {
     isValidPromo = true;
     const discount = listingData.discount;
 
@@ -500,24 +440,18 @@ export default function ListingDetailPage() {
         const reviewsRef = collection(db, "reviews");
         const reviewQuery = query(
           reviewsRef,
-          where("listingId", "==", listing_id)
+          where("listing_id", "==", listing_id)
         );
         const reviewSnap = await getDocs(reviewQuery);
         const reviewCount = reviewSnap.size;
-
-        let totalRating = 0;
-        reviewSnap.docs.forEach(doc => {
-          totalRating += doc.data().rating;
-        });
-        const averageRating = reviewCount > 0 ? (totalRating / reviewCount).toFixed(1) : 0;
 
         const reviewsWithUsers = await Promise.all(
           reviewSnap.docs.map(async (reviewDoc) => {
             const reviewData = reviewDoc.data();
             let userData = null;
 
-            if (reviewData.guestId) {
-              const userRef = doc(db, "users", reviewData.guestId);
+            if (reviewData.user_id) {
+              const userRef = doc(db, "users", reviewData.user_id);
               const userSnap = await getDoc(userRef);
               if (userSnap.exists()) {
                 userData = userSnap.data();
@@ -544,16 +478,7 @@ export default function ListingDetailPage() {
           }
         }
 
-        setListingData({ ...data, reviewCount, rating: averageRating, host: hostData });
-
-        // Update the listing document with the new rating and review count
-        if (listingSnap.exists()) {
-          const listingRef = doc(db, "listings", listing_id);
-          await updateDoc(listingRef, {
-            rating: averageRating,
-            reviewCount: reviewCount
-          });
-        }
+        setListingData({ ...data, reviewCount, host: hostData });
 
         // Set map center based on listing coordinates
         if (data.coordinates?.lat && data.coordinates?.lng) {
@@ -618,13 +543,7 @@ export default function ListingDetailPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => {
-                if (!user) {
-                  navigate("/");
-                } else {
-                  window.history.back();
-                }
-              }}
+              onClick={() => window.history.back()}
               className="flex items-center gap-2 text-slate-300 hover:text-indigo-400 font-medium transition"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -632,7 +551,7 @@ export default function ListingDetailPage() {
             </button>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => handleActionWithVerification(() => setShowShareModal(true))}
+                onClick={() => setShowShareModal(true)}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-700 transition text-slate-300"
               >
                 <Share2 className="w-4 h-4" />
@@ -658,34 +577,32 @@ export default function ListingDetailPage() {
         </div>
       </header>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 mt-12 sm:mt-14">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 mt-[65px]">
         {/* Verification Banner */}
         {!isVerified && (
-          <div className="mb-4 sm:mb-6">
+          <div className="mb-6">
             <VerificationBanner handleVerification={handleVerification} />
           </div>
         )}
 
         {/* Title Section */}
-        <div className="mb-4 sm:mb-6">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2 sm:mb-3 break-words">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-white mb-3">
             {listingData?.title || "Loading..."}
           </h1>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm">
+          <div className="flex flex-wrap items-center gap-4 text-sm">
             <div className="flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-yellow-400 text-yellow-400 flex-shrink-0" />
+              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
               <span className="font-semibold text-white">
                 {listingData?.rating || "New"}
               </span>
-              <span className="text-slate-400 whitespace-nowrap">
+              <span className="text-slate-400">
                 ({listingData?.reviewCount || 0} reviews)
               </span>
             </div>
             <div className="flex items-center gap-1 text-slate-400">
-              <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-              <span className="truncate">
-                {listingData?.location || "Unknown location"}
-              </span>
+              <MapPin className="w-4 h-4" />
+              {listingData?.location || "Unknown location"}
             </div>
           </div>
         </div>
@@ -1018,7 +935,6 @@ export default function ListingDetailPage() {
 
                 <div className="border-2 border-slate-600 rounded-xl p-4 bg-gradient-to-br from-slate-700 to-slate-800 hover:border-indigo-500/50 transition-colors">
                   <label className="text-xs font-semibold text-slate-400 block mb-2 uppercase tracking-wider">
-                    <Gift className="w-3 h-3 inline mr-1" />
                     Promo Code (Optional)
                   </label>
                   <input
@@ -1033,7 +949,7 @@ export default function ListingDetailPage() {
 
               <button
                 onClick={() =>
-                  handleActionWithVerification(() => handleReserveNow())
+                  handleActionWithVerification(() => setShowBookingModal(true))
                 }
                 className="w-full bg-gradient-to-r from-indigo-600 to-indigo-600 hover:from-indigo-700 hover:to-indigo-700 text-white py-3.5 rounded-xl font-semibold transition-all duration-200 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 mb-4 flex items-center justify-center gap-2"
               >
@@ -1063,9 +979,11 @@ export default function ListingDetailPage() {
                 {isValidPromo && discountAmount > 0 && (
                   <div className="flex items-center justify-between pb-3 text-emerald-400">
                     <span className="text-emerald-300/80">
-                      Discount ({listingData.discount?.type === "percentage"
+                      Discount (
+                      {listingData.discount?.type === "percentage"
                         ? `${listingData.discount?.value}%`
-                        : "Fixed"})
+                        : "Fixed"}
+                      )
                     </span>
                     <span className="font-semibold text-emerald-400">
                       -₱{discountAmount?.toLocaleString() || 0}
@@ -1195,7 +1113,11 @@ export default function ListingDetailPage() {
               {promoCode && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-400">Promo Code</span>
-                  <span className={`font-medium ${isValidPromo ? "text-emerald-400" : "text-red-400"}`}>
+                  <span
+                    className={`font-medium ${
+                      isValidPromo ? "text-emerald-400" : "text-red-400"
+                    }`}
+                  >
                     {promoCode} {isValidPromo ? "✓" : "✗"}
                   </span>
                 </div>
@@ -1212,8 +1134,16 @@ export default function ListingDetailPage() {
                 </div>
                 {isValidPromo && discountAmount > 0 && (
                   <div className="flex items-center justify-between text-sm text-emerald-400">
-                    <span>Discount ({listingData.discount?.type === "percentage" ? `${listingData.discount?.value}%` : "Fixed"})</span>
-                    <span className="font-medium">-₱{discountAmount?.toLocaleString() || 0}</span>
+                    <span>
+                      Discount (
+                      {listingData.discount?.type === "percentage"
+                        ? `${listingData.discount?.value}%`
+                        : "Fixed"}
+                      )
+                    </span>
+                    <span className="font-medium">
+                      -₱{discountAmount?.toLocaleString() || 0}
+                    </span>
                   </div>
                 )}
                 <div className="flex items-center justify-between text-sm">
@@ -1253,68 +1183,6 @@ export default function ListingDetailPage() {
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Insufficient Balance Modal */}
-      {showInsufficientBalanceModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-            <div className="bg-slate-800 rounded-2xl shadow-lg w-full max-w-md p-6 border border-slate-700">
-                <h2 className="text-2xl font-bold text-white mb-4">
-                    Insufficient Balance
-                </h2>
-                <p className="text-slate-300 mb-6">
-                    Your current wallet balance is ₱{walletBalance.toLocaleString()}. This is not enough to cover the total amount of ₱{grandTotal.toLocaleString()}. Please add funds to your e-wallet to proceed with the booking.
-                </p>
-                <div className="flex gap-3">
-                    <button
-                        onClick={() => {
-                            setShowInsufficientBalanceModal(false);
-                            navigate('/guest/e-wallet');
-                        }}
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition"
-                    >
-                        Go to E-Wallet
-                    </button>
-                    <button
-                        onClick={() => setShowInsufficientBalanceModal(false)}
-                        className="flex-1 border border-slate-600 text-slate-300 hover:bg-slate-700 font-semibold py-3 rounded-lg transition"
-                    >
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        </div>
-      )}
-
-      {/* Login Modal */}
-      {showLoginModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-            <div className="bg-slate-800 rounded-2xl shadow-lg w-full max-w-md p-6 border border-slate-700">
-                <h2 className="text-2xl font-bold text-white mb-4">
-                    Please Sign In
-                </h2>
-                <p className="text-slate-300 mb-6">
-                    You need to be logged in to perform this action.
-                </p>
-                <div className="flex gap-3">
-                    <button
-                        onClick={() => {
-                            setShowLoginModal(false);
-                            navigate('/');
-                        }}
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition"
-                    >
-                        Sign In
-                    </button>
-                    <button
-                        onClick={() => setShowLoginModal(false)}
-                        className="flex-1 border border-slate-600 text-slate-300 hover:bg-slate-700 font-semibold py-3 rounded-lg transition"
-                    >
-                        Cancel
-                    </button>
-                </div>
-            </div>
         </div>
       )}
 
@@ -1428,292 +1296,289 @@ export default function ListingDetailPage() {
       {/* Date Range Picker Modal */}
       {showDatePicker && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col border border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-xl max-h-[80vh] overflow-auto p-5 border border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
             {/* Header */}
-            <div className="p-5 border-b border-slate-700 flex-shrink-0">
-                <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-indigo-400" />
-                    Select Dates
-                </h3>
-                <button
-                    onClick={() => setShowDatePicker(false)}
-                    className="text-indigo-400/60 hover:text-indigo-400 transition"
-                >
-                    <X className="w-5 h-5" />
-                </button>
-                </div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-indigo-400" />
+                Select Dates
+              </h3>
+              <button
+                onClick={() => setShowDatePicker(false)}
+                className="text-indigo-400/60 hover:text-indigo-400 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {/* Body */}
-            <div className="overflow-y-auto p-5">
-                {/* Available Dates */}
-                {Array.isArray(listingData.availableDates) && listingData.availableDates.length > 0 && (
+            {/* Available Dates */}
+            {Array.isArray(listingData.availableDates) &&
+              listingData.availableDates.length > 0 && (
                 <div className="mb-4 p-3 bg-slate-900/50 rounded-lg border border-green-500/30">
-                    <div className="text-xs font-semibold text-green-400 mb-2 flex items-center gap-1">
+                  <div className="text-xs font-semibold text-green-400 mb-2 flex items-center gap-1">
                     <Check className="w-4 h-4" />
                     Available Dates
-                    </div>
-                    <div className="space-y-1">
+                  </div>
+                  <div className="space-y-1">
                     {listingData.availableDates.map((range, idx) => (
-                        <div key={idx} className="text-xs text-slate-300">
+                      <div key={idx} className="text-xs text-slate-300">
                         <span className="text-green-400 font-medium">
-                            {new Date(range.startDate).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            })}
+                          {new Date(range.startDate).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                            }
+                          )}
                         </span>
                         <span className="text-slate-500 mx-1">→</span>
                         <span className="text-green-400 font-medium">
-                            {new Date(range.endDate).toLocaleDateString("en-US", {
+                          {new Date(range.endDate).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
-                            })}
+                          })}
                         </span>
-                        </div>
+                      </div>
                     ))}
-                    </div>
+                  </div>
                 </div>
-                )}
+              )}
 
-                {/* Date Range Picker */}
-                <div className="mb-4 w-full flex justify-center">
-                <style>{`
-                    .rdrCalendarWrapper {
-                    background-color: rgba(15, 23, 42, 0.8);
-                    border-radius: 12px;
-                    width: 100%;
-                    padding: 16px;
-                    }
-                    .rdrCalendarContainer {
-                    width: 100%;
-                    }
-                    .rdrMonth {
-                    width: 100%;
-                    padding: 0 10px;
-                    }
-                    .rdrMonths {
-                    width: 100%;
-                    display: flex;
-                    gap: 20px;
-                    }
-                    .rdrMonthAndYearWrapper {
-                    background-color: rgba(30, 41, 59, 0.5);
-                    border-radius: 8px;
-                    padding: 10px;
-                    margin-bottom: 12px;
-                    text-align: center;
-                    color: #a5b4fc;
-                    font-weight: 600;
-                    font-size: 14px;
-                    }
-                    .rdrMonthAndYearPickers button {
-                    color: #a5b4fc;
-                    padding: 2px 6px;
-                    }
-                    .rdrMonthAndYearPickers button:hover {
-                    background-color: rgba(79, 70, 229, 0.2);
-                    }
-                    .rdrDayNames {
-                    margin-bottom: 10px;
-                    display: grid;
-                    grid-template-columns: repeat(7, 1fr);
-                    gap: 3px;
-                    }
-                    .rdrDayName {
-                    color: #c7d2fe;
-                    font-size: 11px;
-                    font-weight: 600;
-                    text-align: center;
-                    padding: 6px 0;
-                    }
-                    .rdrDays {
-                    display: grid;
-                    grid-template-columns: repeat(7, 1fr);
-                    gap: 3px;
-                    }
-                    .rdrDayDisabled {
-                    background-color: transparent;
-                    }
-                    .rdrDay {
-                    height: 42px;
-                    display: flex !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    border-radius: 6px;
-                    border: 1px solid transparent !important;
-                    cursor: pointer;
-                    position: relative;
-                    width: 100%;
-                    padding: 0 !important;
-                    margin: 0 !important;
-                    }
-                    .rdrDayNumber {
-                    color: #cbd5e1;
-                    font-size: 13px;
-                    font-weight: 500;
-                    position: relative;
-                    z-index: 1;
-                    text-decoration: none !important;
-                    border: none !important;
-                    outline: none !important;
-                    }
-                    .rdrDayNumber span {
-                    color: #cbd5e1;
-                    text-decoration: none !important;
-                    border: none !important;
-                    }
-                    .rdrDayNumber::before,
-                    .rdrDayNumber::after {
-                    content: none !important;
-                    }
-                    .rdrStartEdge {
-                    border-radius: 6px 0 0 6px !important;
-                    border: 1px solid #818cf8 !important;
-                    border-right: none !important;
-                    background-color: #6366f1 !important;
-                    width: 100% !important;
-                    }
-                    .rdrStartEdge::after {
-                    content: none !important;
-                    }
-                    .rdrEndEdge {
-                    border-radius: 0 6px 6px 0 !important;
-                    border: 1px solid #818cf8 !important;
-                    border-left: none !important;
-                    background-color: #6366f1 !important;
-                    width: 100% !important;
-                    }
-                    .rdrEndEdge::before {
-                    content: none !important;
-                    }
-                    .rdrDayStartPreview {
-                    background-color: #6366f1 !important;
-                    border-radius: 6px !important;
-                    border: 1px solid #818cf8 !important;
-                    width: 100% !important;
-                    }
-                    .rdrDayInPreview {
-                    background-color: rgba(99, 102, 241, 0.2) !important;
-                    border: none !important;
-                    width: 100% !important;
-                    }
-                    .rdrDayInPreview::before,
-                    .rdrDayInPreview::after {
-                    content: none !important;
-                    }
-                    .rdrDayEndPreview {
-                    background-color: #6366f1 !important;
-                    border-radius: 6px !important;
-                    border: 1px solid #818cf8 !important;
-                    width: 100% !important;
-                    }
-                    .rdrDayInRange {
-                    background-color: rgba(99, 102, 241, 0.2) !important;
-                    border: none !important;
-                    width: 100% !important;
-                    }
-                    .rdrDayInRange::before,
-                    .rdrDayInRange::after {
-                    content: none !important;
-                    }
-                    .rdrDayStartOfMonth,
-                    .rdrDayEndOfMonth {
-                    background-color: transparent;
-                    }
-                    .rdrDaySelected {
-                    background-color: #6366f1 !important;
-                    color: #ffffff !important;
-                    border-radius: 6px !important;
-                    border: 1px solid #818cf8 !important;
-                    }
-                    .rdrDaySelected .rdrDayNumber {
-                    color: #ffffff !important;
-                    }
-                    .rdrDayStartOfWeek,
-                    .rdrDayEndOfWeek {
-                    border-radius: 6px;
-                    }
-                    /* Scrollbar Styling */
-                    div:has(> .DateRange)::-webkit-scrollbar {
-                    width: 8px;
-                    }
-                    div:has(> .DateRange)::-webkit-scrollbar-track {
-                    background-color: rgba(30, 41, 59, 0.5);
-                    border-radius: 10px;
-                    }
-                    div:has(> .DateRange)::-webkit-scrollbar-thumb {
-                    background: linear-gradient(180deg, #6366f1 0%, #818cf8 100%);
-                    border-radius: 10px;
-                    border: 2px solid rgba(30, 41, 59, 0.5);
-                    }
-                    div:has(> .DateRange)::-webkit-scrollbar-thumb:hover {
-                    background: linear-gradient(180deg, #818cf8 0%, #a5b4fc 100%);
-                    }
-                `}</style>
-                <DateRange
-                    editableDateInputs={false}
-                    onChange={handleDateRangeChange}
-                    moveRangeOnFirstSelection={false}
-                    ranges={dateRange}
-                    months={2}
-                    direction="horizontal"
-                    showMonthAndYearPickers={false}
-                />
-                </div>
-
-                {/* Selected dates summary */}
-                <div className="p-3 bg-slate-900/50 rounded-lg border border-indigo-500/20">
-                <div className="flex items-center justify-between text-sm">
-                    <div>
-                    <div className="text-xs text-slate-400 mb-1">Check-in</div>
-                    <div className="text-sm font-semibold text-white">
-                        {dateRange[0].startDate.toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        })}
-                    </div>
-                    </div>
-                    <div className="text-slate-500">→</div>
-                    <div className="text-right">
-                    <div className="text-xs text-slate-400 mb-1">Check-out</div>
-                    <div className="text-sm font-semibold text-white">
-                        {dateRange[0].endDate.toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        })}
-                    </div>
-                    </div>
-                </div>
-                <div className="text-xs text-slate-400 text-center mt-2">
-                    {Math.ceil(
-                    (dateRange[0].endDate - dateRange[0].startDate) /
-                        (1000 * 60 * 60 * 24)
-                    )}{" "}
-                    nights
-                </div>
-                </div>
+            {/* Date Range Picker */}
+            <div className="mb-4 w-full flex justify-center">
+              <style>{`
+                .rdrCalendarWrapper {
+                  background-color: rgba(15, 23, 42, 0.8);
+                  border-radius: 12px;
+                  width: 100%;
+                  padding: 16px;
+                }
+                .rdrCalendarContainer {
+                  width: 100%;
+                }
+                .rdrMonth {
+                  width: 100%;
+                  padding: 0 10px;
+                }
+                .rdrMonths {
+                  width: 100%;
+                  display: flex;
+                  gap: 20px;
+                }
+                .rdrMonthAndYearWrapper {
+                  background-color: rgba(30, 41, 59, 0.5);
+                  border-radius: 8px;
+                  padding: 10px;
+                  margin-bottom: 12px;
+                  text-align: center;
+                  color: #a5b4fc;
+                  font-weight: 600;
+                  font-size: 14px;
+                }
+                .rdrMonthAndYearPickers button {
+                  color: #a5b4fc;
+                  padding: 2px 6px;
+                }
+                .rdrMonthAndYearPickers button:hover {
+                  background-color: rgba(79, 70, 229, 0.2);
+                }
+                .rdrDayNames {
+                  margin-bottom: 10px;
+                  display: grid;
+                  grid-template-columns: repeat(7, 1fr);
+                  gap: 3px;
+                }
+                .rdrDayName {
+                  color: #c7d2fe;
+                  font-size: 11px;
+                  font-weight: 600;
+                  text-align: center;
+                  padding: 6px 0;
+                }
+                .rdrDays {
+                  display: grid;
+                  grid-template-columns: repeat(7, 1fr);
+                  gap: 3px;
+                }
+                .rdrDayDisabled {
+                  background-color: transparent;
+                }
+                .rdrDay {
+                  height: 42px;
+                  display: flex !important;
+                  align-items: center !important;
+                  justify-content: center !important;
+                  border-radius: 6px;
+                  border: 1px solid transparent !important;
+                  cursor: pointer;
+                  position: relative;
+                  width: 100%;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                }
+                .rdrDayNumber {
+                  color: #cbd5e1;
+                  font-size: 13px;
+                  font-weight: 500;
+                  position: relative;
+                  z-index: 1;
+                  text-decoration: none !important;
+                  border: none !important;
+                  outline: none !important;
+                }
+                .rdrDayNumber span {
+                  color: #cbd5e1;
+                  text-decoration: none !important;
+                  border: none !important;
+                }
+                .rdrDayNumber::before,
+                .rdrDayNumber::after {
+                  content: none !important;
+                }
+                .rdrStartEdge {
+                  border-radius: 6px 0 0 6px !important;
+                  border: 1px solid #818cf8 !important;
+                  border-right: none !important;
+                  background-color: #6366f1 !important;
+                  width: 100% !important;
+                }
+                .rdrStartEdge::after {
+                  content: none !important;
+                }
+                .rdrEndEdge {
+                  border-radius: 0 6px 6px 0 !important;
+                  border: 1px solid #818cf8 !important;
+                  border-left: none !important;
+                  background-color: #6366f1 !important;
+                  width: 100% !important;
+                }
+                .rdrEndEdge::before {
+                  content: none !important;
+                }
+                .rdrDayStartPreview {
+                  background-color: #6366f1 !important;
+                  border-radius: 6px !important;
+                  border: 1px solid #818cf8 !important;
+                  width: 100% !important;
+                }
+                .rdrDayInPreview {
+                  background-color: rgba(99, 102, 241, 0.2) !important;
+                  border: none !important;
+                  width: 100% !important;
+                }
+                .rdrDayInPreview::before,
+                .rdrDayInPreview::after {
+                  content: none !important;
+                }
+                .rdrDayEndPreview {
+                  background-color: #6366f1 !important;
+                  border-radius: 6px !important;
+                  border: 1px solid #818cf8 !important;
+                  width: 100% !important;
+                }
+                .rdrDayInRange {
+                  background-color: rgba(99, 102, 241, 0.2) !important;
+                  border: none !important;
+                  width: 100% !important;
+                }
+                .rdrDayInRange::before,
+                .rdrDayInRange::after {
+                  content: none !important;
+                }
+                .rdrDayStartOfMonth,
+                .rdrDayEndOfMonth {
+                  background-color: transparent;
+                }
+                .rdrDaySelected {
+                  background-color: #6366f1 !important;
+                  color: #ffffff !important;
+                  border-radius: 6px !important;
+                  border: 1px solid #818cf8 !important;
+                }
+                .rdrDaySelected .rdrDayNumber {
+                  color: #ffffff !important;
+                }
+                .rdrDayStartOfWeek,
+                .rdrDayEndOfWeek {
+                  border-radius: 6px;
+                }
+                /* Scrollbar Styling */
+                div:has(> .DateRange)::-webkit-scrollbar {
+                  width: 8px;
+                }
+                div:has(> .DateRange)::-webkit-scrollbar-track {
+                  background-color: rgba(30, 41, 59, 0.5);
+                  border-radius: 10px;
+                }
+                div:has(> .DateRange)::-webkit-scrollbar-thumb {
+                  background: linear-gradient(180deg, #6366f1 0%, #818cf8 100%);
+                  border-radius: 10px;
+                  border: 2px solid rgba(30, 41, 59, 0.5);
+                }
+                div:has(> .DateRange)::-webkit-scrollbar-thumb:hover {
+                  background: linear-gradient(180deg, #818cf8 0%, #a5b4fc 100%);
+                }
+              `}</style>
+              <DateRange
+                editableDateInputs={false}
+                onChange={handleDateRangeChange}
+                moveRangeOnFirstSelection={false}
+                ranges={dateRange}
+                months={2}
+                direction="horizontal"
+                showMonthAndYearPickers={false}
+              />
             </div>
 
-            {/* Footer */}
-            <div className="p-5 border-t border-slate-700 flex-shrink-0 bg-slate-800/50">
-                <div className="flex gap-2">
-                <button
-                    onClick={() => setShowDatePicker(false)}
-                    className="flex-1 px-4 py-2 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 hover:border-indigo-500/50 transition font-medium text-sm"
-                >
-                    Cancel
-                </button>
-                <button
-                    onClick={handleApplyDates}
-                    className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition flex items-center justify-center gap-2 font-medium text-sm shadow-lg shadow-indigo-500/20"
-                >
-                    <Calendar className="w-4 h-4" />
-                    Apply Dates
-                </button>
+            {/* Selected dates summary */}
+            <div className="mb-4 p-3 bg-slate-900/50 rounded-lg border border-indigo-500/20">
+              <div className="flex items-center justify-between text-sm">
+                <div>
+                  <div className="text-xs text-slate-400 mb-1">Check-in</div>
+                  <div className="text-sm font-semibold text-white">
+                    {dateRange[0].startDate.toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </div>
                 </div>
+                <div className="text-slate-500">→</div>
+                <div className="text-right">
+                  <div className="text-xs text-slate-400 mb-1">Check-out</div>
+                  <div className="text-sm font-semibold text-white">
+                    {dateRange[0].endDate.toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div className="text-xs text-slate-400 text-center mt-2">
+                {Math.ceil(
+                  (dateRange[0].endDate - dateRange[0].startDate) /
+                    (1000 * 60 * 60 * 24)
+                )}{" "}
+                nights
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDatePicker(false)}
+                className="flex-1 px-4 py-2 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 hover:border-indigo-500/50 transition font-medium text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApplyDates}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition flex items-center justify-center gap-2 font-medium text-sm shadow-lg shadow-indigo-500/20"
+              >
+                <Calendar className="w-4 h-4" />
+                Apply Dates
+              </button>
             </div>
           </div>
         </div>

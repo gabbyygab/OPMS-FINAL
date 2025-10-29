@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import AddFundsPaypal from "../paypal/AddFundsPaypal";
+import ReceiptModal from "./ReceiptModal";
 import {
   addDoc,
   collection,
@@ -33,6 +34,10 @@ export default function WalletPage({ user, userData }) {
   const [showPaypal, setShowPaypal] = useState(false);
 
   const [transactions, setTransactions] = useState([]);
+
+  // Receipt Modal
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   //get wallet from user
   const getWalletDataFromCurrentUser = async (user_id) => {
@@ -179,6 +184,11 @@ export default function WalletPage({ user, userData }) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleViewReceipt = (transaction) => {
+    setSelectedTransaction(transaction);
+    setShowReceiptModal(true);
   };
 
   const getTransactionIcon = (type) => {
@@ -473,20 +483,41 @@ export default function WalletPage({ user, userData }) {
                       </p>
                     </div>
 
-                    <div className="text-right">
-                      <p
-                        className={`text-lg font-bold ${
-                          transaction.amount > 0
-                            ? "text-green-400"
-                            : "text-red-400"
-                        }`}
+                    <div className="text-right space-y-2">
+                      <div>
+                        <p
+                          className={`text-lg font-bold ${
+                            transaction.amount > 0
+                              ? "text-green-400"
+                              : "text-red-400"
+                          }`}
+                        >
+                          {transaction.amount > 0 ? "+" : ""}₱
+                          {Math.abs(transaction.amount).toFixed(2)}
+                        </p>
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
+                          {transaction.status}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleViewReceipt(transaction)}
+                        className="w-full px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 hover:text-indigo-200 text-xs font-semibold rounded transition-colors flex items-center justify-center gap-1"
                       >
-                        {transaction.amount > 0 ? "+" : ""}₱
-                        {Math.abs(transaction.amount).toFixed(2)}
-                      </p>
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
-                        {transaction.status}
-                      </span>
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        Receipt
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -703,6 +734,18 @@ export default function WalletPage({ user, userData }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Receipt Modal */}
+      {showReceiptModal && selectedTransaction && (
+        <ReceiptModal
+          transaction={selectedTransaction}
+          user={user}
+          onClose={() => {
+            setShowReceiptModal(false);
+            setSelectedTransaction(null);
+          }}
+        />
       )}
     </div>
   );

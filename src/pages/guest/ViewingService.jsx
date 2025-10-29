@@ -75,6 +75,7 @@ export default function ServiceDetailPage() {
   const [selectedTime, setSelectedTime] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
+  const [promoCode, setPromoCode] = useState("");
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [serviceData, setServiceData] = useState({});
   const [reviewsData, setReviewsData] = useState([]);
@@ -113,8 +114,27 @@ export default function ServiceDetailPage() {
   };
 
   const basePrice = serviceData?.price || 0;
-  const serviceFee = basePrice * 0.12;
-  const totalPrice = basePrice + serviceFee;
+
+  // Calculate discount if promo code matches
+  let discountAmount = 0;
+  let isValidPromo = false;
+
+  if (promoCode && serviceData.promoCode && promoCode.trim().toUpperCase() === serviceData.promoCode.toUpperCase()) {
+    isValidPromo = true;
+    const discount = serviceData.discount;
+
+    if (discount) {
+      if (discount.type === "percentage") {
+        discountAmount = basePrice * (discount.value / 100);
+      } else if (discount.type === "fixed") {
+        discountAmount = discount.value;
+      }
+    }
+  }
+
+  const totalPrice = basePrice - discountAmount;
+  const serviceFee = totalPrice * 0.12;
+  const finalTotal = totalPrice + serviceFee;
 
   const nextPhoto = () => {
     setCurrentPhotoIndex(
@@ -711,6 +731,19 @@ export default function ServiceDetailPage() {
 
                 <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
                   <label className="text-xs font-medium text-slate-300 block mb-1">
+                    PROMO CODE (OPTIONAL)
+                  </label>
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    placeholder="Enter promo code"
+                    className="w-full text-sm font-medium focus:outline-none rounded-lg bg-slate-600/50 text-white placeholder-slate-400 px-3 py-2 border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  />
+                </div>
+
+                <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
+                  <label className="text-xs font-medium text-slate-300 block mb-1">
                     ADDITIONAL NOTES (OPTIONAL)
                   </label>
                   <textarea
@@ -743,6 +776,21 @@ export default function ServiceDetailPage() {
                     ₱{basePrice.toLocaleString()}
                   </span>
                 </div>
+
+                {/* Discount Row - Only show if valid promo code */}
+                {isValidPromo && discountAmount > 0 && (
+                  <div className="flex items-center justify-between text-emerald-400">
+                    <span className="text-emerald-300/80">
+                      Discount ({serviceData.discount?.type === "percentage"
+                        ? `${serviceData.discount?.value}%`
+                        : "Fixed"})
+                    </span>
+                    <span className="font-semibold text-emerald-400">
+                      -₱{discountAmount.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400">Service fee</span>
                   <span className="font-medium text-white">
@@ -754,7 +802,7 @@ export default function ServiceDetailPage() {
                     Estimated total
                   </span>
                   <span className="font-bold text-white text-lg">
-                    ₱{totalPrice.toLocaleString()}
+                    ₱{finalTotal.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -881,6 +929,14 @@ export default function ServiceDetailPage() {
                 <span className="text-slate-400">Preferred time</span>
                 <span className="font-medium text-white">{selectedTime}</span>
               </div>
+              {promoCode && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Promo Code</span>
+                  <span className={`font-medium ${isValidPromo ? "text-emerald-400" : "text-red-400"}`}>
+                    {promoCode} {isValidPromo ? "✓" : "✗"}
+                  </span>
+                </div>
+              )}
               {additionalNotes && (
                 <div className="text-sm">
                   <span className="text-slate-400 block mb-1">Notes:</span>
@@ -892,15 +948,34 @@ export default function ServiceDetailPage() {
             </div>
 
             <div className="border-t border-slate-600 pt-4 mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-slate-400">Estimated total</span>
-                <span className="text-2xl font-bold text-white">
-                  ₱{totalPrice.toLocaleString()}
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Base price</span>
+                  <span className="font-medium text-white">
+                    ₱{basePrice.toLocaleString()}
+                  </span>
+                </div>
+                {isValidPromo && discountAmount > 0 && (
+                  <div className="flex items-center justify-between text-sm text-emerald-400">
+                    <span>Discount ({serviceData.discount?.type === "percentage" ? `${serviceData.discount?.value}%` : "Fixed"})</span>
+                    <span className="font-medium">-₱{discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Service fee</span>
+                  <span className="font-medium text-white">
+                    ₱{serviceFee.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between mb-2 border-t border-slate-600 pt-3">
+                <span className="text-white font-semibold">Estimated total</span>
+                <span className="text-2xl font-bold text-indigo-400">
+                  ₱{finalTotal.toLocaleString()}
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Includes ₱{serviceFee.toLocaleString()} service fee · Final
-                quote will be provided by provider
+                Final quote will be provided by provider
               </p>
             </div>
 

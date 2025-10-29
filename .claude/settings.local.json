@@ -13,7 +13,9 @@
       "WebFetch(domain:ui.shadcn.com)",
       "WebFetch(domain:bundlephobia.com)",
       "Bash(cd D:Web AppsOPMS-FINAL)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(\"cd\" \"D:\\Web Apps\\OPMS-FINAL\")",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

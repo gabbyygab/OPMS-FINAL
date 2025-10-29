@@ -31,6 +31,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-toastify";
 import LoadingSpinner from "../loading/Loading";
+import { sendBookingCancellationEmail } from "../utils/sendBookingCancellationEmail";
 
 function parseDate(dateStr) {
   return dateStr ? new Date(dateStr) : null;
@@ -149,6 +150,25 @@ export default function MyBookingsSection() {
 
       // Update local state
       setBookings(bookings.filter((b) => b.id !== selectedBooking.id));
+
+      // Send cancellation email to guest
+      try {
+        await sendBookingCancellationEmail(
+          selectedBooking,
+          {
+            email: user.email,
+            fullName: user.displayName || "Guest",
+          },
+          {
+            cancellationReason: "Booking cancelled by guest",
+            basePrice: selectedBooking.totalAmount || selectedBooking.price,
+            refundAmount: 0, // No refund for pending bookings
+          }
+        );
+      } catch (emailError) {
+        console.error("Error sending cancellation email:", emailError);
+        // Don't fail the cancellation if email fails
+      }
 
       toast.dismiss(loadingToast);
       toast.success("Booking cancelled successfully!");
@@ -274,6 +294,29 @@ export default function MyBookingsSection() {
 
       // Update local state
       setBookings(bookings.filter((b) => b.id !== selectedBooking.id));
+
+      // Send cancellation/refund email to guest
+      try {
+        const basePriceAmount = selectedBooking.totalAmount || selectedBooking.price;
+        const serviceFeeAmount = Math.round(basePriceAmount * 0.05 * 100) / 100;
+
+        await sendBookingCancellationEmail(
+          selectedBooking,
+          {
+            email: user.email,
+            fullName: user.displayName || "Guest",
+          },
+          {
+            cancellationReason: "Booking cancelled by guest",
+            basePrice: basePriceAmount,
+            serviceFee: serviceFeeAmount,
+            refundAmount: selectedBooking.totalAmount,
+          }
+        );
+      } catch (emailError) {
+        console.error("Error sending refund email:", emailError);
+        // Don't fail the refund if email fails
+      }
 
       toast.dismiss(loadingToast);
       toast.success("Booking cancelled and refund processed successfully!");

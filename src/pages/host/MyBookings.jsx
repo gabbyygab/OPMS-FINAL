@@ -28,6 +28,7 @@ import {
   addDoc,
   serverTimestamp,
 } from "firebase/firestore";
+import emailjs from "@emailjs/browser";
 import LoadingSpinner from "../../loading/Loading";
 import { useAuth } from "../../context/AuthContext";
 import { toast } from "react-toastify";
@@ -54,6 +55,24 @@ export default function HostMyBookings() {
   const { user, userData } = useAuth();
   const navigate = useNavigate();
   const itemsPerPage = 8;
+
+  // Initialize EmailJS
+  useEffect(() => {
+    const publicKey = import.meta.env.VITE_EMAIL_JS_PUBLIC_KEY?.trim();
+    if (publicKey) {
+      try {
+        emailjs.init({
+          publicKey: publicKey,
+          blockHeadless: false,
+        });
+        console.log("✓ EmailJS initialized successfully");
+      } catch (err) {
+        console.error("Failed to initialize EmailJS:", err);
+      }
+    } else {
+      console.warn("EmailJS public key not found in environment variables");
+    }
+  }, []);
 
   // Fetch bookings for host's listings
   useEffect(() => {
@@ -90,7 +109,7 @@ export default function HostMyBookings() {
         }
 
         const bookingSnapshots = await Promise.all(bookingPromises);
-        const bookingsDocs = bookingSnapshots.flatMap(snap => snap.docs);
+        const bookingsDocs = bookingSnapshots.flatMap((snap) => snap.docs);
 
         // Enrich bookings with listing and guest data
         const enrichedBookings = await Promise.all(
@@ -178,6 +197,189 @@ export default function HostMyBookings() {
     filterBookings(bookings, status, searchTerm);
   };
 
+  // Send booking confirmation email
+  const sendBookingConfirmationEmail = async (booking, guestData) => {
+    try {
+      const listing = booking.listing;
+      const serviceId = import.meta.env.VITE_EMAIL_JS_SERVICE_ID;
+      const templateId = import.meta.env.VITE_BOOKING_EMAIL_JS_TEMPLATE_ID;
+
+      if (!serviceId || !templateId) {
+        console.warn("EmailJS service or template ID not configured");
+        return;
+      }
+
+      if (!guestData?.email) {
+        console.warn("Guest email not available, skipping email send");
+        return;
+      }
+
+      // Calculate base price and service fee
+      const totalAmount = booking.totalAmount || 0;
+      const serviceFee = totalAmount * 0.05;
+
+      // Generate booking type-specific details HTML
+      let bookingDetailsHtml = "";
+      if (booking.type === "stays") {
+        const checkInDate = booking.checkIn
+          ? new Date(
+              booking.checkIn.toDate?.() || booking.checkIn
+            ).toLocaleDateString()
+          : "N/A";
+        const checkOutDate = booking.checkOut
+          ? new Date(
+              booking.checkOut.toDate?.() || booking.checkOut
+            ).toLocaleDateString()
+          : "N/A";
+        let nights = 1;
+        if (booking.checkIn && booking.checkOut) {
+          const checkInObj = new Date(
+            booking.checkIn.toDate?.() || booking.checkIn
+          );
+          const checkOutObj = new Date(
+            booking.checkOut.toDate?.() || booking.checkOut
+          );
+          nights = Math.max(
+            Math.ceil((checkOutObj - checkInObj) / (1000 * 60 * 60 * 24)),
+            1
+          );
+        }
+        bookingDetailsHtml = `
+          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
+            <span style="color: #6b7280; font-weight: 500;">Check-in Date</span>
+            <span style="color: #1f2937; font-weight: 600;">${checkInDate}</span>
+          </div>
+          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
+            <span style="color: #6b7280; font-weight: 500;">Check-out Date</span>
+            <span style="color: #1f2937; font-weight: 600;">${checkOutDate}</span>
+          </div>
+          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
+            <span style="color: #6b7280; font-weight: 500;">Number of Nights</span>
+            <span style="color: #1f2937; font-weight: 600;">${nights}</span>
+          </div>
+        `;
+      } else if (booking.type === "experiences") {
+        const expDate = booking.selectedDateTime?.date || "N/A";
+        const expTime = booking.selectedDateTime?.time || "N/A";
+        const duration = listing?.duration || 0;
+        bookingDetailsHtml = `
+          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
+            <span style="color: #6b7280; font-weight: 500;">Experience Date</span>
+            <span style="color: #1f2937; font-weight: 600;">${expDate}</span>
+          </div>
+          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
+            <span style="color: #6b7280; font-weight: 500;">Experience Time</span>
+            <span style="color: #1f2937; font-weight: 600;">${expTime}</span>
+          </div>
+          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
+            <span style="color: #6b7280; font-weight: 500;">Duration</span>
+            <span style="color: #1f2937; font-weight: 600;">${duration} hours</span>
+          </div>
+        `;
+      } else if (booking.type === "services") {
+        const svcDate = booking.selectedDateTime?.date || "N/A";
+        const svcTime = booking.selectedDateTime?.time || "N/A";
+        const duration = listing?.duration || 0;
+        bookingDetailsHtml = `
+          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
+            <span style="color: #6b7280; font-weight: 500;">Service Date</span>
+            <span style="color: #1f2937; font-weight: 600;">${svcDate}</span>
+          </div>
+          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
+            <span style="color: #6b7280; font-weight: 500;">Service Time</span>
+            <span style="color: #1f2937; font-weight: 600;">${svcTime}</span>
+          </div>
+          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
+            <span style="color: #6b7280; font-weight: 500;">Duration</span>
+            <span style="color: #1f2937; font-weight: 600;">${duration} hours</span>
+          </div>
+        `;
+      }
+
+      // Prepare email template variables (MUST match template {{variables}})
+      const emailParams = {
+        to_email: guestData.email,
+        guestName: guestData.fullName || "Guest",
+        listingTitle: listing?.title || "N/A",
+        listingLocation: listing?.location || "N/A",
+        listingRating: listing?.rating || 0,
+        listingType: listing?.type
+          ? listing.type.charAt(0).toUpperCase() + listing.type.slice(1)
+          : "Booking",
+        bookingId: booking.id || "N/A",
+        numberOfGuests: booking.numberOfGuests || booking.totalGuests || 1,
+        basePrice: totalAmount.toFixed(2),
+        serviceFee: serviceFee.toFixed(2),
+        totalAmount: totalAmount.toFixed(2),
+        dashboardLink: `${window.location.origin}/guest/my-bookings`,
+      };
+
+      // Send email using EmailJS
+      console.log("Sending booking confirmation email to:", guestData.email);
+      console.log("Email params:", emailParams);
+
+      try {
+        const response = await emailjs.send(serviceId, templateId, emailParams);
+
+        console.log("✓ Booking confirmation email sent successfully", {
+          status: response.status,
+          to: guestData.email,
+          bookingId: booking.id,
+        });
+      } catch (emailError) {
+        // If primary template fails, try alternative approach
+        console.warn(
+          "Primary template failed, attempting alternative send:",
+          emailError?.message
+        );
+
+        // Try using the alternative email service if available
+        const altServiceId = import.meta.env.VITE_EMAIL_JS_ANOTHER_SERVICE_ID;
+        const altPublicKey = import.meta.env.VITE_EMAIL_JS_ANOTHER_PUBLIC_KEY;
+
+        if (altServiceId && altPublicKey) {
+          try {
+            emailjs.init({
+              publicKey: altPublicKey,
+              blockHeadless: false,
+            });
+
+            const altResponse = await emailjs.send(
+              altServiceId,
+              templateId,
+              emailParams
+            );
+
+            console.log("✓ Email sent via alternative service:", {
+              status: altResponse.status,
+              to: guestData.email,
+            });
+          } catch (altError) {
+            console.error(
+              "Alternative email service also failed:",
+              altError?.message
+            );
+            // Re-initialize with primary key for future emails
+            emailjs.init({
+              publicKey: import.meta.env.VITE_EMAIL_JS_PUBLIC_KEY,
+              blockHeadless: false,
+            });
+          }
+        } else {
+          throw emailError;
+        }
+      }
+    } catch (error) {
+      console.error("Error sending booking confirmation email:", {
+        message: error?.message,
+        status: error?.status,
+        errorText: error?.text,
+        fullError: error,
+      });
+      // Don't throw error - email failure shouldn't stop booking confirmation
+    }
+  };
+
   // Handle confirm booking
   const handleConfirmBooking = async () => {
     if (!bookingToAction) return;
@@ -256,11 +458,9 @@ export default function HostMyBookings() {
         const hostWalletData = hostWalletDoc.data();
 
         await updateDoc(doc(db, "wallets", hostWalletDoc.id), {
-          balance:
-            hostWalletData.balance + bookingToAction.totalAmount,
+          balance: hostWalletData.balance + bookingToAction.totalAmount,
           total_cash_in:
-            (hostWalletData.total_cash_in || 0) +
-            bookingToAction.totalAmount,
+            (hostWalletData.total_cash_in || 0) + bookingToAction.totalAmount,
         });
 
         // Create host transaction
@@ -292,6 +492,15 @@ export default function HostMyBookings() {
         isRead: false,
         createdAt: serverTimestamp(),
       });
+
+      // Send booking confirmation email to guest
+      const guestRef = doc(db, "users", bookingToAction.guest_id);
+      const guestSnap = await getDoc(guestRef);
+      const guestData = guestSnap.exists() ? guestSnap.data() : null;
+
+      if (guestData) {
+        await sendBookingConfirmationEmail(bookingToAction, guestData);
+      }
 
       // Update local state
       const updatedBooking = {
@@ -385,7 +594,7 @@ export default function HostMyBookings() {
       // Update booking status to completed
       await updateDoc(doc(db, "bookings", bookingToAction.id), {
         status: "completed",
-        completedAt: serverTimestamp()
+        completedAt: serverTimestamp(),
       });
 
       // Create notification for guest to leave a review
@@ -398,13 +607,13 @@ export default function HostMyBookings() {
         listingId: bookingToAction.listing_id,
         bookingId: bookingToAction.id,
         isRead: false,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       });
 
       // Update local state
       const updatedBooking = {
         ...bookingToAction,
-        status: "completed"
+        status: "completed",
       };
 
       const updatedBookings = bookings.map((b) =>
@@ -427,7 +636,6 @@ export default function HostMyBookings() {
       setIsProcessing(false);
     }
   };
-
 
   // Pagination
   const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
@@ -529,8 +737,7 @@ export default function HostMyBookings() {
         day
       );
       const dayBookings = getBookingsForDate(date);
-      const isToday =
-        date.toDateString() === new Date().toDateString();
+      const isToday = date.toDateString() === new Date().toDateString();
 
       days.push(
         <div
@@ -615,7 +822,9 @@ export default function HostMyBookings() {
             </div>
           </div>
           <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-            <div className="text-red-400 text-sm font-medium mb-2">Rejected</div>
+            <div className="text-red-400 text-sm font-medium mb-2">
+              Rejected
+            </div>
             <div className="text-3xl font-bold text-red-300">
               {stats.rejected}
             </div>
@@ -701,7 +910,8 @@ export default function HostMyBookings() {
             {selectedDate && (
               <div className="border-t border-slate-700 pt-6">
                 <h3 className="text-lg font-semibold text-white mb-4">
-                  Bookings for {selectedDate.toLocaleDateString("en-US", {
+                  Bookings for{" "}
+                  {selectedDate.toLocaleDateString("en-US", {
                     month: "long",
                     day: "numeric",
                     year: "numeric",
@@ -782,147 +992,149 @@ export default function HostMyBookings() {
 
         {/* Bookings Table - Only show in List View */}
         {viewMode === "list" && (
-        <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-          {paginatedBookings.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-slate-400 text-lg">No bookings found</p>
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-700 bg-slate-700/50">
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">
-                        Guest
-                      </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">
-                        Listing
-                      </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">
-                        Dates
-                      </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">
-                        Amount
-                      </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">
-                        Status
-                      </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedBookings.map((booking) => (
-                      <tr
-                        key={booking.id}
-                        className="border-b border-slate-700 hover:bg-slate-700/30 transition"
-                      >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={
-                                booking.guest?.photoURL ||
-                                "https://via.placeholder.com/40"
-                              }
-                              alt={booking.guest?.fullName}
-                              className="w-10 h-10 rounded-full"
-                            />
-                            <div>
-                              <div className="text-sm font-medium text-white">
-                                {booking.guest?.fullName || "Unknown"}
-                              </div>
-                              <div className="text-xs text-slate-400">
-                                {booking.guest?.email || "N/A"}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-slate-200">
-                            {booking.listing?.title || "Unknown"}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-slate-200">
-                            {booking.checkIn
-                              ? formatDate(booking.checkIn)
-                              : formatDate(booking.selectedDate)}{" "}
-                            {booking.checkIn && `- ${formatDate(booking.checkOut)}`}
-                          </div>
-                          {booking.checkIn && (
-                            <div className="text-xs text-slate-400">
-                              {booking.guests} {booking.guests === 1 ? "guest" : "guests"}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-white">
-                            ₱{booking.totalAmount?.toLocaleString() || 0}
-                          </div>
-                          <div className="text-xs text-slate-400">
-                            +₱{booking.serviceFee?.toLocaleString() || 0} fee
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                              booking.status
-                            )}`}
-                          >
-                            {booking.status?.charAt(0).toUpperCase() +
-                              booking.status?.slice(1)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => {
-                              setSelectedBooking(booking);
-                              setShowDetailsModal(true);
-                            }}
-                            className="text-indigo-400 hover:text-indigo-300 text-sm font-medium transition"
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+            {paginatedBookings.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-slate-400 text-lg">No bookings found</p>
               </div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between px-6 py-4 border-t border-slate-700">
-                  <button
-                    onClick={() =>
-                      setCurrentPage(Math.max(1, currentPage - 1))
-                    }
-                    disabled={currentPage === 1}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-slate-300 transition"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Previous
-                  </button>
-                  <span className="text-sm text-slate-400">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <button
-                    onClick={() =>
-                      setCurrentPage(Math.min(totalPages, currentPage + 1))
-                    }
-                    disabled={currentPage === totalPages}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-slate-300 transition"
-                  >
-                    Next
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-700 bg-slate-700/50">
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">
+                          Guest
+                        </th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">
+                          Listing
+                        </th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">
+                          Dates
+                        </th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">
+                          Amount
+                        </th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">
+                          Status
+                        </th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedBookings.map((booking) => (
+                        <tr
+                          key={booking.id}
+                          className="border-b border-slate-700 hover:bg-slate-700/30 transition"
+                        >
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={
+                                  booking.guest?.photoURL ||
+                                  "https://via.placeholder.com/40"
+                                }
+                                alt={booking.guest?.fullName}
+                                className="w-10 h-10 rounded-full"
+                              />
+                              <div>
+                                <div className="text-sm font-medium text-white">
+                                  {booking.guest?.fullName || "Unknown"}
+                                </div>
+                                <div className="text-xs text-slate-400">
+                                  {booking.guest?.email || "N/A"}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-slate-200">
+                              {booking.listing?.title || "Unknown"}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-slate-200">
+                              {booking.checkIn
+                                ? formatDate(booking.checkIn)
+                                : formatDate(booking.selectedDate)}{" "}
+                              {booking.checkIn &&
+                                `- ${formatDate(booking.checkOut)}`}
+                            </div>
+                            {booking.checkIn && (
+                              <div className="text-xs text-slate-400">
+                                {booking.guests}{" "}
+                                {booking.guests === 1 ? "guest" : "guests"}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm font-medium text-white">
+                              ₱{booking.totalAmount?.toLocaleString() || 0}
+                            </div>
+                            <div className="text-xs text-slate-400">
+                              +₱{booking.serviceFee?.toLocaleString() || 0} fee
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                                booking.status
+                              )}`}
+                            >
+                              {booking.status?.charAt(0).toUpperCase() +
+                                booking.status?.slice(1)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => {
+                                setSelectedBooking(booking);
+                                setShowDetailsModal(true);
+                              }}
+                              className="text-indigo-400 hover:text-indigo-300 text-sm font-medium transition"
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              )}
-            </>
-          )}
-        </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between px-6 py-4 border-t border-slate-700">
+                    <button
+                      onClick={() =>
+                        setCurrentPage(Math.max(1, currentPage - 1))
+                      }
+                      disabled={currentPage === 1}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-slate-300 transition"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Previous
+                    </button>
+                    <span className="text-sm text-slate-400">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() =>
+                        setCurrentPage(Math.min(totalPages, currentPage + 1))
+                      }
+                      disabled={currentPage === totalPages}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-slate-300 transition"
+                    >
+                      Next
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         )}
       </main>
 
@@ -1122,145 +1334,85 @@ export default function HostMyBookings() {
               </div>
             </div>
 
-                        {/* Modal Footer */}
-
-                        <div className="p-6 border-t border-slate-700 flex-shrink-0">
-
-                          {selectedBooking.status === "pending" && (
-
-                            <div className="flex flex-col sm:flex-row gap-3">
-
-                              <button
-
-                                onClick={() => {
-
-                                  setShowConfirmModal(true);
-
-                                  setBookingToAction(selectedBooking);
-
-                                }}
-
-                                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
-
-                              >
-
-                                <Check className="w-5 h-5" />
-
-                                Confirm Booking
-
-                              </button>
-
-                              <button
-
-                                onClick={() => {
-
-                                  setShowRejectModal(true);
-
-                                  setBookingToAction(selectedBooking);
-
-                                }}
-
-                                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
-
-                              >
-
-                                <X className="w-5 h-5" />
-
-                                Reject Booking
-
-                              </button>
-
-                            </div>
-
-                          )}
-
-            
-
-                          {selectedBooking.status === "confirmed" && (
-
-                            <div className="flex flex-col sm:flex-row gap-3">
-
-                                <div className="flex-1 text-center py-3 bg-green-500/10 rounded-lg border border-green-500/20 flex items-center justify-center">
-
-                                    <p className="text-green-300 font-medium">
-
-                                        Booking Confirmed
-
-                                    </p>
-
-                                </div>
-
-                                <button
-
-                                    onClick={() => {
-
-                                        setShowCompleteModal(true);
-
-                                        setBookingToAction(selectedBooking);
-
-                                    }}
-
-                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
-
-                                >
-
-                                    <Check className="w-5 h-5" />
-
-                                    Mark as Completed
-
-                                </button>
-
-                            </div>
-
-                          )}
-
-            
-
-                          {selectedBooking.status === "completed" && (
-
-                            <div className="text-center py-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
-
-                                <Check className="w-6 h-6 text-blue-400 mx-auto mb-2" />
-
-                                <p className="text-blue-300 font-medium">
-
-                                This booking has been marked as completed.
-
-                                </p>
-
-                            </div>
-
-                          )}
-
-            
-
-                          {selectedBooking.status === "rejected" && (
-
-                            <div className="text-center py-4 bg-red-500/10 rounded-lg border border-red-500/20">
-
-                              <X className="w-6 h-6 text-red-400 mx-auto mb-2" />
-
-                              <p className="text-red-300 font-medium">
-
-                                This booking has been rejected.
-
-                              </p>
-
-                              {selectedBooking.rejectionReason && (
-
-                                <p className="text-red-300 text-sm mt-2">
-
-                                  Reason: {selectedBooking.rejectionReason}
-
-                                </p>
-
-                              )}
-
-                            </div>
-
-                          )}
-
-                        </div>
+            {/* Modal Footer */}
+
+            <div className="p-6 border-t border-slate-700 flex-shrink-0">
+              {selectedBooking.status === "pending" && (
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => {
+                      setShowConfirmModal(true);
+
+                      setBookingToAction(selectedBooking);
+                    }}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-5 h-5" />
+                    Confirm Booking
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowRejectModal(true);
+
+                      setBookingToAction(selectedBooking);
+                    }}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+                  >
+                    <X className="w-5 h-5" />
+                    Reject Booking
+                  </button>
+                </div>
+              )}
+
+              {selectedBooking.status === "confirmed" && (
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1 text-center py-3 bg-green-500/10 rounded-lg border border-green-500/20 flex items-center justify-center">
+                    <p className="text-green-300 font-medium">
+                      Booking Confirmed
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowCompleteModal(true);
+
+                      setBookingToAction(selectedBooking);
+                    }}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-5 h-5" />
+                    Mark as Completed
+                  </button>
+                </div>
+              )}
+
+              {selectedBooking.status === "completed" && (
+                <div className="text-center py-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                  <Check className="w-6 h-6 text-blue-400 mx-auto mb-2" />
+
+                  <p className="text-blue-300 font-medium">
+                    This booking has been marked as completed.
+                  </p>
+                </div>
+              )}
+
+              {selectedBooking.status === "rejected" && (
+                <div className="text-center py-4 bg-red-500/10 rounded-lg border border-red-500/20">
+                  <X className="w-6 h-6 text-red-400 mx-auto mb-2" />
+
+                  <p className="text-red-300 font-medium">
+                    This booking has been rejected.
+                  </p>
+
+                  {selectedBooking.rejectionReason && (
+                    <p className="text-red-300 text-sm mt-2">
+                      Reason: {selectedBooking.rejectionReason}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1355,33 +1507,34 @@ export default function HostMyBookings() {
       {/* Complete Booking Modal */}
       {showCompleteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-            <div className="bg-slate-800 rounded-2xl shadow-lg w-full max-w-md p-6 border border-slate-700">
-                <h2 className="text-2xl font-bold text-white mb-4">
-                    Mark as Completed?
-                </h2>
-                <p className="text-slate-300 mb-6">
-                    This will mark the booking as completed and notify the guest to leave a review. This action cannot be undone.
-                </p>
-                <div className="flex gap-3">
-                    <button
-                        onClick={handleCompleteBooking}
-                        disabled={isProcessing}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition"
-                    >
-                        {isProcessing ? "Processing..." : "Confirm"}
-                    </button>
-                    <button
-                        onClick={() => {
-                            setShowCompleteModal(false);
-                            setBookingToAction(null);
-                        }}
-                        disabled={isProcessing}
-                        className="flex-1 border border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold py-3 rounded-lg transition"
-                    >
-                        Cancel
-                    </button>
-                </div>
+          <div className="bg-slate-800 rounded-2xl shadow-lg w-full max-w-md p-6 border border-slate-700">
+            <h2 className="text-2xl font-bold text-white mb-4">
+              Mark as Completed?
+            </h2>
+            <p className="text-slate-300 mb-6">
+              This will mark the booking as completed and notify the guest to
+              leave a review. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleCompleteBooking}
+                disabled={isProcessing}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition"
+              >
+                {isProcessing ? "Processing..." : "Confirm"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowCompleteModal(false);
+                  setBookingToAction(null);
+                }}
+                disabled={isProcessing}
+                className="flex-1 border border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold py-3 rounded-lg transition"
+              >
+                Cancel
+              </button>
             </div>
+          </div>
         </div>
       )}
     </div>

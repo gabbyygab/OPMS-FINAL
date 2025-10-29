@@ -33,7 +33,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { auth, db } from "../firebase/firebase";
 import { AuthModalContext } from "../context/AuthModalContext";
 import { signOut } from "firebase/auth";
-import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  getDocs,
+} from "firebase/firestore";
 import { ROUTES } from "../constants/routes";
 import { DateRange } from "react-date-range";
 import "react-date-range/dist/styles.css";
@@ -80,23 +86,33 @@ const animatedBorderStyle = `
 
 // ========== SUB-COMPONENTS ==========
 
+// Messages Link with Unread Badge Component
+const MessagesLinkWithBadge = ({ to, unreadCount = 0, className, onClick }) => {
+  const count = Number(unreadCount) || 0;
+  return (
+    <Link
+      to={to}
+      className={className}
+      onClick={onClick}
+    >
+      <div className="relative">
+        <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
+        {count > 0 && (
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+            {count > 9 ? "9+" : count}
+          </span>
+        )}
+      </div>
+      <span>Messages</span>
+    </Link>
+  );
+};
+
 // Logo Component
 const Logo = () => (
   <Link to={ROUTES.HOME} className="flex-shrink-0">
     <div className="flex items-center cursor-pointer">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="32"
-        height="32"
-        viewBox="0 0 24 24"
-        fill="white"
-        className="w-7 h-7 sm:w-8 sm:h-8"
-      >
-        <path d="M7 2v2H5a2 2 0 0 0-2 2v2h18V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zm13 8H4v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10zm-4 4h-4v4h4v-4z" />
-      </svg>
-      <span className="ml-2 text-lg sm:text-xl font-bold text-white">
-        BookingNest
-      </span>
+      <img src="/bookingNestLogoFInal.png" alt="" className="w-16 h-16 sm:w-24 sm:h-24 lg:w-32 lg:h-32 hover:scale-105 transition-transform" />
     </div>
   </Link>
 );
@@ -217,7 +233,8 @@ const HostNavLinks = ({ location }) => {
 
 // Public Auth Dropdown Component
 const PublicAuthDropdown = ({ isScrolled, dropdownOpen, setDropdownOpen }) => {
-  const { openSignUp, openSignIn, selectSignUpRole } = useContext(AuthModalContext);
+  const { openSignUp, openSignIn, selectSignUpRole } =
+    useContext(AuthModalContext);
 
   const handleBecomeHost = () => {
     selectSignUpRole("host");
@@ -289,6 +306,7 @@ const GuestUserActions = ({
   user,
   handleLogout,
   unreadNotificationsCount,
+  unreadMessagesCount,
 }) => (
   <>
     {/* My Bookings link */}
@@ -321,7 +339,10 @@ const GuestUserActions = ({
           {unreadNotificationsCount > 0 ? (
             <div className="text-sm">
               <p className="text-slate-300 font-medium mb-2">
-                {unreadNotificationsCount} unread {unreadNotificationsCount === 1 ? "notification" : "notifications"}
+                {unreadNotificationsCount} unread{" "}
+                {unreadNotificationsCount === 1
+                  ? "notification"
+                  : "notifications"}
               </p>
               <Link
                 to={ROUTES.GUEST.NOTIFICATIONS}
@@ -409,14 +430,12 @@ const GuestUserActions = ({
 
           {/* Communication Section */}
           <div className="border-b border-slate-700/50 my-1">
-            <Link
+            <MessagesLinkWithBadge
               to={ROUTES.GUEST.MESSAGES}
+              unreadCount={unreadMessagesCount}
               className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
               onClick={() => setProfileDropdownOpen(false)}
-            >
-              <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-              Messages
-            </Link>
+            />
           </div>
 
           {/* Wallet & Logout Section */}
@@ -451,15 +470,25 @@ const HostUserActions = ({
   userData,
   handleLogout,
   unreadNotificationsCount,
+  unreadMessagesCount,
 }) => (
   <div className="hidden lg:flex items-center gap-4">
-    <Link
-      to={ROUTES.HOST.MESSAGES}
-      className="flex items-center gap-2 text-slate-200 hover:text-white transition-colors"
-    >
-      <MessageSquare className="w-5 h-5" />
-      <span className="hidden xl:inline text-sm font-medium">Messages</span>
-    </Link>
+    <div className="relative">
+      <Link
+        to={ROUTES.HOST.MESSAGES}
+        className="flex items-center gap-2 text-slate-200 hover:text-white transition-colors"
+      >
+        <div className="relative">
+          <MessageSquare className="w-5 h-5" />
+          {unreadMessagesCount > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+              {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
+            </span>
+          )}
+        </div>
+        <span className="hidden xl:inline text-sm font-medium">Messages</span>
+      </Link>
+    </div>
 
     <Link
       to={ROUTES.HOST.NOTIFICATIONS}
@@ -671,61 +700,69 @@ const MobileMenu = ({
           </>
         ) : (
           <>
-            {userData?.role === "guest" && setActiveFilter && activeFilter !== null && (
-              <>
-                {/* Category Navigation */}
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={() => {
-                      setActiveFilter("stays");
-                      const newParams = new URLSearchParams();
-                      newParams.set("type", "stays");
-                      navigate(`${ROUTES.GUEST.HOME}?${newParams.toString()}`);
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all ${
-                      activeFilter === "stays"
-                        ? "bg-indigo-600 text-white"
-                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                    }`}
-                  >
-                    Stays
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveFilter("services");
-                      const newParams = new URLSearchParams();
-                      newParams.set("type", "services");
-                      navigate(`${ROUTES.GUEST.HOME}?${newParams.toString()}`);
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all ${
-                      activeFilter === "services"
-                        ? "bg-indigo-600 text-white"
-                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                    }`}
-                  >
-                    Services
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveFilter("experiences");
-                      const newParams = new URLSearchParams();
-                      newParams.set("type", "experiences");
-                      navigate(`${ROUTES.GUEST.HOME}?${newParams.toString()}`);
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all ${
-                      activeFilter === "experiences"
-                        ? "bg-indigo-600 text-white"
-                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                    }`}
-                  >
-                    Experiences
-                  </button>
-                </div>
-              </>
-            )}
+            {userData?.role === "guest" &&
+              setActiveFilter &&
+              activeFilter !== null && (
+                <>
+                  {/* Category Navigation */}
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => {
+                        setActiveFilter("stays");
+                        const newParams = new URLSearchParams();
+                        newParams.set("type", "stays");
+                        navigate(
+                          `${ROUTES.GUEST.HOME}?${newParams.toString()}`
+                        );
+                        setMobileMenuOpen(false);
+                      }}
+                      className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all ${
+                        activeFilter === "stays"
+                          ? "bg-indigo-600 text-white"
+                          : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      Stays
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveFilter("services");
+                        const newParams = new URLSearchParams();
+                        newParams.set("type", "services");
+                        navigate(
+                          `${ROUTES.GUEST.HOME}?${newParams.toString()}`
+                        );
+                        setMobileMenuOpen(false);
+                      }}
+                      className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all ${
+                        activeFilter === "services"
+                          ? "bg-indigo-600 text-white"
+                          : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      Services
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveFilter("experiences");
+                        const newParams = new URLSearchParams();
+                        newParams.set("type", "experiences");
+                        navigate(
+                          `${ROUTES.GUEST.HOME}?${newParams.toString()}`
+                        );
+                        setMobileMenuOpen(false);
+                      }}
+                      className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all ${
+                        activeFilter === "experiences"
+                          ? "bg-indigo-600 text-white"
+                          : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      Experiences
+                    </button>
+                  </div>
+                </>
+              )}
 
             {userData?.role === "guest" && (
               <>
@@ -917,7 +954,14 @@ const HostMobileMenuDrawer = ({
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <MessageSquare className="w-5 h-5 flex-shrink-0" />
+                <div className="relative">
+                  <MessageSquare className="w-5 h-5 flex-shrink-0" />
+                  {unreadMessagesCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                      {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
+                    </span>
+                  )}
+                </div>
                 <span className="text-sm font-medium">Messages</span>
               </Link>
 
@@ -1135,7 +1179,14 @@ const StreamlinedMobileMenu = ({
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  <MessageSquare className="w-5 h-5" />
+                  <div className="relative">
+                    <MessageSquare className="w-5 h-5" />
+                    {unreadMessagesCount > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                        {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
+                      </span>
+                    )}
+                  </div>
                   <span className="font-medium">Messages</span>
                 </Link>
               </>
@@ -1152,7 +1203,14 @@ const StreamlinedMobileMenu = ({
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  <MessageSquare className="w-5 h-5" />
+                  <div className="relative">
+                    <MessageSquare className="w-5 h-5" />
+                    {unreadMessagesCount > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                        {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
+                      </span>
+                    )}
+                  </div>
                   <span className="font-medium">Messages</span>
                 </Link>
 
@@ -1269,7 +1327,7 @@ const useResponsiveDatePicker = () => {
 };
 
 // Guest Tab Navigation Component - Airbnb Style
-const GuestTabNavigation = ({ user, userData, handleLogout }) => {
+const GuestTabNavigation = ({ user, userData, handleLogout, unreadMessagesCount }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1291,7 +1349,8 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
   const [serviceTypeSuggestions, setServiceTypeSuggestions] = useState([]);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
-  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+  const [notificationDropdownOpen, setNotificationDropdownOpen] =
+    useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
   // Get auth modal context functions
@@ -1401,7 +1460,7 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
   useEffect(() => {
     const handleClickOutside = (e) => {
       // Check if click is outside dropdowns
-      const navBar = document.querySelector('nav');
+      const navBar = document.querySelector("nav");
       if (navBar && !navBar.contains(e.target)) {
         setNotificationDropdownOpen(false);
         setProfileDropdownOpen(false);
@@ -1461,7 +1520,8 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
     if (searchData.checkIn) newParams.set("checkIn", searchData.checkIn);
     if (searchData.checkOut) newParams.set("checkOut", searchData.checkOut);
     if (searchData.guests) newParams.set("guests", searchData.guests);
-    if (searchData.serviceType) newParams.set("serviceType", searchData.serviceType);
+    if (searchData.serviceType)
+      newParams.set("serviceType", searchData.serviceType);
     newParams.set("type", activeFilter);
 
     setSearchParams(newParams);
@@ -1483,21 +1543,11 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
           <div className="flex items-center justify-between gap-2 sm:gap-3 lg:gap-6">
             {/* Logo - Left */}
             <Link to={ROUTES.GUEST.HOME} className="flex-shrink-0">
-              <div className="flex items-center cursor-pointer">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="32"
-                  height="32"
-                  viewBox="0 0 24 24"
-                  fill="white"
-                  className="w-7 h-7 sm:w-8 sm:h-8"
-                >
-                  <path d="M7 2v2H5a2 2 0 0 0-2 2v2h18V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zm13 8H4v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10zm-4 4h-4v4h4v-4z" />
-                </svg>
-                <span className="ml-2 text-lg sm:text-xl font-bold text-white whitespace-nowrap hidden sm:inline">
-                  BookingNest
-                </span>
-              </div>
+              <img
+                src="/bookingNestLogoFInal.png"
+                alt="BookingNest Logo"
+                className="w-16 h-16 sm:w-20 sm:h-20 hover:scale-105 transition-transform"
+              />
             </Link>
 
             {/* Center - Tabs (hidden when scrolled) - Hidden on mobile */}
@@ -1564,14 +1614,18 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
+                  onClick={() =>
+                    setNotificationDropdownOpen(!notificationDropdownOpen)
+                  }
                   className="relative p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200 hover:scale-110 text-slate-300 hover:text-white"
                   title="Notifications"
                 >
                   <Bell className="w-5 h-5" />
                   {unreadNotificationsCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold w-5 h-5 rounded-full flex items-center justify-center">
-                      {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                      {unreadNotificationsCount > 9
+                        ? "9+"
+                        : unreadNotificationsCount}
                     </span>
                   )}
                 </button>
@@ -1581,7 +1635,10 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                     {unreadNotificationsCount > 0 ? (
                       <div className="text-sm">
                         <p className="text-slate-300 font-medium mb-2">
-                          {unreadNotificationsCount} unread {unreadNotificationsCount === 1 ? "notification" : "notifications"}
+                          {unreadNotificationsCount} unread{" "}
+                          {unreadNotificationsCount === 1
+                            ? "notification"
+                            : "notifications"}
                         </p>
                         <Link
                           to={ROUTES.GUEST.NOTIFICATIONS}
@@ -1592,7 +1649,9 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                         </Link>
                       </div>
                     ) : (
-                      <p className="text-sm text-slate-400">No new notifications</p>
+                      <p className="text-sm text-slate-400">
+                        No new notifications
+                      </p>
                     )}
                   </div>
                 )}
@@ -1683,7 +1742,14 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                         className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
                         onClick={() => setProfileDropdownOpen(false)}
                       >
-                        <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                        <div className="relative">
+                          <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
+                          {unreadMessagesCount > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                              {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
+                            </span>
+                          )}
+                        </div>
                         Messages
                       </Link>
 
@@ -1726,9 +1792,7 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
         {/* Mobile Tab Navigation - Only on mobile */}
         <div
           className={`lg:hidden max-w-full mx-auto px-2 sm:px-4 transition-all duration-500 ease-out overflow-hidden ${
-            isScrolled
-              ? "opacity-0 max-h-0 py-0"
-              : "opacity-100 max-h-12 py-2"
+            isScrolled ? "opacity-0 max-h-0 py-0" : "opacity-100 max-h-12 py-2"
           }`}
         >
           <div className="flex gap-1 justify-center flex-nowrap">
@@ -1752,9 +1816,7 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
         {/* Search Bar - Desktop Only (smooth animation) */}
         <div
           className={`hidden lg:block max-w-full mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-500 ease-out overflow-hidden ${
-            isScrolled
-              ? "opacity-0 max-h-0 py-0"
-              : "opacity-100 max-h-20 py-3"
+            isScrolled ? "opacity-0 max-h-0 py-0" : "opacity-100 max-h-20 py-3"
           }`}
         >
           <div className="flex justify-center">
@@ -1783,7 +1845,13 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                   readOnly
                   value={
                     searchData.checkIn && searchData.checkOut
-                      ? `${new Date(searchData.checkIn).toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${new Date(searchData.checkOut).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                      ? `${new Date(searchData.checkIn).toLocaleDateString(
+                          "en-US",
+                          { month: "short", day: "numeric" }
+                        )} - ${new Date(searchData.checkOut).toLocaleDateString(
+                          "en-US",
+                          { month: "short", day: "numeric" }
+                        )}`
                       : ""
                   }
                   className="outline-none bg-transparent text-xs lg:text-sm flex-1 min-w-0 cursor-pointer"
@@ -1811,16 +1879,18 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                       type="text"
                       placeholder="Who?"
                       readOnly
-                      value={searchData.guests > 1 ? `${searchData.guests} guests` : ""}
+                      value={
+                        searchData.guests > 1
+                          ? `${searchData.guests} guests`
+                          : ""
+                      }
                       className="outline-none bg-transparent text-xs lg:text-sm flex-1 min-w-0 cursor-pointer"
                     />
                   </>
                 )}
               </div>
 
-              <div
-                className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0 flex items-center justify-center"
-              >
+              <div className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0 flex items-center justify-center">
                 <Search className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
               </div>
             </div>
@@ -1831,13 +1901,13 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
         <div
           className={`hidden lg:flex flex-1 items-center justify-center px-4 sm:px-6 lg:px-8 transition-all duration-500 ease-out absolute inset-0 ${
             isScrolled
-              ? "opacity-100 pointer-events-auto"
-              : "opacity-0 pointer-events-none"
-          }`}
+              ? "opacity-100"
+              : "opacity-0"
+          } pointer-events-none`}
         >
           <div
             onClick={handleSearchClick}
-            className="flex-1 max-w-lg flex items-center bg-white rounded-full px-3 lg:px-4 py-1.5 lg:py-2 text-gray-700 shadow-md gap-1.5 lg:gap-2.5 transition-all hover:shadow-lg cursor-pointer"
+            className="flex-1 max-w-lg flex items-center bg-white rounded-full px-3 lg:px-4 py-1.5 lg:py-2 text-gray-700 shadow-md gap-1.5 lg:gap-2.5 transition-all hover:shadow-lg cursor-pointer pointer-events-auto"
           >
             <MapPin className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
             <input
@@ -1867,9 +1937,7 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
               className="hidden lg:block outline-none bg-transparent text-xs lg:text-sm flex-1 min-w-0"
             />
 
-            <div
-              className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0 flex items-center justify-center"
-            >
+            <div className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0 flex items-center justify-center">
               <Search className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
             </div>
           </div>
@@ -2370,24 +2438,34 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                       placeholder="e.g., Deep Cleaning, Repair, etc."
                       value={searchData.serviceType || ""}
                       onChange={(e) =>
-                        setSearchData({ ...searchData, serviceType: e.target.value })
+                        setSearchData({
+                          ...searchData,
+                          serviceType: e.target.value,
+                        })
                       }
                       className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm sm:text-base"
                     />
                     {serviceTypeSuggestions.length > 0 && (
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                            <span className="text-xs text-slate-400 font-medium">Suggestions:</span>
-                            {serviceTypeSuggestions.slice(0, 7).map(type => (
-                                <button
-                                    key={type}
-                                    type="button"
-                                    onClick={() => setSearchData({ ...searchData, serviceType: type })}
-                                    className="px-3 py-1 bg-slate-700 text-slate-200 rounded-full text-xs hover:bg-indigo-600 hover:text-white transition-colors"
-                                >
-                                    {type}
-                                </button>
-                            ))}
-                        </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-slate-400 font-medium">
+                          Suggestions:
+                        </span>
+                        {serviceTypeSuggestions.slice(0, 7).map((type) => (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() =>
+                              setSearchData({
+                                ...searchData,
+                                serviceType: type,
+                              })
+                            }
+                            className="px-3 py-1 bg-slate-700 text-slate-200 rounded-full text-xs hover:bg-indigo-600 hover:text-white transition-colors"
+                          >
+                            {type}
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
                 ) : (
@@ -2529,7 +2607,14 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
                   className="flex items-center gap-3 px-3 py-3 text-slate-200 hover:text-white hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 rounded-lg transition-all duration-200"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  <MessageSquare className="w-5 h-5 flex-shrink-0" />
+                  <div className="relative">
+                    <MessageSquare className="w-5 h-5 flex-shrink-0" />
+                    {unreadMessagesCount > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                        {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-sm font-medium">Messages</span>
                 </Link>
 
@@ -2567,7 +2652,7 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
 
 // Guest Simple Navigation Component - For non-home pages (Messages, Bookings, Favorites, etc.)
 // Host Simple NavBar Component
-const HostSimpleNavBar = ({ user, userData, handleLogout }) => {
+const HostSimpleNavBar = ({ user, userData, handleLogout, unreadMessagesCount }) => {
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -2740,7 +2825,14 @@ const HostSimpleNavBar = ({ user, userData, handleLogout }) => {
                     onClick={() => setDropdownOpen(false)}
                     className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
                   >
-                    <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    <div className="relative">
+                      <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
+                      {unreadMessagesCount > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                          {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
+                        </span>
+                      )}
+                    </div>
                     Messages
                   </Link>
                 </div>
@@ -2764,7 +2856,7 @@ const HostSimpleNavBar = ({ user, userData, handleLogout }) => {
   );
 };
 
-const GuestSimpleNavBar = ({ user, userData, handleLogout }) => {
+const GuestSimpleNavBar = ({ user, userData, handleLogout, unreadMessagesCount }) => {
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -2876,7 +2968,14 @@ const GuestSimpleNavBar = ({ user, userData, handleLogout }) => {
                     onClick={() => setDropdownOpen(false)}
                     className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
                   >
-                    <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    <div className="relative">
+                      <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
+                      {unreadMessagesCount > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                          {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
+                        </span>
+                      )}
+                    </div>
                     Messages
                   </Link>
                 </div>
@@ -2926,6 +3025,7 @@ export default function NavigationBar({
   const [notificationDropdownOpen, setNotificationDropdownOpen] =
     useState(false);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -2960,7 +3060,7 @@ export default function NavigationBar({
   useEffect(() => {
     const handleClickOutside = (e) => {
       // Check if click is outside dropdowns
-      const navBar = document.querySelector('nav');
+      const navBar = document.querySelector("nav");
       if (navBar && !navBar.contains(e.target)) {
         setNotificationDropdownOpen(false);
         setProfileDropdownOpen(false);
@@ -3017,6 +3117,33 @@ export default function NavigationBar({
       if (unsubscribeOld) unsubscribeOld();
     };
   }, [userData?.id, userData?.role]);
+
+  // Listen to unread message conversations
+  useEffect(() => {
+    if (!user?.uid) {
+      setUnreadMessagesCount(0);
+      return;
+    }
+
+    const q = query(
+      collection(db, "conversations"),
+      where("participants", "array-contains", user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let unreadCount = 0;
+      snapshot.docs.forEach((doc) => {
+        const convData = doc.data();
+        const userUnreadCount = convData.unreadCount?.[user.uid] || 0;
+        if (userUnreadCount > 0) {
+          unreadCount++;
+        }
+      });
+      setUnreadMessagesCount(unreadCount);
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
 
   const getNavbarBg = () => {
     if (user) return "bg-slate-900 shadow-md";
@@ -3250,7 +3377,14 @@ export default function NavigationBar({
                             className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-slate-700/50 hover:text-blue-300"
                             onClick={() => setProfileDropdownOpen(false)}
                           >
-                            <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
+                            <div className="relative">
+                              <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
+                              {unreadMessagesCount > 0 && (
+                                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                                  {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
+                                </span>
+                              )}
+                            </div>
                             <span className="font-medium">Messages</span>
                           </Link>
 
@@ -3274,7 +3408,14 @@ export default function NavigationBar({
                             className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-slate-700/50 hover:text-pink-300"
                             onClick={() => setProfileDropdownOpen(false)}
                           >
-                            <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
+                            <div className="relative">
+                              <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
+                              {unreadMessagesCount > 0 && (
+                                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                                  {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
+                                </span>
+                              )}
+                            </div>
                             <span className="font-medium">Messages</span>
                           </Link>
 
@@ -3375,6 +3516,7 @@ export default function NavigationBar({
         user={user}
         userData={userData}
         handleLogout={handleLogout}
+        unreadMessagesCount={unreadMessagesCount}
       />
     );
   }
@@ -3394,12 +3536,14 @@ export default function NavigationBar({
         user={user}
         userData={userData}
         handleLogout={handleLogout}
+        unreadMessagesCount={unreadMessagesCount}
       />
     ) : (
       <GuestSimpleNavBar
         user={user}
         userData={userData}
         handleLogout={handleLogout}
+        unreadMessagesCount={unreadMessagesCount}
       />
     );
   }
@@ -3443,6 +3587,7 @@ export default function NavigationBar({
                   user={user}
                   handleLogout={handleLogout}
                   unreadNotificationsCount={unreadNotificationsCount}
+                  unreadMessagesCount={unreadMessagesCount}
                 />
               ) : isHost ? (
                 <HostUserActions
@@ -3451,6 +3596,7 @@ export default function NavigationBar({
                   userData={userData}
                   handleLogout={handleLogout}
                   unreadNotificationsCount={unreadNotificationsCount}
+                  unreadMessagesCount={unreadMessagesCount}
                 />
               ) : null}
             </div>

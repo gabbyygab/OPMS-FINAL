@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useContext } from "react";
-import { Facebook, Instagram, Twitter, Linkedin, Mail, Phone, MapPin } from "lucide-react";
+import {
+  Facebook,
+  Instagram,
+  Twitter,
+  Linkedin,
+  Mail,
+  Phone,
+  MapPin,
+} from "lucide-react";
 import { AuthModalContext } from "../context/AuthModalContext";
 
 export default function Footer() {
@@ -23,11 +31,16 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {/* Brand Section */}
           <div className="col-span-1">
-            <h2 className="text-3xl font-bold text-white mb-4">
-              <span className="text-indigo-400">Booking</span>Nest
-            </h2>
+            <div className="flex items-center gap-4 mb-6">
+              <img
+                src="/bookingNestLogoFInal.png"
+                alt="BookingNest Logo"
+                className="w-80 h-80 sm:w-40 sm:h-40"
+              />
+            </div>
             <p className="text-slate-400 text-sm leading-relaxed mb-6">
-              Your trusted platform for discovering exceptional stays, experiences, and services worldwide.
+              Your trusted platform for discovering exceptional stays,
+              experiences, and services worldwide.
             </p>
             {/* Social Media Icons */}
             <div className="flex gap-3">
@@ -64,35 +77,55 @@ export default function Footer() {
 
           {/* For Guests */}
           <div className="col-span-1">
-            <h3 className="text-lg font-semibold text-white mb-6">For Guests</h3>
+            <h3 className="text-lg font-semibold text-white mb-6">
+              For Guests
+            </h3>
             <ul className="space-y-3">
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   Browse Stays
                 </a>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   Experiences
                 </a>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   Services
                 </a>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   My Bookings
                 </a>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   Favorites
                 </a>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   Reviews & Ratings
                 </a>
               </li>
@@ -104,32 +137,50 @@ export default function Footer() {
             <h3 className="text-lg font-semibold text-white mb-6">For Hosts</h3>
             <ul className="space-y-3">
               <li>
-                <button onClick={() => selectSignUpRole("host")} className="text-slate-400 hover:text-indigo-400 transition-colors text-sm cursor-pointer">
+                <button
+                  onClick={() => selectSignUpRole("host")}
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm cursor-pointer"
+                >
                   Become a Host
                 </button>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   Host Dashboard
                 </a>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   Manage Listings
                 </a>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   Pricing & Payments
                 </a>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   Host Support
                 </a>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   Resources
                 </a>
               </li>
@@ -141,27 +192,42 @@ export default function Footer() {
             <h3 className="text-lg font-semibold text-white mb-6">Company</h3>
             <ul className="space-y-3 mb-8">
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   About Us
                 </a>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   Privacy Policy
                 </a>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   Terms & Conditions
                 </a>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   Contact Us
                 </a>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <a
+                  href="#"
+                  className="text-slate-400 hover:text-indigo-400 transition-colors text-sm"
+                >
                   Blog
                 </a>
               </li>
@@ -171,13 +237,19 @@ export default function Footer() {
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-indigo-400" />
-                <a href="mailto:support@bookingnest.com" className="text-slate-400 hover:text-indigo-400 text-sm">
+                <a
+                  href="mailto:support@bookingnest.com"
+                  className="text-slate-400 hover:text-indigo-400 text-sm"
+                >
                   support@bookingnest.com
                 </a>
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-indigo-400" />
-                <a href="tel:+1234567890" className="text-slate-400 hover:text-indigo-400 text-sm">
+                <a
+                  href="tel:+1234567890"
+                  className="text-slate-400 hover:text-indigo-400 text-sm"
+                >
                   +1 (234) 567-890
                 </a>
               </div>
@@ -192,7 +264,9 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="text-center md:text-left">
             <p className="text-slate-400 text-sm">
-              © {currentYear} <span className="text-white font-semibold">BookingNest</span>. All rights reserved.
+              © {currentYear}{" "}
+              <span className="text-white font-semibold">BookingNest</span>. All
+              rights reserved.
             </p>
             <p className="text-slate-500 text-xs mt-1">
               Connecting travelers with unforgettable experiences worldwide.
@@ -220,8 +294,18 @@ export default function Footer() {
           className="fixed bottom-8 right-8 w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all z-40"
           aria-label="Scroll to top"
         >
-          <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+          <svg
+            className="w-5 h-5 mx-auto"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M5 10l7-7m0 0l7 7m-7-7v18"
+            />
           </svg>
         </button>
       )}

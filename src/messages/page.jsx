@@ -2,7 +2,20 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
 import { toast } from "react-toastify";
-import { getDoc, doc, onSnapshot, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
+import {
+  getDoc,
+  doc,
+  onSnapshot,
+  deleteDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  updateDoc,
+  serverTimestamp,
+  increment,
+} from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import { useRef } from "react";
 
@@ -26,14 +39,20 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
   const [showMobileChat, setShowMobileChat] = useState(false);
+  const [totalUnreadConversations, setTotalUnreadConversations] = useState(0);
   const isDirectChat = user_id && host_id;
   const messagesEndRef = useRef(null);
 
+  // Calculate total unread conversations
   useEffect(() => {
-    const initChat = async () => {
-      try {
-        if (isDirectChat) {
-          // Direct chat between user and host
+    const unreadCount = conversations.filter((conv) => conv.unread > 0).length;
+    setTotalUnreadConversations(unreadCount);
+  }, [conversations]);
+
+  useEffect(() => {
+    if (isDirectChat) {
+      const initDirectChat = async () => {
+        try {
           const hostRef = doc(db, "users", host_id);
           const hostSnap = await getDoc(hostRef);
           if (!hostSnap.exists()) return toast.error("Host not found");
@@ -58,57 +77,78 @@ export default function MessagesPage() {
             }))
           );
 
-          // Sidebar still needs at least 1 conversation
           setConversations([
             {
               id: conv.id,
               name: hostData.fullName,
               avatar: hostData.photoURL,
-              lastMessage: conv.lastMessage || "",
+              lastMessage: conv.lastMessage?.text || "",
               property: "Modern Loft in Downtown",
               unread: 0,
             },
           ]);
-        } else {
-          if (!user?.uid) return;
-          const allConvs = await getUserConversations(user.uid);
+        } catch (err) {
+          console.error(err);
+          toast.error("Failed to load direct message");
+        }
+      };
+      initDirectChat();
+      return;
+    }
 
-          // Fetch the other user's info for each conversation
-          const enriched = await Promise.all(
-            allConvs.map(async (conv) => {
-              const otherId = conv.participants.find((p) => p !== user.uid);
-              const userRef = doc(db, "users", otherId);
-              const userSnap = await getDoc(userRef);
-              const otherUser = userSnap.exists() ? userSnap.data() : {};
+    if (!user?.uid) return;
 
-              return {
-                id: conv.id,
-                name: otherUser.fullName || "Unknown",
-                avatar: otherUser.photoURL || "/profile-placeholder.png",
-                lastMessage: conv.lastMessage || "",
-                time: conv.updatedAt
-                  ? conv.updatedAt.toDate().toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "",
-                unread: 0,
-                participants: conv.participants,
-              };
-            })
-          );
+    const q = query(
+      collection(db, "conversations"),
+      where("participants", "array-contains", user.uid)
+    );
 
-          setConversations(enriched);
-          if (enriched.length > 0) setSelectedChat(0);
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      try {
+        const allConvs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+        const enriched = await Promise.all(
+          allConvs.map(async (conv) => {
+            const otherId = conv.participants.find((p) => p !== user.uid);
+            if (!otherId) return null;
+
+            const userRef = doc(db, "users", otherId);
+            const userSnap = await getDoc(userRef);
+            const otherUser = userSnap.exists() ? userSnap.data() : {};
+
+            const unread = conv.unreadCount && conv.unreadCount[user.uid] ? conv.unreadCount[user.uid] : 0;
+
+            return {
+              id: conv.id,
+              name: otherUser.fullName || "Unknown User",
+              avatar: otherUser.photoURL || "/profile-placeholder.png",
+              lastMessage: conv.lastMessage?.text || "No messages yet",
+              time: conv.updatedAt
+                ? conv.updatedAt.toDate().toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "",
+              unread: unread,
+              participants: conv.participants,
+            };
+          })
+        );
+        
+        const validEnriched = enriched.filter(Boolean);
+
+        setConversations(validEnriched);
+        if (validEnriched.length > 0 && selectedChat === null) {
+          setSelectedChat(0);
         }
       } catch (err) {
-        console.error(err);
-        toast.error("Failed to load messages");
+        console.error("Error enriching conversations:", err);
+        toast.error("Failed to load conversation details");
       }
-    };
+    });
 
-    initChat();
-  }, [isDirectChat, user_id, host_id]);
+    return () => unsubscribe();
+  }, [isDirectChat, user_id, host_id, user?.uid, selectedChat]);
 
   useEffect(() => {
     const fetchMessagesForSelectedChat = async () => {
@@ -178,14 +218,42 @@ export default function MessagesPage() {
 
   // 2️⃣ Handle sending
   const handleSend = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() || !conversationId) return;
     try {
-      await sendMessage(conversationId, user.uid, message.trim());
+      const myId = user.uid;
+      const conversationRef = doc(db, "conversations", conversationId);
 
-      // add locally
+      // 1. Add message to subcollection
+      const messagesColRef = collection(conversationRef, "messages");
+      await addDoc(messagesColRef, {
+        text: message.trim(),
+        senderId: myId,
+        createdAt: serverTimestamp(),
+        isRead: false, // Set isRead to false for new messages
+      });
+
+      // 2. Update lastMessage and unreadCount on conversation
+      const otherParticipantId = conversations[selectedChat].participants.find(
+        (p) => p !== myId
+      );
+      const unreadCountUpdate = {};
+      if (otherParticipantId) {
+        unreadCountUpdate[`unreadCount.${otherParticipantId}`] = increment(1);
+      }
+
+      await updateDoc(conversationRef, {
+        lastMessage: {
+          text: message.trim(),
+          senderId: myId,
+          createdAt: serverTimestamp(),
+        },
+        updatedAt: serverTimestamp(),
+        ...unreadCountUpdate,
+      });
+
       setMessage("");
     } catch (err) {
-      console.error(err);
+      console.error("Failed to send message:", err);
       toast.error("Failed to send message");
     }
   };
@@ -204,6 +272,36 @@ export default function MessagesPage() {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  const handleSelectChat = async (index) => {
+    setSelectedChat(index);
+    setShowMobileChat(true);
+
+    const conversation = conversations[index];
+    if (conversation) {
+      const myId = user.uid;
+      const convRef = doc(db, "conversations", conversation.id);
+
+      // Reset unread count for the current user
+      const unreadCountUpdate = {};
+      unreadCountUpdate[`unreadCount.${myId}`] = 0;
+      await updateDoc(convRef, unreadCountUpdate);
+
+      // Mark all incoming messages in the subcollection as read
+      const messagesQuery = query(
+        collection(convRef, "messages"),
+        where("senderId", "!=", myId),
+        where("isRead", "==", false)
+      );
+      const messagesSnapshot = await getDocs(messagesQuery);
+      const updatePromises = messagesSnapshot.docs.map((messageDoc) =>
+        updateDoc(messageDoc.ref, { isRead: true })
+      );
+      await Promise.all(updatePromises);
+    }
+  };
+
+
 
   const handleDeleteConversation = async (conversationIdToDelete) => {
     if (
@@ -286,16 +384,12 @@ export default function MessagesPage() {
                 className="relative group"
               >
                 <button
-                  onClick={() => {
-                    setSelectedChat(index);
-                    setShowMobileChat(true);
-                  }}
+                  onClick={() => handleSelectChat(index)}
                   className={`w-full p-3 lg:p-4 flex items-start gap-3 hover:bg-slate-700/50 transition-all border-b border-slate-700 ${
                     selectedChat === index
                       ? "bg-indigo-600/20 border-l-4 border-l-indigo-500"
                       : ""
-                  }`}
-                >
+                  }`}>
                   <img
                     src={conv.avatar || "/profile-placeholder.png"}
                     alt={conv.name || ""}
@@ -310,15 +404,20 @@ export default function MessagesPage() {
                         {conv.time || ""}
                       </span>
                     </div>
-                    <p
-                      className={`text-xs lg:text-sm truncate ${
-                        conv.unread > 0
-                          ? "font-semibold text-slate-200"
-                          : "text-slate-400"
-                      }`}
-                    >
-                      {conv.lastMessage || ""}
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <p
+                        className={`text-xs lg:text-sm truncate ${
+                          conv.unread > 0
+                            ? "font-semibold text-slate-200"
+                            : "text-slate-400"
+                        }`}
+                      >
+                        {conv.lastMessage || ""}
+                      </p>
+                      {conv.unread > 0 && (
+                        <span className="w-2.5 h-2.5 bg-indigo-500 rounded-full ml-2 flex-shrink-0"></span>
+                      )}
+                    </div>
                   </div>
                 </button>
                 <button

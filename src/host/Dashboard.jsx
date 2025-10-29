@@ -47,6 +47,7 @@ export default function HostDashboard({ isVerified, user }) {
     ratingChange: 0,
   });
   const [upcomingBookings, setUpcomingBookings] = useState([]);
+  const [todayBookings, setTodayBookings] = useState([]);
   const [recentMessages, setRecentMessages] = useState([]);
   const [listingPerformance, setListingPerformance] = useState([]);
   const { userData } = useAuth();
@@ -110,6 +111,52 @@ export default function HostDashboard({ isVerified, user }) {
           }
         }
 
+        // Helper: normalize to start-of-day for date-only comparison
+        const toStartOfDay = (d) => {
+          const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+          return dt;
+        };
+        const today = toStartOfDay(new Date());
+
+        // Helper: safely extract Date from mixed booking fields
+        const getDateFrom = (value) => {
+          try {
+            if (!value) return null;
+            if (typeof value?.toDate === "function") return value.toDate();
+            const parsed = new Date(value);
+            return isNaN(parsed.getTime()) ? null : parsed;
+          } catch (_) {
+            return null;
+          }
+        };
+
+        // Partition bookings into today's and upcoming (future-only)
+        const bookingsWithDates = allBookings.map((b) => {
+          const start = getDateFrom(b.checkIn) || getDateFrom(b.selectedDate) || null;
+          const end = getDateFrom(b.checkOut) || start;
+          return { ...b, __start: start, __end: end };
+        });
+
+        const isToday = (b) => {
+          if (!b.__start) return false;
+          const start = toStartOfDay(b.__start);
+          const end = b.__end ? toStartOfDay(b.__end) : start;
+          return start <= today && today <= end;
+        };
+
+        const isUpcoming = (b) => {
+          if (!b.__start) return false;
+          const start = toStartOfDay(b.__start);
+          return start > today; // strictly after today
+        };
+
+        const todaysConfirmed = bookingsWithDates.filter(
+          (b) => b.status === "confirmed" && isToday(b)
+        );
+        const upcomingConfirmed = bookingsWithDates
+          .filter((b) => b.status === "confirmed" && isUpcoming(b))
+          .sort((a, b) => a.__start - b.__start);
+
         // Get conversations for this host
         const conversationsRef = collection(db, "conversations");
         const conversationsQuery = query(conversationsRef);
@@ -129,7 +176,9 @@ export default function HostDashboard({ isVerified, user }) {
             return {
               id: conv.id,
               guest: guestData?.fullName || "Unknown",
-              message: conv.lastMessage || "No messages",
+              message: typeof conv.lastMessage === "string"
+                ? conv.lastMessage
+                : (conv.lastMessage?.text || "No messages"),
               time: conv.updatedAt
                 ? new Date(conv.updatedAt.toDate()).toLocaleString()
                 : "Just now",
@@ -139,7 +188,7 @@ export default function HostDashboard({ isVerified, user }) {
         );
 
         // Calculate stats
-        const confirmedBookings = allBookings.filter(
+        const confirmedBookings = bookingsWithDates.filter(
           (b) => b.status === "confirmed"
         );
         const totalEarnings = confirmedBookings.reduce(
@@ -148,15 +197,15 @@ export default function HostDashboard({ isVerified, user }) {
         );
         const avgRating =
           listings.length > 0
-            ? (
-                listings.reduce((sum, l) => sum + (l.rating || 0), 0) /
-                listings.length
-              ).toFixed(1)
+            ? Math.round(
+                (listings.reduce((sum, l) => sum + (Number(l.rating) || 0), 0) /
+                  listings.length) *
+                  10
+              ) / 10
             : 0;
 
-        // Get upcoming bookings (next 5 confirmed bookings)
-        const upcomingBookingsData = await Promise.all(
-          confirmedBookings.slice(0, 5).map(async (booking) => {
+        // Map helper for booking display row
+        const mapBookingDisplay = async (booking) => {
             const listingRef = doc(db, "listings", booking.listing_id);
             const listingSnap = await getDoc(listingRef);
             const listingData = listingSnap.data();
@@ -183,10 +232,19 @@ export default function HostDashboard({ isVerified, user }) {
               checkOut: booking.checkOut
                 ? new Date(booking.checkOut.toDate()).toLocaleDateString()
                 : booking.selectedDate || "N/A",
-              amount: booking.totalAmount || 0,
+              amount: Number(booking.totalAmount || 0),
               status: booking.status,
             };
-          })
+          };
+
+        // Today's Bookings (up to 5)
+        const todayBookingsData = await Promise.all(
+          todaysConfirmed.slice(0, 5).map(mapBookingDisplay)
+        );
+
+        // Upcoming Bookings (next 5)
+        const upcomingBookingsData = await Promise.all(
+          upcomingConfirmed.slice(0, 5).map(mapBookingDisplay)
         );
 
         // Get listing performance
@@ -217,16 +275,17 @@ export default function HostDashboard({ isVerified, user }) {
         });
 
         setStats({
-          totalEarnings,
+          totalEarnings: Number(totalEarnings) || 0,
           earningsChange: 12.5,
-          totalBookings: allBookings.length,
+          totalBookings: Number(allBookings.length) || 0,
           bookingsChange: 8.3,
-          activeListings: listings.length,
+          activeListings: Number(listings.length) || 0,
           listingsChange: 2,
-          avgRating: parseFloat(avgRating),
+          avgRating: Number(avgRating) || 0,
           ratingChange: 0.2,
         });
 
+        setTodayBookings(todayBookingsData);
         setUpcomingBookings(upcomingBookingsData);
         setRecentMessages(messagesWithDetails);
         setListingPerformance(listingPerformanceData);
@@ -323,7 +382,7 @@ export default function HostDashboard({ isVerified, user }) {
               </span>
             </div>
             <h3 className="text-2xl font-bold text-indigo-100">
-              ₱{stats.totalEarnings.toLocaleString()}
+              ₱{Number(stats.totalEarnings || 0).toLocaleString()}
             </h3>
             <p className="text-indigo-300/70 text-sm mt-1">Total Earnings</p>
           </div>
@@ -348,7 +407,7 @@ export default function HostDashboard({ isVerified, user }) {
               </span>
             </div>
             <h3 className="text-2xl font-bold text-indigo-100">
-              {stats.totalBookings}
+              {Number(stats.totalBookings || 0)}
             </h3>
             <p className="text-indigo-300/70 text-sm mt-1">Total Bookings</p>
           </div>
@@ -373,7 +432,7 @@ export default function HostDashboard({ isVerified, user }) {
               </span>
             </div>
             <h3 className="text-2xl font-bold text-indigo-100">
-              {stats.activeListings}
+              {Number(stats.activeListings || 0)}
             </h3>
             <p className="text-indigo-300/70 text-sm mt-1">Active Listings</p>
           </div>
@@ -398,66 +457,67 @@ export default function HostDashboard({ isVerified, user }) {
               </span>
             </div>
             <h3 className="text-2xl font-bold text-indigo-100">
-              {stats.avgRating}
+              {Number.isFinite(Number(stats.avgRating))
+                ? Number(stats.avgRating).toFixed(1)
+                : "0.0"}
             </h3>
             <p className="text-indigo-300/70 text-sm mt-1">Average Rating</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Upcoming Bookings */}
-          <div className="lg:col-span-2 bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
+          {/* Today's Bookings */}
+          <div className="lg:col-span-2 bg-gradient-to-br from-slate-800/60 to-slate-900/60 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-indigo-100">
-                Upcoming Bookings
-              </h2>
-              <a
-                href="/host/my-bookings"
-                className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
-              >
-                View All
-              </a>
+              <h2 className="text-xl font-bold text-indigo-100">Today's Bookings</h2>
+              <span className="text-indigo-300/70 text-sm">
+                {todayBookings.length} today
+              </span>
             </div>
 
-            <div className="space-y-4">
-              {upcomingBookings.map((booking) => (
-                <div
-                  key={booking.id}
-                  className="flex items-center justify-between p-4 bg-slate-700/30 hover:bg-slate-600/30 border border-indigo-500/20 rounded-lg transition"
-                >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="w-10 h-10 bg-indigo-500/20 border border-indigo-500/30 rounded-full flex items-center justify-center text-indigo-400">
-                      {getTypeIcon(booking.type)}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-indigo-100">
-                        {booking.property}
-                      </h3>
-                      <p className="text-sm text-indigo-300/60">{booking.guest}</p>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs text-indigo-300/50 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {booking.checkIn} - {booking.checkOut}
-                        </span>
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full ${getStatusColor(
-                            booking.status
-                          )}`}
-                        >
-                          {booking.status}
-                        </span>
+            {todayBookings.length === 0 ? (
+              <div className="text-sm text-indigo-300/60">No bookings today.</div>
+            ) : (
+              <div className="space-y-4">
+                {todayBookings.map((booking) => (
+                  <div
+                    key={booking.id}
+                    className="flex items-center justify-between p-4 bg-slate-700/30 hover:bg-slate-600/30 border border-indigo-500/20 rounded-lg transition"
+                  >
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="w-10 h-10 bg-indigo-500/20 border border-indigo-500/30 rounded-full flex items-center justify-center text-indigo-400">
+                        {getTypeIcon(booking.type)}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-indigo-100">
+                          {booking.property}
+                        </h3>
+                        <p className="text-sm text-indigo-300/60">{booking.guest}</p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-xs text-indigo-300/50 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {booking.checkIn} {booking.checkOut && booking.checkOut !== booking.checkIn ? `- ${booking.checkOut}` : ""}
+                          </span>
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full ${getStatusColor(
+                              booking.status
+                            )}`}
+                          >
+                            {booking.status}
+                          </span>
+                        </div>
                       </div>
                     </div>
+                    <div className="text-right">
+                      <p className="font-bold text-indigo-100">
+                        ₱{Number(booking.amount || 0).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-indigo-300/50">{booking.type}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-indigo-100">
-                      ₱{booking.amount.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-indigo-300/50">{booking.type}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Recent Messages */}
@@ -492,6 +552,76 @@ export default function HostDashboard({ isVerified, user }) {
                     {message.message}
                   </p>
                   <span className="text-xs text-indigo-300/50">{message.time}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Upcoming - full width on desktop */}
+        <div className="grid grid-cols-1 gap-6 mt-6">
+          {/* Upcoming Bookings */}
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl shadow-xl shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent">
+                  Upcoming Bookings
+                </h2>
+                <p className="text-indigo-300/60 text-sm mt-1">Next confirmed reservations in chronological order</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full bg-slate-700/60 border border-slate-600/50 text-indigo-200">
+                  {upcomingBookings.length} upcoming
+                </span>
+                <a
+                  href="/host/my-bookings"
+                  className="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
+                >
+                  View All
+                </a>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {upcomingBookings.map((booking) => (
+                <div
+                  key={booking.id}
+                  className="flex items-center justify-between p-5 bg-slate-700/30 hover:bg-slate-600/30 border border-indigo-500/20 rounded-xl transition shadow-sm hover:shadow-md hover:border-indigo-400/30"
+                >
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-12 h-12 bg-indigo-500/20 border border-indigo-500/30 rounded-full flex items-center justify-center text-indigo-400">
+                      {getTypeIcon(booking.type)}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-indigo-100 text-base">
+                        {booking.property}
+                      </h3>
+                      <p className="text-sm text-indigo-300/70">{booking.guest}</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-xs text-indigo-300/60 flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" />
+                          {booking.checkIn}
+                          {booking.checkOut && booking.checkOut !== booking.checkIn ? (
+                            <span className="mx-1">–</span>
+                          ) : null}
+                          {booking.checkOut && booking.checkOut !== booking.checkIn ? booking.checkOut : null}
+                        </span>
+                        <span
+                          className={`text-[11px] px-2.5 py-1 rounded-full ${getStatusColor(
+                            booking.status
+                          )}`}
+                        >
+                          {booking.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-indigo-100 text-base">
+                      ₱{Number(booking.amount || 0).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-indigo-300/60">{booking.type}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -558,13 +688,15 @@ export default function HostDashboard({ isVerified, user }) {
                     </td>
                     <td className="py-4 px-4">
                       <span className="text-sm font-semibold text-green-400">
-                        ₱{listing.revenue.toLocaleString()}
+                        ₱{Number(listing.revenue || 0).toLocaleString()}
                       </span>
                     </td>
                     <td className="py-4 px-4">
                       <span className="flex items-center gap-1 text-sm text-indigo-100">
                         <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                        {listing.rating}
+                        {Number.isFinite(Number(listing.rating))
+                          ? Number(listing.rating).toFixed(1)
+                          : "0.0"}
                       </span>
                     </td>
                   </tr>
