@@ -13,8 +13,8 @@ export default function ProgressBar({ currentStep, totalSteps, steps }) {
   const progress = (currentStep / totalSteps) * 100;
 
   return (
-    <div className="w-full bg-slate-900 border-b border-slate-700 p-6">
-      <div className="max-w-2xl mx-auto">
+    <div className="w-full bg-slate-900 border-b border-slate-700 p-3 sm:p-4 lg:p-6">
+      <div className="max-w-sm sm:max-w-lg lg:max-w-2xl mx-auto">
         {/* Step Indicators */}
         <div className="flex items-center justify-between mb-4">
           {stepsToShow.map((step, index) => (

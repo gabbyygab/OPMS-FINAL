@@ -922,7 +922,7 @@ export default function HostMyStays({ user, userData }) {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {paginatedStays.map((stay) => (
               <div
                 key={stay.id}

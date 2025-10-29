@@ -12,7 +12,8 @@
       "WebFetch(domain:react-tailwindcss-datepicker.vercel.app)",
       "WebFetch(domain:ui.shadcn.com)",
       "WebFetch(domain:bundlephobia.com)",
-      "Bash(cd D:Web AppsOPMS-FINAL)"
+      "Bash(cd D:Web AppsOPMS-FINAL)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "ask": []

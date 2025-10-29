@@ -627,120 +627,144 @@ const MobileMenu = ({
   setMobileMenuOpen,
   handleLogout,
   userData,
-}) => (
-  <div className="xl:hidden bg-slate-900/95 backdrop-blur-md shadow-lg border-t border-slate-700">
-    <div className="flex flex-col p-4 space-y-3 text-slate-200">
-      {!user ? (
-        <>
-          <Link
-            to={ROUTES.LOGIN}
-            className="flex items-center gap-2 hover:text-white transition"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <User className="w-5 h-5" /> Sign In
-          </Link>
-          <Link
-            to={ROUTES.GUEST.SIGNUP}
-            className="flex items-center gap-2 hover:text-white transition"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <PlusSquare className="w-5 h-5" /> Sign Up
-          </Link>
-          <Link
-            to={ROUTES.HOST.SIGNUP}
-            className="flex items-center gap-2 hover:text-white transition"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <Home className="w-5 h-5" /> Become a Host
-          </Link>
-        </>
-      ) : (
-        <>
-          {userData?.role === "guest" && (
-            <>
-              {/* Category Navigation */}
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={() => {
-                    setActiveFilter("stays");
-                    navigate("/guest?type=stays");
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all ${
-                    activeFilter === "stays"
-                      ? "bg-indigo-600 text-white"
-                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                  }`}
-                >
-                  Stays
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveFilter("services");
-                    navigate("/guest?type=services");
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all ${
-                    activeFilter === "services"
-                      ? "bg-indigo-600 text-white"
-                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                  }`}
-                >
-                  Services
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveFilter("experiences");
-                    navigate("/guest?type=experiences");
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all ${
-                    activeFilter === "experiences"
-                      ? "bg-indigo-600 text-white"
-                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                  }`}
-                >
-                  Experiences
-                </button>
-              </div>
+  activeFilter = null,
+  setActiveFilter = null,
+  openSignIn = null,
+  selectSignUpRole = null,
+}) => {
+  const navigate = useNavigate();
 
-              <Link
-                to={ROUTES.GUEST.HOME}
-                className="flex items-center gap-2 hover:text-white transition"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Calendar className="w-5 h-5" /> My Bookings
-              </Link>
-              <Link
-                to={ROUTES.GUEST.PROFILE}
-                className="flex items-center gap-2 hover:text-white transition"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <User className="w-5 h-5" /> My Profile
-              </Link>
+  return (
+    <div className="xl:hidden bg-slate-900/95 backdrop-blur-md shadow-lg border-t border-slate-700">
+      <div className="flex flex-col p-4 space-y-3 text-slate-200">
+        {!user ? (
+          <>
+            <button
+              onClick={() => {
+                if (openSignIn) openSignIn();
+                setMobileMenuOpen(false);
+              }}
+              className="flex items-center gap-2 hover:text-white transition text-left w-full"
+            >
+              <User className="w-5 h-5" /> Sign In
+            </button>
+            <button
+              onClick={() => {
+                if (selectSignUpRole) selectSignUpRole("guest");
+                setMobileMenuOpen(false);
+              }}
+              className="flex items-center gap-2 hover:text-white transition text-left w-full"
+            >
+              <PlusSquare className="w-5 h-5" /> Sign Up
+            </button>
+            <button
+              onClick={() => {
+                if (selectSignUpRole) selectSignUpRole("host");
+                setMobileMenuOpen(false);
+              }}
+              className="flex items-center gap-2 hover:text-white transition text-left w-full"
+            >
+              <Home className="w-5 h-5" /> Become a Host
+            </button>
+          </>
+        ) : (
+          <>
+            {userData?.role === "guest" && setActiveFilter && activeFilter !== null && (
+              <>
+                {/* Category Navigation */}
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => {
+                      setActiveFilter("stays");
+                      const newParams = new URLSearchParams();
+                      newParams.set("type", "stays");
+                      navigate(`${ROUTES.GUEST.HOME}?${newParams.toString()}`);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all ${
+                      activeFilter === "stays"
+                        ? "bg-indigo-600 text-white"
+                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                    }`}
+                  >
+                    Stays
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveFilter("services");
+                      const newParams = new URLSearchParams();
+                      newParams.set("type", "services");
+                      navigate(`${ROUTES.GUEST.HOME}?${newParams.toString()}`);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all ${
+                      activeFilter === "services"
+                        ? "bg-indigo-600 text-white"
+                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                    }`}
+                  >
+                    Services
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveFilter("experiences");
+                      const newParams = new URLSearchParams();
+                      newParams.set("type", "experiences");
+                      navigate(`${ROUTES.GUEST.HOME}?${newParams.toString()}`);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all ${
+                      activeFilter === "experiences"
+                        ? "bg-indigo-600 text-white"
+                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                    }`}
+                  >
+                    Experiences
+                  </button>
+                </div>
+              </>
+            )}
 
-              <Link
-                to={ROUTES.GUEST.FAVORITES}
-                className="flex items-center gap-2 hover:text-white transition"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Heart className="w-5 h-5" /> Favorites
-              </Link>
-            </>
-          )}
+            {userData?.role === "guest" && (
+              <>
+                <Link
+                  to={ROUTES.GUEST.MY_BOOKINGS}
+                  className="flex items-center gap-2 hover:text-white transition"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Calendar className="w-5 h-5" /> My Bookings
+                </Link>
+                <Link
+                  to={ROUTES.GUEST.PROFILE}
+                  className="flex items-center gap-2 hover:text-white transition"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <User className="w-5 h-5" /> My Profile
+                </Link>
 
-          <button
-            className="flex items-center gap-2 hover:text-white transition text-left"
-            onClick={handleLogout}
-          >
-            <LogOut className="w-5 h-5" />
-            Logout
-          </button>
-        </>
-      )}
+                <Link
+                  to={ROUTES.GUEST.FAVORITES}
+                  className="flex items-center gap-2 hover:text-white transition"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Heart className="w-5 h-5" /> Favorites
+                </Link>
+              </>
+            )}
+
+            <button
+              className="flex items-center gap-2 hover:text-white transition text-left"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-5 h-5" />
+              Logout
+            </button>
+          </>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Host Mobile Menu Drawer Component (right-side sidebar for host view)
 const HostMobileMenuDrawer = ({
@@ -1264,6 +1288,28 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
 
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
   const [serviceTypeSuggestions, setServiceTypeSuggestions] = useState([]);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+
+  // Get auth modal context functions
+  const { openSignIn, selectSignUpRole } = useContext(AuthModalContext);
+
+  // Fetch unread notifications count
+  useEffect(() => {
+    if (!userData?.id) return;
+
+    const notificationsRef = collection(db, "notifications");
+    const q = query(
+      notificationsRef,
+      where("userId", "==", userData.id),
+      where("isRead", "==", false)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setUnreadNotificationsCount(snapshot.size);
+    });
+
+    return () => unsubscribe();
+  }, [userData?.id]);
 
   useEffect(() => {
     const fetchServiceTypes = async () => {
@@ -1491,6 +1537,20 @@ const GuestTabNavigation = ({ user, userData, handleLogout }) => {
               >
                 <Menu className="w-5 h-5 text-slate-300" />
               </button>
+
+              {/* Notifications Icon */}
+              <Link
+                to={ROUTES.GUEST.NOTIFICATIONS}
+                className="relative p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200 hover:scale-110 text-slate-300 hover:text-white"
+                title="Notifications"
+              >
+                <Bell className="w-5 h-5" />
+                {unreadNotificationsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold w-5 h-5 rounded-full flex items-center justify-center">
+                    {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                  </span>
+                )}
+              </Link>
 
               {/* Profile Menu */}
               <div className="relative group">
@@ -2813,6 +2873,7 @@ export default function NavigationBar({
 
   const navigate = useNavigate();
   const location = useLocation();
+  const { openSignIn, selectSignUpRole } = useContext(AuthModalContext);
 
   const isGuest = userData?.role === "guest" || forceSimpleNavBar;
   const isHost = userData?.role === "host";
@@ -3353,6 +3414,8 @@ export default function NavigationBar({
               setMobileSearchOpen={setMobileSearchOpen}
               setMobileMenuOpen={setMobileMenuOpen}
               handleLogout={handleLogout}
+              openSignIn={openSignIn}
+              selectSignUpRole={selectSignUpRole}
             />
           )
         )}

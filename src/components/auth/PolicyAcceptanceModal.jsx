@@ -286,18 +286,18 @@ By accepting this policy, you acknowledge that you have read and understand all 
   }, []);
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-slate-700 shadow-2xl">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-sm sm:max-w-lg lg:max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col border border-slate-700 shadow-2xl">
         {/* Header */}
-        <div className="p-6 border-b border-slate-700 flex-shrink-0 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-1">
+        <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-700 flex-shrink-0 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-white mb-1 break-words">
                 {userRole === "host"
                   ? "Host Terms & Policies"
                   : "Guest Terms & Policies"}
               </h2>
-              <p className="text-slate-400 text-sm">
+              <p className="text-slate-400 text-xs sm:text-sm">
                 Please read and accept the terms to continue
               </p>
             </div>

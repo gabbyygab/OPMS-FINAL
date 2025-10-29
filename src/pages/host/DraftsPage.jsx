@@ -111,7 +111,7 @@ export default function DraftsPage() {
       const listingRef = collection(db, "listings");
       const q = query(
         listingRef,
-        where("host_id", "==", userData.id),
+        where("hostId", "==", userData.id),
         where("isDraft", "==", true)
       );
       const querySnapshot = await getDocs(q);

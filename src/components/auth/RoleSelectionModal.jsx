@@ -10,25 +10,25 @@ export default function RoleSelectionModal({ onSelectRole, onCancel }) {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex flex-col">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex flex-col overflow-y-auto">
       {/* Progress Bar */}
       <ProgressBar currentStep={1} totalSteps={4} steps={steps} />
 
       {/* Modal Content */}
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-2xl border border-slate-700 shadow-2xl overflow-hidden">
+      <div className="flex-1 flex items-center justify-center p-3 sm:p-4">
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-sm sm:max-w-lg lg:max-w-2xl border border-slate-700 shadow-2xl overflow-hidden my-auto">
           {/* Header */}
-          <div className="p-8 text-center border-b border-slate-700 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
-            <h2 className="text-3xl font-bold text-white mb-2">
+          <div className="p-4 sm:p-6 lg:p-8 text-center border-b border-slate-700 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">
               How do you want to use BookingNest?
             </h2>
-            <p className="text-slate-400">
+            <p className="text-slate-400 text-sm sm:text-base">
               Choose your role to get started with our platform
             </p>
           </div>
 
           {/* Role Selection Cards */}
-          <div className="p-8">
+          <div className="p-4 sm:p-6 lg:p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Guest Card */}
               <button
