@@ -167,10 +167,10 @@ export default function OTPVerificationPage({ user, userData }) {
         // Clear sessionStorage
         sessionStorage.removeItem("signupData");
 
-        toast.success("Account created successfully! Please sign in.", {
+        toast.success("Account created successfully!", {
           position: "top-right",
         });
-        navigate("/login");
+        navigate("/");
         return;
       }
 

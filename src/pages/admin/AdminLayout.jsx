@@ -3,6 +3,7 @@ import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../../firebase/firebase";
 import { toast } from "react-toastify";
+import { ROUTES } from "../../constants/routes";
 import {
   LayoutDashboard,
   DollarSign,
@@ -25,6 +26,8 @@ export default function AdminLayout({ user, userData }) {
 
   const handleLogout = async () => {
     try {
+      // Navigate immediately to prevent showing protected route
+      navigate(ROUTES.HOME, { replace: true });
       await signOut(auth);
       toast.success("Logged out successfully");
       navigate("/");

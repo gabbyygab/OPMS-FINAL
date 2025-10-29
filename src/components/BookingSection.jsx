@@ -267,24 +267,45 @@ export default function BookingsSection({ userData, isFavoritePage }) {
           }
 
           // Fetch full listing data for each favorite
-          const favoriteListings = await Promise.all(
-            snapshot.docs.map(async (favDoc) => {
-              const favData = favDoc.data();
-              const listingRef = doc(db, "listings", favData.listing_id);
-              const listingSnap = await getDoc(listingRef);
-
-              if (listingSnap.exists()) {
-                return {
-                  id: listingSnap.id,
-                  ...listingSnap.data(),
-                  isFavorite: true, // ✅ mark it as favorite
-                  favoriteDocId: favDoc.id, // for removing later
-                };
-              }
-              return null;
-            })
-          );
-
+                  const favoriteListings = await Promise.all(
+                    snapshot.docs.map(async (favDoc) => {
+                      const favData = favDoc.data();
+                      const listingRef = doc(db, "listings", favData.listing_id);
+                      const listingSnap = await getDoc(listingRef);
+          
+                      if (listingSnap.exists()) {
+                        const listing = {
+                          id: listingSnap.id,
+                          ...listingSnap.data(),
+                        };
+          
+                        // Fetch reviews for this listing
+                        const reviewsRef = collection(db, "reviews");
+                        const reviewQuery = query(
+                          reviewsRef,
+                          where("listingId", "==", listing.id)
+                        );
+                        const reviewSnap = await getDocs(reviewQuery);
+                        const reviewCount = reviewSnap.size;
+          
+                        let totalRating = 0;
+                        reviewSnap.docs.forEach((doc) => {
+                          totalRating += doc.data().rating;
+                        });
+                        const averageRating =
+                          reviewCount > 0 ? (totalRating / reviewCount).toFixed(1) : 0;
+          
+                        return {
+                          ...listing,
+                          rating: averageRating,
+                          reviewCount: reviewCount,
+                          isFavorite: true, // ✅ mark it as favorite
+                          favoriteDocId: favDoc.id, // for removing later
+                        };
+                      }
+                      return null;
+                    })
+                  );
           setFavorites(favoriteListings.filter((f) => f !== null));
         } catch (error) {
           console.error("Error fetching favorite listings:", error);
@@ -308,10 +329,36 @@ export default function BookingsSection({ userData, isFavoritePage }) {
       const fetchAndCombine = async (favDocIds) => {
         try {
           const listingsSnap = await getDocs(listingQuery);
-          const listingsData = listingsSnap.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
+          const listingsData = await Promise.all(
+            listingsSnap.docs.map(async (doc) => {
+              const listing = {
+                id: doc.id,
+                ...doc.data(),
+              };
+
+              // Fetch reviews for this listing
+              const reviewsRef = collection(db, "reviews");
+              const reviewQuery = query(
+                reviewsRef,
+                where("listingId", "==", listing.id)
+              );
+              const reviewSnap = await getDocs(reviewQuery);
+              const reviewCount = reviewSnap.size;
+
+              let totalRating = 0;
+              reviewSnap.docs.forEach((doc) => {
+                totalRating += doc.data().rating;
+              });
+              const averageRating =
+                reviewCount > 0 ? (totalRating / reviewCount).toFixed(1) : 0;
+
+              return {
+                ...listing,
+                rating: averageRating,
+                reviewCount: reviewCount,
+              };
+            })
+          );
 
           // Combine listings with favorite status based on current favorites
           const listingsWithFavs = listingsData.map((listing) => ({

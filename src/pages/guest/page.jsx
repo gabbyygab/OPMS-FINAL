@@ -8,8 +8,22 @@ import VerificationBanner from "../../components/Verification";
 import { useState } from "react";
 import { sendOtpToUser } from "../../utils/sendOtpToUser";
 import LoadingSpinner from "../../loading/Loading";
+import { toast } from "react-toastify";
 import NavigationBar from "../../components/NavigationBar";
 export default function GuestPage({ userData, user }) {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      // Navigate immediately to prevent showing protected route
+      navigate("/", { replace: true });
+      await signOut(auth);
+      toast.success("Logged out successfully");
+    } catch (error) {
+      toast.error("Error logging out: " + error.message);
+    }
+  };
+
   // Calculate top padding for fixed navbar with tabs and search bar
   // Top row (logo + tabs + profile): ~54px (py-2.5)
   // Search bar row: ~50px (py-2.5)
@@ -18,7 +32,7 @@ export default function GuestPage({ userData, user }) {
   // Using 104px to account for both rows
   return (
     <>
-      <NavigationBar user={user} userData={userData} />
+      <NavigationBar user={user} userData={userData} handleLogout={handleLogout} />
       <section style={{ paddingTop: user && userData?.role === "guest" ? "104px" : "0px" }}>
         <BookingsSection userData={userData} isFavoritePage={false} />
       </section>

@@ -33,6 +33,7 @@ export function AuthModalProvider({ children }) {
   };
 
   const selectSignUpRole = (role) => {
+    setShowSignUpModal(true);
     setSignUpRole(role);
     setSignUpStep(2);
   };

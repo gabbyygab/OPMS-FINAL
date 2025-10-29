@@ -1,5 +1,10 @@
 import { Check } from "lucide-react";
+import { useContext } from "react";
+import { AuthModalContext } from "../context/AuthModalContext";
+
 export default function Pricing() {
+  const { selectSignUpRole } = useContext(AuthModalContext);
+
   return (
     <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-7xl mx-auto">
@@ -32,7 +37,7 @@ export default function Pricing() {
                 </li>
               </ul>
             </div>
-            <button className="mt-auto w-full px-6 py-3 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors">
+            <button onClick={() => selectSignUpRole("host")} className="mt-auto w-full px-6 py-3 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors">
               Become a Host
             </button>
           </div>
@@ -74,7 +79,7 @@ export default function Pricing() {
                 </li>
               </ul>
             </div>
-            <button className="mt-auto w-full px-6 py-3 bg-white text-purple-700 rounded-xl font-semibold hover:bg-gray-100 transition-colors">
+            <button onClick={() => selectSignUpRole("host")} className="mt-auto w-full px-6 py-3 bg-white text-purple-700 rounded-xl font-semibold hover:bg-gray-100 transition-colors">
               Become a Host
             </button>
           </div>
@@ -113,7 +118,7 @@ export default function Pricing() {
                 </li>
               </ul>
             </div>
-            <button className="mt-auto w-full px-6 py-3 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors">
+            <button onClick={() => selectSignUpRole("host")} className="mt-auto w-full px-6 py-3 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors">
               Become a Host
             </button>
           </div>

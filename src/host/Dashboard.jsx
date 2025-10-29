@@ -91,15 +91,23 @@ export default function HostDashboard({ isVerified, user }) {
 
         let allBookings = [];
         if (listingIds.length > 0) {
-          const bookingsQuery = query(
-            bookingsRef,
-            where("listing_id", "in", listingIds)
-          );
-          const bookingsSnap = await getDocs(bookingsQuery);
-          allBookings = bookingsSnap.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
+          // Firebase IN operator supports max 30 values, so split into chunks
+          const chunkSize = 30;
+          for (let i = 0; i < listingIds.length; i += chunkSize) {
+            const chunk = listingIds.slice(i, i + chunkSize);
+            const bookingsQuery = query(
+              bookingsRef,
+              where("listing_id", "in", chunk)
+            );
+            const bookingsSnap = await getDocs(bookingsQuery);
+            allBookings = [
+              ...allBookings,
+              ...bookingsSnap.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+              })),
+            ];
+          }
         }
 
         // Get conversations for this host

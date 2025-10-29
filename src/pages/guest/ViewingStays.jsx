@@ -500,18 +500,24 @@ export default function ListingDetailPage() {
         const reviewsRef = collection(db, "reviews");
         const reviewQuery = query(
           reviewsRef,
-          where("listing_id", "==", listing_id)
+          where("listingId", "==", listing_id)
         );
         const reviewSnap = await getDocs(reviewQuery);
         const reviewCount = reviewSnap.size;
+
+        let totalRating = 0;
+        reviewSnap.docs.forEach(doc => {
+          totalRating += doc.data().rating;
+        });
+        const averageRating = reviewCount > 0 ? (totalRating / reviewCount).toFixed(1) : 0;
 
         const reviewsWithUsers = await Promise.all(
           reviewSnap.docs.map(async (reviewDoc) => {
             const reviewData = reviewDoc.data();
             let userData = null;
 
-            if (reviewData.user_id) {
-              const userRef = doc(db, "users", reviewData.user_id);
+            if (reviewData.guestId) {
+              const userRef = doc(db, "users", reviewData.guestId);
               const userSnap = await getDoc(userRef);
               if (userSnap.exists()) {
                 userData = userSnap.data();
@@ -538,7 +544,16 @@ export default function ListingDetailPage() {
           }
         }
 
-        setListingData({ ...data, reviewCount, host: hostData });
+        setListingData({ ...data, reviewCount, rating: averageRating, host: hostData });
+
+        // Update the listing document with the new rating and review count
+        if (listingSnap.exists()) {
+          const listingRef = doc(db, "listings", listing_id);
+          await updateDoc(listingRef, {
+            rating: averageRating,
+            reviewCount: reviewCount
+          });
+        }
 
         // Set map center based on listing coordinates
         if (data.coordinates?.lat && data.coordinates?.lng) {
@@ -603,7 +618,13 @@ export default function ListingDetailPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => window.history.back()}
+              onClick={() => {
+                if (!user) {
+                  navigate("/");
+                } else {
+                  window.history.back();
+                }
+              }}
               className="flex items-center gap-2 text-slate-300 hover:text-indigo-400 font-medium transition"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -611,7 +632,7 @@ export default function ListingDetailPage() {
             </button>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setShowShareModal(true)}
+                onClick={() => handleActionWithVerification(() => setShowShareModal(true))}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-700 transition text-slate-300"
               >
                 <Share2 className="w-4 h-4" />
@@ -637,7 +658,7 @@ export default function ListingDetailPage() {
         </div>
       </header>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 mt-16 sm:mt-20">
+      <main className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 mt-12 sm:mt-14">
         {/* Verification Banner */}
         {!isVerified && (
           <div className="mb-4 sm:mb-6">

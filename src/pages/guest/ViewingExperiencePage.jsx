@@ -91,6 +91,7 @@ export default function ExperienceDetailPage() {
   const [guests, setGuests] = useState(2);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [reviewsData, setReviewsData] = useState([]);
   const [experienceData, setExperienceData] = useState({});
   const [loading, setLoading] = useState(false);
   const [isLoadingVerification, setIsLoadingVerification] = useState(false);
@@ -256,10 +257,44 @@ export default function ExperienceDetailPage() {
         }
 
         const data = experienceSnap.data();
+
+        // Fetch reviews with user data
         const reviewsRef = collection(db, "reviews");
-        const q = query(reviewsRef, where("listing_id", "==", listing_id));
-        const reviewSnap = await getDocs(q);
+        const reviewQuery = query(
+          reviewsRef,
+          where("listingId", "==", listing_id)
+        );
+        const reviewSnap = await getDocs(reviewQuery);
         const reviewCount = reviewSnap.size;
+
+        let totalRating = 0;
+        reviewSnap.docs.forEach(doc => {
+          totalRating += doc.data().rating;
+        });
+        const averageRating = reviewCount > 0 ? (totalRating / reviewCount).toFixed(1) : 0;
+
+        const reviewsWithUsers = await Promise.all(
+          reviewSnap.docs.map(async (reviewDoc) => {
+            const reviewData = reviewDoc.data();
+            let userData = null;
+
+            if (reviewData.guestId) {
+              const userRef = doc(db, "users", reviewData.guestId);
+              const userSnap = await getDoc(userRef);
+              if (userSnap.exists()) {
+                userData = userSnap.data();
+              }
+            }
+
+            return {
+              id: reviewDoc.id,
+              ...reviewData,
+              user: userData,
+            };
+          })
+        );
+
+        setReviewsData(reviewsWithUsers);
 
         let hostData = null;
         if (data.hostId) {
@@ -270,7 +305,16 @@ export default function ExperienceDetailPage() {
           }
         }
 
-        setExperienceData({ ...data, reviewCount, host: hostData });
+        setExperienceData({ ...data, reviewCount, rating: averageRating, host: hostData });
+
+        // Update the listing document with the new rating and review count
+        if (experienceSnap.exists()) {
+          const listingRef = doc(db, "listings", listing_id);
+          await updateDoc(listingRef, {
+            rating: averageRating,
+            reviewCount: reviewCount
+          });
+        }
 
         // Set map center based on experience coordinates
         if (data.coordinates?.lat && data.coordinates?.lng) {
@@ -353,7 +397,13 @@ export default function ExperienceDetailPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => window.history.back()}
+              onClick={() => {
+                if (!user) {
+                  navigate("/");
+                } else {
+                  window.history.back();
+                }
+              }}
               className="flex items-center gap-2 text-slate-300 hover:text-indigo-400 font-medium transition"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -629,25 +679,32 @@ export default function ExperienceDetailPage() {
                 </h3>
               </div>
               <div className="space-y-6">
-                {reviews.map((review) => (
+                {reviewsData.map((review) => (
                   <div key={review.id} className="flex gap-4">
                     <img
-                      src={review.avatar}
-                      alt={review.author}
+                      src={review.user?.photoURL || "https://via.placeholder.com/100"}
+                      alt={review.user?.fullName || "User"}
                       className="w-12 h-12 rounded-full flex-shrink-0"
                     />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-white">
-                          {review.author}
+                          {review.user?.fullName || "Anonymous"}
                         </span>
                         <span className="text-slate-500 text-sm">·</span>
                         <span className="text-slate-500 text-sm">
-                          {review.date}
+                          {review.createdAt
+                            ? new Date(
+                                review.createdAt.toDate()
+                              ).toLocaleDateString("en-US", {
+                                month: "long",
+                                year: "numeric",
+                              })
+                            : "Recently"}
                         </span>
                       </div>
                       <div className="flex items-center gap-1 mb-2">
-                        {Array.from({ length: review.rating }).map((_, i) => (
+                        {Array.from({ length: review.rating || 5 }).map((_, i) => (
                           <Star
                             key={i}
                             className="w-3 h-3 fill-yellow-400 text-yellow-400"
@@ -655,7 +712,7 @@ export default function ExperienceDetailPage() {
                         ))}
                       </div>
                       <p className="text-slate-300 text-sm leading-relaxed">
-                        {review.comment}
+                        {review.comment || review.review || "Great stay!"}
                       </p>
                     </div>
                   </div>

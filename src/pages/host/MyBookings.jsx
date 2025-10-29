@@ -43,6 +43,7 @@ export default function HostMyBookings() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [bookingToAction, setBookingToAction] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -369,11 +370,64 @@ export default function HostMyBookings() {
       setShowDetailsModal(false);
     } catch (error) {
       console.error("Error rejecting booking:", error);
-      toast.error("Failed to reject booking");
     } finally {
       setIsProcessing(false);
     }
   };
+
+  const handleCompleteBooking = async () => {
+    if (!bookingToAction) return;
+
+    try {
+      setIsProcessing(true);
+      const loadingToast = toast.loading("Marking booking as completed...");
+
+      // Update booking status to completed
+      await updateDoc(doc(db, "bookings", bookingToAction.id), {
+        status: "completed",
+        completedAt: serverTimestamp()
+      });
+
+      // Create notification for guest to leave a review
+      await addDoc(collection(db, "notifications"), {
+        userId: bookingToAction.guest_id,
+        guestId: bookingToAction.guest_id,
+        type: "booking_completed",
+        title: "Booking Completed",
+        message: `Your booking for ${bookingToAction.listing?.title} is complete! Please leave a review to share your experience.`,
+        listingId: bookingToAction.listing_id,
+        bookingId: bookingToAction.id,
+        isRead: false,
+        createdAt: serverTimestamp()
+      });
+
+      // Update local state
+      const updatedBooking = {
+        ...bookingToAction,
+        status: "completed"
+      };
+
+      const updatedBookings = bookings.map((b) =>
+        b.id === bookingToAction.id ? updatedBooking : b
+      );
+
+      setBookings(updatedBookings);
+      filterBookings(updatedBookings, statusFilter, searchTerm);
+
+      toast.dismiss(loadingToast);
+      toast.success("Booking marked as completed!");
+
+      setShowCompleteModal(false);
+      setBookingToAction(null);
+      setShowDetailsModal(false);
+    } catch (error) {
+      console.error("Error completing booking:", error);
+      toast.error("Failed to mark booking as completed");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
 
   // Pagination
   const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);

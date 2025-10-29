@@ -145,9 +145,15 @@ export default function ServiceDetailPage() {
 
         // Fetch reviews using listing_id
         const reviewsRef = collection(db, "reviews");
-        const q = query(reviewsRef, where("listing_id", "==", listing_id));
+        const q = query(reviewsRef, where("listingId", "==", listing_id));
         const reviewSnap = await getDocs(q);
         const reviewCount = reviewSnap.size;
+
+        let totalRating = 0;
+        reviewSnap.docs.forEach(doc => {
+          totalRating += doc.data().rating;
+        });
+        const averageRating = reviewCount > 0 ? (totalRating / reviewCount).toFixed(1) : 0;
 
         // Fetch review details with user data
         const reviewsWithUsers = await Promise.all(
@@ -155,8 +161,8 @@ export default function ServiceDetailPage() {
             const reviewData = reviewDoc.data();
             let userData = null;
 
-            if (reviewData.user_id) {
-              const userRef = doc(db, "users", reviewData.user_id);
+            if (reviewData.guestId) {
+              const userRef = doc(db, "users", reviewData.guestId);
               const userSnap = await getDoc(userRef);
               if (userSnap.exists()) {
                 userData = userSnap.data();
@@ -181,8 +187,17 @@ export default function ServiceDetailPage() {
           }
         }
 
-        setServiceData({ ...data, reviewCount, provider: providerData });
+        setServiceData({ ...data, reviewCount, rating: averageRating, provider: providerData });
         setReviewsData(reviewsWithUsers || []);
+
+        // Update the listing document with the new rating and review count
+        if (serviceSnap.exists()) {
+          const listingRef = doc(db, "listings", listing_id);
+          await updateDoc(listingRef, {
+            rating: averageRating,
+            reviewCount: reviewCount
+          });
+        }
 
         // Set first available time slot and service type
         if (
@@ -213,7 +228,13 @@ export default function ServiceDetailPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => window.history.back()}
+              onClick={() => {
+                if (!user) {
+                  navigate("/");
+                } else {
+                  window.history.back();
+                }
+              }}
               className="flex items-center gap-2 text-slate-300 hover:text-indigo-400 font-medium transition"
             >
               <ChevronLeft className="w-5 h-5" />

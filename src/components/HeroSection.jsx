@@ -1,4 +1,9 @@
+import { useContext } from "react";
+import { AuthModalContext } from "../context/AuthModalContext";
+
 export default function HeroSection() {
+  const { openSignUp } = useContext(AuthModalContext);
+
   return (
     <section className="relative overflow-x-hidden h-screen text-white flex items-center justify-center">
       {/* Background video */}
@@ -42,7 +47,7 @@ export default function HeroSection() {
 
         {/* Call to actions with enhanced design */}
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center px-4 sm:px-0">
-          <button className="group px-8 sm:px-10 py-3 sm:py-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-2xl text-base sm:text-lg font-bold transition-all shadow-2xl hover:shadow-3xl hover:scale-105 transform duration-300 flex items-center justify-center gap-2">
+          <button onClick={() => openSignUp()} className="group px-8 sm:px-10 py-3 sm:py-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-2xl text-base sm:text-lg font-bold transition-all shadow-2xl hover:shadow-3xl hover:scale-105 transform duration-300 flex items-center justify-center gap-2">
             <span>Get Started</span>
             <svg
               className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform"

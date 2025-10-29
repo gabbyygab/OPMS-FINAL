@@ -1,13 +1,31 @@
 import { AlertCircle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useContext } from "react";
+import { AuthModalContext } from "../context/AuthModalContext";
+import { toast } from "react-toastify";
 
 export default function VerificationBanner({ handleVerification }) {
   const { userData } = useAuth();
+  const { openSignUp } = useContext(AuthModalContext);
 
   // Don't show banner if userData is null or role is not available
   if (!userData || !userData.role) {
     return null;
   }
+
+  const handleVerifyClick = async () => {
+    try {
+      // Call the verification handler
+      await handleVerification();
+      // Show toast that code is sent
+      toast.info("Verification code sent to your email", {
+        position: "top-center",
+      });
+    } catch (error) {
+      console.error("Verification error:", error);
+      toast.error("Failed to send verification code");
+    }
+  };
 
   return (
     <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
@@ -26,7 +44,7 @@ export default function VerificationBanner({ handleVerification }) {
       </div>
 
       <button
-        onClick={handleVerification}
+        onClick={handleVerifyClick}
         className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium text-sm transition"
       >
         Verify Account Now

@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { Facebook, Instagram, Twitter, Linkedin, Mail, Phone, MapPin } from "lucide-react";
+import { AuthModalContext } from "../context/AuthModalContext";
 
 export default function Footer() {
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const { selectSignUpRole } = useContext(AuthModalContext);
   const currentYear = new Date().getFullYear();
 
   useEffect(() => {
@@ -102,9 +104,9 @@ export default function Footer() {
             <h3 className="text-lg font-semibold text-white mb-6">For Hosts</h3>
             <ul className="space-y-3">
               <li>
-                <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">
+                <button onClick={() => selectSignUpRole("host")} className="text-slate-400 hover:text-indigo-400 transition-colors text-sm cursor-pointer">
                   Become a Host
-                </a>
+                </button>
               </li>
               <li>
                 <a href="#" className="text-slate-400 hover:text-indigo-400 transition-colors text-sm">

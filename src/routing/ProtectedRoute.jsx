@@ -7,10 +7,10 @@ import { Navigate, Outlet } from "react-router-dom";
  * @param {string} allowedRole - Required role to access the route
  * @param {string} redirectTo - Path to redirect if access is denied
  */
-export function ProtectedRoute({ user, userData, allowedRole, redirectTo = "/login" }) {
-  // Redirect to login if not authenticated
+export function ProtectedRoute({ user, userData, allowedRole, redirectTo = "/" }) {
+  // Redirect to home if not authenticated
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // Redirect to appropriate page if role doesn't match

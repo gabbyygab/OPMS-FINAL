@@ -26,8 +26,10 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from 'react-router-dom';
 import NavigationBar from "../components/NavigationBar";
 import LoadingSpinner from "../loading/Loading";
+import ReviewModal from "../components/ReviewModal";
 
 export default function NotificationsPage() {
   const { user, userData } = useAuth();
@@ -35,6 +37,9 @@ export default function NotificationsPage() {
   const [filterType, setFilterType] = useState("all");
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedBookingForReview, setSelectedBookingForReview] = useState(null);
 
   // Fetch notifications from Firestore
   useEffect(() => {
@@ -115,7 +120,7 @@ export default function NotificationsPage() {
             const listingId = data.listingId || data.listing_id;
             const guestAvatar = data.guestAvatar || data.guest_avatar;
 
-            return {
+            const notificationPayload = {
               id: docSnapshot.id,
               ...data,
               avatar: guestAvatar || relatedUserData?.photoURL || null,
@@ -127,15 +132,23 @@ export default function NotificationsPage() {
                     minute: "2-digit",
                   })
                 : "Recently",
-              actionUrl:
+            };
+
+            // Special handler for completed bookings to open review modal
+            if (data.type === 'booking_completed') {
+              notificationPayload.onClick = () => handleOpenReviewModal(bookingId);
+            } else {
+              notificationPayload.actionUrl =
                 userData.role === "host"
                   ? data.type === "booking"
-                    ? `/host/my-bookings/${bookingId}`
+                    ? `/host/my-bookings`
                     : `/host/messages/${relatedUserId}`
                   : data.type === "booking_confirmed" || data.type === "booking_rejected"
                   ? `/guest/my-bookings`
-                  : `/guest/messages/${relatedUserId}`,
-            };
+                  : `/guest/messages/${relatedUserId}`;
+            }
+
+            return notificationPayload;
           })
         );
 
@@ -243,6 +256,33 @@ export default function NotificationsPage() {
         return <AlertCircle className="w-5 h-5 text-red-400" />;
       default:
         return <Bell className="w-5 h-5 text-slate-400" />;
+    } 
+  };
+
+  const handleOpenReviewModal = async (bookingId) => {
+    try {
+      const bookingRef = doc(db, "bookings", bookingId);
+      const bookingSnap = await getDoc(bookingRef);
+
+      if (bookingSnap.exists()) {
+        const bookingData = bookingSnap.data();
+
+        // Also fetch listing data to pass to the modal
+        const listingRef = doc(db, "listings", bookingData.listing_id);
+        const listingSnap = await getDoc(listingRef);
+
+        if (listingSnap.exists()) {
+          bookingData.listing = listingSnap.data();
+        }
+
+        setSelectedBookingForReview({ id: bookingSnap.id, ...bookingData });
+        setShowReviewModal(true);
+      } else {
+        toast.error("Booking details not found.");
+      }
+    } catch (error) {
+      console.error("Error fetching booking details:", error);
+      toast.error("Failed to open review modal.");
     }
   };
 
@@ -345,7 +385,15 @@ export default function NotificationsPage() {
             {filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`bg-slate-800 rounded-lg border border-slate-700 p-4 transition hover:border-slate-600 ${
+                onClick={() => {
+                  if (typeof notification.onClick === 'function') {
+                    notification.onClick();
+                  } else if (notification.actionUrl) {
+                    navigate(notification.actionUrl);
+                  }
+                  markAsRead(notification.id);
+                }}
+                className={`bg-slate-800 rounded-lg border border-slate-700 p-4 transition hover:border-slate-600 cursor-pointer ${
                   !notification.isRead ? "border-indigo-500 bg-slate-800/50" : ""
                 }`}
               >
@@ -417,6 +465,14 @@ export default function NotificationsPage() {
         )}
         </div>
       </div>
+      {showReviewModal && (
+        <ReviewModal
+          showModal={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          booking={selectedBookingForReview}
+          user={user}
+        />
+      )}
     </>
   );
 }

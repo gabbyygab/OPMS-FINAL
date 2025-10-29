@@ -217,18 +217,23 @@ const HostNavLinks = ({ location }) => {
 
 // Public Auth Dropdown Component
 const PublicAuthDropdown = ({ isScrolled, dropdownOpen, setDropdownOpen }) => {
-  const { openSignUp, openSignIn } = useContext(AuthModalContext);
+  const { openSignUp, openSignIn, selectSignUpRole } = useContext(AuthModalContext);
+
+  const handleBecomeHost = () => {
+    selectSignUpRole("host");
+    setDropdownOpen(false);
+  };
 
   return (
     <>
-      <Link
-        to={ROUTES.HOST.SIGNUP}
+      <button
+        onClick={handleBecomeHost}
         className={`text-sm font-medium ${
           isScrolled ? "text-slate-300" : "text-slate-200"
         } hover:text-white transition-colors`}
       >
         Become a Host
-      </Link>
+      </button>
 
       <div className="relative">
         <button
@@ -261,13 +266,12 @@ const PublicAuthDropdown = ({ isScrolled, dropdownOpen, setDropdownOpen }) => {
             >
               <PlusSquare className="w-4 h-4" /> Sign Up
             </button>
-            <Link
-              to={ROUTES.HOST.SIGNUP}
-              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
-              onClick={() => setDropdownOpen(false)}
+            <button
+              onClick={handleBecomeHost}
+              className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
             >
               <Home className="w-4 h-4" /> Become a Host
-            </Link>
+            </button>
           </div>
         )}
       </div>
@@ -305,7 +309,7 @@ const GuestUserActions = ({
       >
         <Bell className="w-5 h-5 transition" />
         {unreadNotificationsCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold w-5 h-5 rounded-full flex items-center justify-center">
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-semibold w-4 h-4 rounded-full flex items-center justify-center">
             {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
           </span>
         )}
@@ -461,7 +465,7 @@ const HostUserActions = ({
     >
       <Bell className="w-5 h-5" />
       {unreadNotificationsCount > 0 && (
-        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold w-5 h-5 rounded-full flex items-center justify-center">
+        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-semibold w-4 h-4 rounded-full flex items-center justify-center">
           {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
         </span>
       )}
@@ -2817,8 +2821,10 @@ export default function NavigationBar({
     if (!confirm("Are you sure you want to logout?")) return;
     setMobileMenuOpen(false);
     setProfileDropdownOpen(false);
-    await signOut(auth);
+    // Navigate immediately to prevent showing protected route
     navigate(ROUTES.HOME);
+    await signOut(auth);
+    toast.success("Logged out successfully");
   };
 
   useEffect(() => {

@@ -10,20 +10,16 @@ import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
 import { auth, db, googleAuthProvider } from "../../firebase/firebase";
 import { AuthModalContext } from "../../context/AuthModalContext";
-import PolicyAcceptanceModal from "./PolicyAcceptanceModal";
-import ProgressBar from "./ProgressBar";
 
 export default function SignInModal() {
   const navigate = useNavigate();
   const { showSignInModal, closeSignIn } = useContext(AuthModalContext);
 
-  const [step, setStep] = useState("form"); // "form" or "policy"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [userRole, setUserRole] = useState(null);
 
   if (!showSignInModal) return null;
 
@@ -58,28 +54,18 @@ export default function SignInModal() {
       }
 
       const userData = userSnap.data();
-      setUserRole(userData.role);
 
-      // Move to policy acceptance
-      setStep("policy");
+      // Show success toast and close modal immediately
+      toast.success("Successfully signed in!", { position: "top-right" });
+      closeSignIn();
+
+      // Navigate to appropriate dashboard
+      setTimeout(() => {
+        navigate(`/${userData.role || "guest"}`);
+      }, 100);
     } catch (error) {
       toast.error(error.message, { position: "top-right" });
       console.error("Sign in error:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePolicyAccept = async () => {
-    try {
-      setIsLoading(true);
-
-      // Navigate to appropriate dashboard
-      toast.success("Successfully signed in!", { position: "top-right" });
-      closeSignIn();
-      navigate(`/${userRole || "guest"}`);
-    } catch (error) {
-      toast.error(error.message, { position: "top-right" });
     } finally {
       setIsLoading(false);
     }
@@ -108,10 +94,15 @@ export default function SignInModal() {
       }
 
       const userData = userSnap.data();
-      setUserRole(userData.role);
 
-      // Move to policy acceptance
-      setStep("policy");
+      // Show success toast and close modal immediately
+      toast.success("Successfully signed in!", { position: "top-right" });
+      closeSignIn();
+
+      // Navigate to appropriate dashboard
+      setTimeout(() => {
+        navigate(`/${userData.role || "guest"}`);
+      }, 100);
     } catch (error) {
       console.error("Google sign-in error:", error);
       toast.error("Google authentication failed. Please try again.", {
@@ -122,10 +113,9 @@ export default function SignInModal() {
     }
   };
 
-  // Step 1: Sign In Form
-  if (step === "form") {
-    return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  // Sign In Form
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-md border border-slate-700 shadow-2xl p-8">
           <h2 className="text-2xl font-bold text-white mb-2">Welcome Back</h2>
           <p className="text-slate-400 text-sm mb-6">
@@ -286,30 +276,4 @@ export default function SignInModal() {
         </div>
       </div>
     );
-  }
-
-  // Step 2: Policy Acceptance
-  if (step === "policy") {
-    return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex flex-col">
-        <ProgressBar
-          currentStep={2}
-          totalSteps={2}
-          steps={[
-            { number: 1, label: "Sign In" },
-            { number: 2, label: "Accept Policies" },
-          ]}
-        />
-
-        <div className="flex-1">
-          <PolicyAcceptanceModal
-            onAccept={handlePolicyAccept}
-            onCancel={() => setStep("form")}
-            userRole={userRole}
-            isLoading={isLoading}
-          />
-        </div>
-      </div>
-    );
-  }
 }
