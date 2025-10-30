@@ -90,11 +90,7 @@ const animatedBorderStyle = `
 const MessagesLinkWithBadge = ({ to, unreadCount = 0, className, onClick }) => {
   const count = Number(unreadCount) || 0;
   return (
-    <Link
-      to={to}
-      className={className}
-      onClick={onClick}
-    >
+    <Link to={to} className={className} onClick={onClick}>
       <div className="relative">
         <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
         {count > 0 && (
@@ -112,7 +108,11 @@ const MessagesLinkWithBadge = ({ to, unreadCount = 0, className, onClick }) => {
 const Logo = () => (
   <Link to={ROUTES.HOME} className="flex-shrink-0">
     <div className="flex items-center cursor-pointer">
-      <img src="/bookingNestLogoFInal.png" alt="" className="w-16 h-16 sm:w-24 sm:h-24 lg:w-32 lg:h-32 hover:scale-105 transition-transform" />
+      <img
+        src="/bookingNestLogoFInal.png"
+        alt=""
+        className="w-16 h-16 sm:w-24 sm:h-24 lg:w-32 lg:h-32 hover:scale-105 transition-transform"
+      />
     </div>
   </Link>
 );
@@ -486,7 +486,6 @@ const HostUserActions = ({
             </span>
           )}
         </div>
-        <span className="hidden xl:inline text-sm font-medium">Messages</span>
       </Link>
     </div>
 
@@ -1327,7 +1326,12 @@ const useResponsiveDatePicker = () => {
 };
 
 // Guest Tab Navigation Component - Airbnb Style
-const GuestTabNavigation = ({ user, userData, handleLogout, unreadMessagesCount }) => {
+const GuestTabNavigation = ({
+  user,
+  userData,
+  handleLogout,
+  unreadMessagesCount,
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1746,7 +1750,9 @@ const GuestTabNavigation = ({ user, userData, handleLogout, unreadMessagesCount 
                           <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
                           {unreadMessagesCount > 0 && (
                             <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                              {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
+                              {unreadMessagesCount > 9
+                                ? "9+"
+                                : unreadMessagesCount}
                             </span>
                           )}
                         </div>
@@ -1900,9 +1906,7 @@ const GuestTabNavigation = ({ user, userData, handleLogout, unreadMessagesCount 
         {/* Search Bar Row When Scrolled - In top row */}
         <div
           className={`hidden lg:flex flex-1 items-center justify-center px-4 sm:px-6 lg:px-8 transition-all duration-500 ease-out absolute inset-0 ${
-            isScrolled
-              ? "opacity-100"
-              : "opacity-0"
+            isScrolled ? "opacity-100" : "opacity-0"
           } pointer-events-none`}
         >
           <div
@@ -2652,7 +2656,12 @@ const GuestTabNavigation = ({ user, userData, handleLogout, unreadMessagesCount 
 
 // Guest Simple Navigation Component - For non-home pages (Messages, Bookings, Favorites, etc.)
 // Host Simple NavBar Component
-const HostSimpleNavBar = ({ user, userData, handleLogout, unreadMessagesCount }) => {
+const HostSimpleNavBar = ({
+  user,
+  userData,
+  handleLogout,
+  unreadMessagesCount,
+}) => {
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -2856,7 +2865,12 @@ const HostSimpleNavBar = ({ user, userData, handleLogout, unreadMessagesCount })
   );
 };
 
-const GuestSimpleNavBar = ({ user, userData, handleLogout, unreadMessagesCount }) => {
+const GuestSimpleNavBar = ({
+  user,
+  userData,
+  handleLogout,
+  unreadMessagesCount,
+}) => {
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -3381,7 +3395,9 @@ export default function NavigationBar({
                               <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
                               {unreadMessagesCount > 0 && (
                                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                                  {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
+                                  {unreadMessagesCount > 9
+                                    ? "9+"
+                                    : unreadMessagesCount}
                                 </span>
                               )}
                             </div>
@@ -3412,7 +3428,9 @@ export default function NavigationBar({
                               <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
                               {unreadMessagesCount > 0 && (
                                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                                  {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
+                                  {unreadMessagesCount > 9
+                                    ? "9+"
+                                    : unreadMessagesCount}
                                 </span>
                               )}
                             </div>

@@ -29,6 +29,9 @@ import {
   query,
   where,
   collection,
+  addDoc,
+  updateDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import LoadingSpinner from "../../loading/Loading";
 import { useAuth } from "../../context/AuthContext";
@@ -72,7 +75,6 @@ export default function ServiceDetailPage() {
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
-  const [selectedTime, setSelectedTime] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
   const [promoCode, setPromoCode] = useState("");
@@ -111,6 +113,76 @@ export default function ServiceDetailPage() {
       return;
     }
     action();
+  };
+
+  const handleConfirmBooking = async () => {
+    if (!user) {
+      toast.error("Please log in to book");
+      return;
+    }
+
+    if (!selectedDate) {
+      toast.error("Please select a date");
+      return;
+    }
+
+    try {
+      const loadingToast = toast.loading("Processing your booking...");
+
+      // Create booking with pending status
+      // Payment will be processed only when host confirms the booking
+      const bookingData = {
+        type: "services",
+        listing_id: listing_id,
+        guest_id: user.uid,
+        hostId: serviceData.hostId,
+        guestName: user.displayName || "Guest",
+        selectedDate: selectedDate,
+        serviceType: serviceType,
+        additionalNotes: additionalNotes,
+        baseAmount: basePrice,
+        discountAmount: discountAmount,
+        discountType: isValidPromo ? serviceData.discount?.type || null : null,
+        totalAmount: totalPrice,
+        serviceFee: serviceFee,
+        grandTotal: finalTotal,
+        promoCode: promoCode || null,
+        status: "pending",
+        createdAt: serverTimestamp(),
+      };
+      const bookingRef = await addDoc(collection(db, "bookings"), bookingData);
+
+      // Create notification for host
+      const notificationData = {
+        userId: serviceData.hostId,
+        guestId: user.uid,
+        type: "booking",
+        title: "New Booking",
+        message: `${user.displayName || "A guest"} has booked your ${
+          serviceData.title
+        } for ${selectedDate}`,
+        listingId: listing_id,
+        bookingId: bookingRef.id,
+        guestName: user.displayName || "A guest",
+        guestAvatar: null,
+        isRead: false,
+        createdAt: serverTimestamp(),
+      };
+      await addDoc(collection(db, "notifications"), notificationData);
+
+      // DO NOT process payment here - payment will be processed when host confirms the booking
+      // This allows the host to accept or reject the booking before payment is taken
+
+      toast.dismiss(loadingToast);
+      toast.success(
+        "Booking request sent successfully! Awaiting host confirmation..."
+      );
+      setShowBookingModal(false);
+      navigate("/guest/my-bookings");
+    } catch (error) {
+      console.error("Error confirming booking:", error);
+      toast.error("Failed to confirm booking. Please try again.");
+    }
   };
 
   const basePrice = serviceData?.price || 0;
@@ -219,12 +291,12 @@ export default function ServiceDetailPage() {
           });
         }
 
-        // Set first available time slot and service type
+        // Set first available date and service type
         if (
-          Array.isArray(data?.availableTimes) &&
-          data.availableTimes.length > 0
+          Array.isArray(data?.availableDates) &&
+          data.availableDates.length > 0
         ) {
-          setSelectedTime(data.availableTimes[0]);
+          setSelectedDate(data.availableDates[0].startDate || "");
         }
         if (Array.isArray(data?.serviceTypes) && data.serviceTypes.length > 0) {
           setServiceType(data.serviceTypes[0]);
@@ -669,37 +741,29 @@ export default function ServiceDetailPage() {
 
               <div className="space-y-4 mb-6">
                 <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
-                  <label className="text-xs font-medium text-slate-300 block mb-1">
+                  <label className="text-xs font-medium text-slate-300 block mb-2">
                     SELECT DATE
                   </label>
-                  <input
-                    type="date"
+                  <select
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    min={new Date().toISOString().split("T")[0]}
-                    className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white"
-                  />
-                </div>
-
-                <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
-                  <label className="text-xs font-medium text-slate-300 block mb-1">
-                    PREFERRED TIME
-                  </label>
-                  <select
-                    value={selectedTime}
-                    onChange={(e) => setSelectedTime(e.target.value)}
                     className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white"
                   >
-                    {Array.isArray(serviceData?.availableTimes) &&
-                    serviceData.availableTimes.length > 0 ? (
-                      serviceData.availableTimes.map((time, idx) => (
-                        <option key={idx} value={time}>
-                          {time}
-                        </option>
-                      ))
+                    {Array.isArray(serviceData?.availableDates) &&
+                    serviceData.availableDates.length > 0 ? (
+                      serviceData.availableDates.map((dateRange, idx) => {
+                        const startDate = dateRange.startDate;
+                        const endDate = dateRange.endDate;
+                        const displayRange = `${startDate} to ${endDate}`;
+                        return (
+                          <option key={idx} value={startDate}>
+                            {displayRange}
+                          </option>
+                        );
+                      })
                     ) : (
                       <option value="" disabled>
-                        No times available
+                        No dates available
                       </option>
                     )}
                   </select>
@@ -920,14 +984,10 @@ export default function ServiceDetailPage() {
                 <span className="font-medium text-white">{serviceType}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-400">Preferred date</span>
+                <span className="text-slate-400">Selected date</span>
                 <span className="font-medium text-white">
                   {selectedDate || "Not selected"}
                 </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-400">Preferred time</span>
-                <span className="font-medium text-white">{selectedTime}</span>
               </div>
               {promoCode && (
                 <div className="flex items-center justify-between text-sm">
@@ -980,7 +1040,12 @@ export default function ServiceDetailPage() {
             </div>
 
             <div className="flex gap-3">
-              <button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition">
+              <button
+                onClick={() =>
+                  handleActionWithVerification(() => handleConfirmBooking())
+                }
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition"
+              >
                 Send request
               </button>
               <button

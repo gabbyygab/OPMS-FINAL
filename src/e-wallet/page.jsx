@@ -271,63 +271,50 @@ export default function WalletPage({ user, userData }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 md:p-8">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-[url('/loginImage.jpg')] bg-cover bg-center opacity-10" />
+    <div className="min-h-screen bg-slate-900 p-4 md:p-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Header with Logo and Navigation */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
 
-      <div className="relative max-w-6xl mx-auto">
-        {/* Home Button */}
-        <button
-          onClick={() => (window.location.href = "/")}
-          className="flex items-center gap-2 mb-6 px-4 py-2 bg-slate-800/80 hover:bg-slate-700/80 backdrop-blur-lg rounded-lg border border-slate-700 transition-colors group"
-        >
-          <svg
-            className="w-5 h-5 text-indigo-400 group-hover:text-indigo-300 transition-colors"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-            />
-          </svg>
-          <span className="text-white font-medium">Home</span>
-        </button>
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="32"
-            height="32"
-            viewBox="0 0 24 24"
-            fill="oklch(0.511 0.262 276.966)"
-          >
-            <path d="M7 2v2H5a2 2 0 0 0-2 2v2h18V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zm13 8H4v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10zm-4 4h-4v4h4v-4z" />
-          </svg>
-          <div>
-            <h1 className="text-3xl font-bold text-white">My Wallet</h1>
-            <p className="text-slate-400">Manage your BookingNest funds</p>
           </div>
+          <h1 className="text-5xl font-bold text-white">My Wallet</h1>
+          <button
+            onClick={() => (window.location.href = "/")}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors group text-sm"
+          >
+            <svg
+              className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+              />
+            </svg>
+            <span className="text-slate-300">Home</span>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Balance Card */}
-          <div className="lg:col-span-2 bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl shadow-2xl p-8 border border-indigo-500/50">
-            <div className="flex items-start justify-between mb-6">
+          <div className="lg:col-span-2 bg-slate-800 rounded-2xl shadow-lg p-8 border border-slate-700">
+            <div className="flex items-start justify-between mb-8">
               <div>
-                <p className="text-indigo-200 text-sm mb-2">
+                <p className="text-slate-400 text-sm mb-2 uppercase tracking-wider">
                   Available Balance
                 </p>
                 <h2 className="text-5xl font-bold text-white">
-                  ₱ {balance.toFixed(2)}
+                  ₱{balance.toFixed(2)}
                 </h2>
               </div>
-              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 bg-indigo-600/20 rounded-full flex items-center justify-center">
                 <svg
-                  className="w-6 h-6 text-white"
+                  className="w-6 h-6 text-indigo-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -342,10 +329,10 @@ export default function WalletPage({ user, userData }) {
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button
                 onClick={() => setShowAddFunds(true)}
-                className="flex-1 bg-white hover:bg-slate-100 text-indigo-600 font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
               >
                 <svg
                   className="w-5 h-5"
@@ -364,7 +351,7 @@ export default function WalletPage({ user, userData }) {
               </button>
               <button
                 onClick={() => setShowWithdraw(true)}
-                className="flex-1 bg-indigo-700 hover:bg-indigo-900 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 border border-slate-600"
               >
                 <svg
                   className="w-5 h-5"
@@ -376,7 +363,7 @@ export default function WalletPage({ user, userData }) {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
                 Withdraw
@@ -386,9 +373,9 @@ export default function WalletPage({ user, userData }) {
 
           {/* Quick Stats */}
           <div className="space-y-4">
-            <div className="bg-slate-800/80 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-slate-700">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-slate-400 text-sm">Total Spent</p>
+            <div className="bg-slate-800 rounded-2xl shadow-lg p-6 border border-slate-700">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-slate-400 text-sm font-medium">Total Spent</p>
                 <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
                   <svg
                     className="w-4 h-4 text-red-400"
@@ -406,13 +393,13 @@ export default function WalletPage({ user, userData }) {
                 </div>
               </div>
               <p className="text-2xl font-bold text-white">
-                ₱ {totalSpent.toFixed(2)}
+                ₱{totalSpent.toFixed(2)}
               </p>
             </div>
 
-            <div className="bg-slate-800/80 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-slate-700">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-slate-400 text-sm">Total Added</p>
+            <div className="bg-slate-800 rounded-2xl shadow-lg p-6 border border-slate-700">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-slate-400 text-sm font-medium">Total Added</p>
                 <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
                   <svg
                     className="w-4 h-4 text-green-400"
@@ -430,19 +417,19 @@ export default function WalletPage({ user, userData }) {
                 </div>
               </div>
               <p className="text-2xl font-bold text-white">
-                ₱ {totalAdded.toFixed(2)}
+                ₱{totalAdded.toFixed(2)}
               </p>
             </div>
           </div>
         </div>
 
         {/* Transaction History */}
-        <div className="bg-slate-800/80 backdrop-blur-lg rounded-2xl shadow-2xl border border-slate-700">
+        <div className="bg-slate-800 rounded-2xl shadow-lg border border-slate-700">
           <div className="p-6 border-b border-slate-700">
-            <h3 className="text-xl font-bold text-white">
+            <h3 className="text-2xl font-bold text-white">
               Transaction History
             </h3>
-            <p className="text-slate-400 text-sm">
+            <p className="text-slate-400 text-sm mt-1">
               Your recent wallet activity
             </p>
           </div>
@@ -452,7 +439,7 @@ export default function WalletPage({ user, userData }) {
               currentTransactions.map((transaction) => (
                 <div
                   key={transaction.id}
-                  className="p-6 hover:bg-slate-700/30 transition-colors"
+                  className="p-6 hover:bg-slate-700/20 transition-colors"
                 >
                   <div className="flex items-center gap-4">
                     {getTransactionIcon(transaction.type)}
@@ -570,10 +557,10 @@ export default function WalletPage({ user, userData }) {
 
       {/* Add Funds Modal */}
       {showAddFunds && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700 max-w-md w-full">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-800 rounded-2xl shadow-lg p-8 border border-slate-700 max-w-md w-full">
             <h3 className="text-2xl font-bold text-white mb-2">Add Funds</h3>
-            <p className="text-slate-400 mb-6">
+            <p className="text-slate-400 text-sm mb-6">
               Enter the amount you want to add to your wallet
             </p>
 
@@ -674,12 +661,12 @@ export default function WalletPage({ user, userData }) {
 
       {/* Withdraw Modal */}
       {showWithdraw && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700 max-w-md w-full">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-800 rounded-2xl shadow-lg p-8 border border-slate-700 max-w-md w-full">
             <h3 className="text-2xl font-bold text-white mb-2">
               Withdraw Funds
             </h3>
-            <p className="text-slate-400 mb-6">
+            <p className="text-slate-400 text-sm mb-6">
               Enter your PayPal email and withdrawal amount
             </p>
 

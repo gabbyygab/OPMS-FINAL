@@ -688,9 +688,21 @@ export default function HostMyBookings() {
   const getBookingsForDate = (date) => {
     const dateString = date.toISOString().split("T")[0];
     return bookings.filter((booking) => {
-      const checkInDate = booking.checkIn
-        ? booking.checkIn.toDate().toISOString().split("T")[0]
-        : booking.selectedDate?.split("T")[0];
+      let checkInDate;
+
+      if (booking.checkIn) {
+        checkInDate = booking.checkIn.toDate().toISOString().split("T")[0];
+      } else if (booking.selectedDateTime?.date) {
+        checkInDate = booking.selectedDateTime.date;
+      } else if (booking.selectedDate) {
+        // Handle if selectedDate is a string
+        checkInDate = typeof booking.selectedDate === 'string'
+          ? booking.selectedDate.split("T")[0]
+          : booking.selectedDate.toDate?.().toISOString().split("T")[0];
+      } else {
+        return false;
+      }
+
       const checkOutDate = booking.checkOut
         ? booking.checkOut.toDate().toISOString().split("T")[0]
         : null;

@@ -3,10 +3,8 @@ import {
   Calendar,
   MapPin,
   Clock,
-  Bell,
   Shield,
   User,
-  Home,
   ChevronRight,
   Plus,
   Ticket,
@@ -15,6 +13,8 @@ import {
   Trash2,
   DollarSign,
   X,
+  Heart,
+  Loader,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { db } from "../../../firebase/firebase";
@@ -26,6 +26,8 @@ import {
   where,
   getDocs,
   getDoc,
+  addDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import { toast } from "react-toastify";
 import { uploadToCloudinary } from "../../../cloudinary/uploadFunction";
@@ -36,19 +38,51 @@ import {
   EmailAuthProvider,
   deleteUser,
 } from "firebase/auth";
-
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../../constants/routes";
 import NavigationBar from "../../../components/NavigationBar";
 
 export default function ProfilePage() {
-  //coupons
+  // Navigation and auth
+  const navigate = useNavigate();
+  const { user, userData } = useAuth();
+  const [activeTab, setActiveTab] = useState("personal");
+
+  // Personal Info State
+  const [formData, setFormData] = useState({
+    fullName: userData?.fullName || "",
+    email: userData?.email || "",
+    phone: userData?.phone || "",
+    address: userData?.address || "",
+    photoURL: userData?.photoURL || "",
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Password State
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Bookings State
+  const [bookings, setBookings] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(true);
+  const [bookingsPage, setBookingsPage] = useState(1);
+  const bookingsPerPage = 3;
+
+  // Wishlist State
+  const [wishlistItem, setWishlistItem] = useState("");
+  const [wishlistDescription, setWishlistDescription] = useState("");
+  const [wishlists, setWishlists] = useState([]);
+  const [loadingWishlists, setLoadingWishlists] = useState(true);
+  const [showWishlistModal, setShowWishlistModal] = useState(false);
+
+  // Coupons State (for hosts)
   const [couponFormData, setCouponFormData] = useState({
     code: "",
     discount: "",
     type: "percentage",
     expiryDate: "",
-    active: false,
   });
   const [showAddModal, setShowAddModal] = useState(false);
   const [coupons, setCoupons] = useState([
@@ -77,64 +111,9 @@ export default function ProfilePage() {
       expiryDate: "2025-10-30",
     },
   ]);
-  const handleAddCoupon = () => {
-    if (formData.code && formData.discount && formData.expiryDate) {
-      setCoupons([
-        ...coupons,
-        {
-          id: Date.now(),
-          code: formData.code.toUpperCase(),
-          discount: parseFloat(formData.discount),
-          type: formData.type,
-          active: true,
-          expiryDate: formData.expiryDate,
-        },
-      ]);
-      setFormData({
-        code: "",
-        discount: "",
-        type: "percentage",
-        expiryDate: "",
-      });
-      setShowAddModal(false);
-    }
-  };
 
-  const toggleCouponStatus = (id) => {
-    setCoupons(
-      coupons.map((coupon) =>
-        coupon.id === id ? { ...coupon, active: !coupon.active } : coupon
-      )
-    );
-  };
-
-  const deleteCoupon = (id) => {
-    setCoupons(coupons.filter((coupon) => coupon.id !== id));
-  };
   const activeCoupons = coupons.filter((c) => c.active);
   const inactiveCoupons = coupons.filter((c) => !c.active);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [pushNotifications, setPushNotifications] = useState(false);
-  const [activeTab, setActiveTab] = useState("personal");
-  const { user, userData } = useAuth();
-  const [formData, setFormData] = useState({
-    fullName: userData.fullName,
-    email: userData.email,
-    phone: userData.phone || "N/A",
-    address: userData.address || "N/A",
-    photoURL: userData.photoURL || "",
-  });
-
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  // console.log(user.photoURL);
-  //deletionand deactivation
-  const navigate = useNavigate();
-  const [bookings, setBookings] = useState([]);
-  const [loadingBookings, setLoadingBookings] = useState(true);
 
   // Fetch bookings from Firestore
   useEffect(() => {
@@ -143,8 +122,6 @@ export default function ProfilePage() {
 
       try {
         setLoadingBookings(true);
-
-        // Query bookings for this user
         const bookingsRef = collection(db, "bookings");
         const bookingsQuery = query(
           bookingsRef,
@@ -152,16 +129,13 @@ export default function ProfilePage() {
         );
         const bookingsSnapshot = await getDocs(bookingsQuery);
 
-        // Fetch listing data for each booking
         const bookingsWithListings = await Promise.all(
           bookingsSnapshot.docs.map(async (bookingDoc) => {
             const bookingData = bookingDoc.data();
             const listingRef = doc(db, "listings", bookingData.listing_id);
             const listingSnap = await getDoc(listingRef);
-
             const listingData = listingSnap.exists() ? listingSnap.data() : {};
 
-            // Convert Firestore Timestamp to Date
             const checkInDate = bookingData.checkIn?.toDate
               ? bookingData.checkIn.toDate()
               : new Date(bookingData.checkIn);
@@ -169,7 +143,6 @@ export default function ProfilePage() {
               ? bookingData.checkOut.toDate()
               : new Date(bookingData.checkOut);
 
-            // Determine status based on check-out date
             const today = new Date();
             const status = checkOutDate < today ? "Completed" : "Upcoming";
 
@@ -188,6 +161,7 @@ export default function ProfilePage() {
                 year: "numeric",
               }),
               status,
+              bookingStatus: bookingData.status || "pending",
               image: listingData.photos?.[0] || "/default-image.png",
               totalAmount: bookingData.grandTotal || 0,
             };
@@ -206,6 +180,88 @@ export default function ProfilePage() {
     fetchBookings();
   }, [userData?.id]);
 
+  // Fetch wishlists from Firestore
+  useEffect(() => {
+    const fetchWishlists = async () => {
+      if (!userData?.id || userData?.role !== "guest") return;
+
+      try {
+        setLoadingWishlists(true);
+        const wishlistRef = collection(db, "wishlists");
+        const wishlistQuery = query(
+          wishlistRef,
+          where("userId", "==", userData.id)
+        );
+        const wishlistSnapshot = await getDocs(wishlistQuery);
+
+        const wishlistData = wishlistSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        setWishlists(wishlistData);
+      } catch (error) {
+        console.error("Error fetching wishlists:", error);
+      } finally {
+        setLoadingWishlists(false);
+      }
+    };
+
+    fetchWishlists();
+  }, [userData?.id, userData?.role]);
+
+  // Wishlist handlers
+  const handleAddWishlistItem = async () => {
+    if (!wishlistItem.trim()) {
+      toast.error("Please enter a wishlist item");
+      return;
+    }
+
+    try {
+      const wishlistRef = collection(db, "wishlists");
+      await addDoc(wishlistRef, {
+        userId: userData.id,
+        userName: userData.fullName,
+        userEmail: userData.email,
+        item: wishlistItem.trim(),
+        description: wishlistDescription.trim(),
+        createdAt: new Date(),
+        priority: "medium",
+      });
+
+      toast.success("Wishlist item added!");
+      setWishlistItem("");
+      setWishlistDescription("");
+
+      // Refresh wishlists
+      const wishlistQuery = query(
+        collection(db, "wishlists"),
+        where("userId", "==", userData.id)
+      );
+      const wishlistSnapshot = await getDocs(wishlistQuery);
+      const wishlistData = wishlistSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setWishlists(wishlistData);
+      setShowWishlistModal(false);
+    } catch (error) {
+      console.error("Error adding wishlist item:", error);
+      toast.error("Failed to add wishlist item");
+    }
+  };
+
+  const handleDeleteWishlistItem = async (id) => {
+    try {
+      await deleteDoc(doc(db, "wishlists", id));
+      setWishlists(wishlists.filter((item) => item.id !== id));
+      toast.success("Wishlist item deleted!");
+    } catch (error) {
+      console.error("Error deleting wishlist item:", error);
+      toast.error("Failed to delete wishlist item");
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (!user) return toast.error("No user logged in");
     const confirmDelete = window.confirm(
@@ -214,19 +270,15 @@ export default function ProfilePage() {
     if (!confirmDelete) return;
 
     try {
-      // 1. Delete user document in Firestore
       await deleteDoc(doc(db, "users", user.uid));
-
-      // 2. Delete user from Firebase Auth
       await deleteUser(user);
-
       toast.success("Your account has been deleted.");
     } catch (error) {
       console.error(error);
       toast.error("Failed to delete account.");
     }
   };
-  //logic password
+
   const handlePasswordUpdate = async () => {
     const auth = getAuth();
     const user = auth.currentUser;
@@ -242,23 +294,17 @@ export default function ProfilePage() {
     setLoading(true);
 
     try {
-      // 🔑 Reauthenticate first
       const credential = EmailAuthProvider.credential(
         user.email,
         currentPassword
       );
       await reauthenticateWithCredential(user, credential);
-
-      // 🔄 Then update the password
       await updatePassword(user, newPassword);
 
       toast.success("Password updated successfully!");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      document.getElementById("password").value = "";
-      document.getElementById("confirmPassword").value = "";
-      document.getElementById("newPassword").value = "";
     } catch (error) {
       console.error("Error updating password:", error);
       if (error.code === "auth/wrong-password") {
@@ -272,11 +318,10 @@ export default function ProfilePage() {
       setLoading(false);
     }
   };
+
   const isGoogleUser = user?.providerData?.some(
     (provider) => provider.providerId === "google.com"
   );
-  //logic profile
-  const [isSaving, setIsSaving] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -289,9 +334,7 @@ export default function ProfilePage() {
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
-      // 🧩 In the future, replace with Firestore update:
       await updateDoc(doc(db, "users", user.uid), formData);
-
       toast.success("Changes saved successfully!");
     } catch (error) {
       console.error("Error saving changes:", error);
@@ -301,222 +344,239 @@ export default function ProfilePage() {
     }
   };
 
+  const handleAddCoupon = () => {
+    if (couponFormData.code && couponFormData.discount && couponFormData.expiryDate) {
+      setCoupons([
+        ...coupons,
+        {
+          id: Date.now(),
+          code: couponFormData.code.toUpperCase(),
+          discount: parseFloat(couponFormData.discount),
+          type: couponFormData.type,
+          active: true,
+          expiryDate: couponFormData.expiryDate,
+        },
+      ]);
+      setCouponFormData({
+        code: "",
+        discount: "",
+        type: "percentage",
+        expiryDate: "",
+      });
+      setShowAddModal(false);
+      toast.success("Coupon added successfully!");
+    }
+  };
+
+  const toggleCouponStatus = (id) => {
+    setCoupons(
+      coupons.map((coupon) =>
+        coupon.id === id ? { ...coupon, active: !coupon.active } : coupon
+      )
+    );
+  };
+
+  const deleteCoupon = (id) => {
+    setCoupons(coupons.filter((coupon) => coupon.id !== id));
+    toast.success("Coupon deleted!");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Top Navigation */}
-
       <NavigationBar user={user} userData={userData} />
-      {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600/10 to-purple-600/10 border-b border-indigo-500/30 mt-[70px] backdrop-blur-sm relative overflow-hidden">
-        {/* Interactive Background Elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-20 -left-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8 mt-[70px]">
+        {/* Mobile Tabs - Horizontal Scroll */}
+        <div className="lg:hidden mb-6 flex gap-2 overflow-x-auto pb-4">
+          {[
+            { id: "personal", label: "Personal", icon: User },
+            { id: "security", label: "Security", icon: Shield },
+            ...(userData?.role === "guest"
+              ? [
+                  { id: "bookings", label: "Bookings", icon: Calendar },
+                  { id: "wishlists", label: "Wishlist", icon: Heart },
+                ]
+              : [{ id: "coupons", label: "Coupons", icon: Ticket }]),
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all font-medium text-sm ${
+                activeTab === tab.id
+                  ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg"
+                  : "bg-slate-800/50 text-indigo-200 hover:bg-indigo-500/20"
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
         </div>
-        <div className="max-w-7xl mx-auto px-8 py-8 relative z-10">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-            Account
-          </h1>
-          <p className="text-indigo-300/80 mt-2 text-lg">
-            <span className="font-semibold text-indigo-200">
-              {userData.fullName}
-            </span>{" "}
-            ·{userData.email}
-          </p>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <nav className="space-y-2 bg-slate-800/50 backdrop-blur-xl rounded-xl p-2 shadow-lg border border-indigo-500/20">
-              <button
-                onClick={() => setActiveTab("personal")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
-                  activeTab === "personal"
-                    ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg"
-                    : "hover:bg-indigo-500/10 text-indigo-200 hover:text-white"
-                }`}
-              >
-                <User className="w-5 h-5" />
-                <span className="font-semibold">Personal info</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab("security")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
-                  activeTab === "security"
-                    ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg"
-                    : "hover:bg-indigo-500/10 text-indigo-200 hover:text-white"
-                }`}
-              >
-                <Shield className="w-5 h-5" />
-                <span className="font-semibold">Login & security</span>
-              </button>
-
-              {userData.role === "guest" ? (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sidebar - Hidden on mobile */}
+          <div className="hidden lg:block">
+            <nav className="sticky top-24 space-y-2 bg-slate-800/50 backdrop-blur-xl rounded-xl p-3 shadow-lg border border-indigo-500/20">
+              {[
+                { id: "personal", label: "Personal info", icon: User },
+                { id: "security", label: "Login & security", icon: Shield },
+                ...(userData?.role === "guest"
+                  ? [
+                      { id: "bookings", label: "Bookings", icon: Calendar },
+                      { id: "wishlists", label: "Wishlist", icon: Heart },
+                    ]
+                  : [{ id: "coupons", label: "Coupons", icon: Ticket }]),
+              ].map((tab) => (
                 <button
-                  onClick={() => setActiveTab("bookings")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
-                    activeTab === "bookings"
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all font-medium ${
+                    activeTab === tab.id
                       ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg"
                       : "hover:bg-indigo-500/10 text-indigo-200 hover:text-white"
                   }`}
                 >
-                  <Calendar className="w-5 h-5" />
-                  <span className="font-semibold">Bookings & trips</span>
+                  <tab.icon className="w-5 h-5 flex-shrink-0" />
+                  <span>{tab.label}</span>
                 </button>
-              ) : (
-                <button
-                  onClick={() => setActiveTab("coupons")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
-                    activeTab === "coupons"
-                      ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg"
-                      : "hover:bg-indigo-500/10 text-indigo-200 hover:text-white"
-                  }`}
-                >
-                  <Ticket className="w-5 h-5" />
-                  <span className="font-semibold">Coupons</span>
-                </button>
-              )}
+              ))}
             </nav>
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
+            {/* Personal Info Tab */}
             {activeTab === "personal" && (
-              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-xl shadow-2xl p-8 relative border border-indigo-500/20 overflow-hidden">
-                {/* Interactive Background */}
-                <div className="absolute inset-0 overflow-hidden">
-                  <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl"></div>
-                  <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/10 rounded-full blur-2xl"></div>
-                </div>
+              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-xl shadow-2xl p-6 md:p-8 border border-indigo-500/20">
+                <h2 className="text-2xl md:text-3xl font-bold text-transparent bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text mb-2">
+                  Personal Information
+                </h2>
+                <p className="text-indigo-200/70 mb-8">
+                  Update your profile details and picture
+                </p>
 
-                {/* Profile Picture Section */}
-                <div className="flex flex-col items-center mb-8 relative z-10">
-                  <div className="relative">
-                    <img
-                      src={formData.photoURL || "/default-avatar.png"}
-                      alt="Profile"
-                      className="w-32 h-32 rounded-full object-cover border-4 border-indigo-500 shadow-lg ring-4 ring-indigo-500/20"
-                    />
-                    <label
-                      htmlFor="profileImageUpload"
-                      className="absolute bottom-0 right-0 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-full p-2 cursor-pointer hover:from-indigo-700 hover:to-indigo-600 transition shadow-lg"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+                {/* Profile Picture */}
+                <div className="mb-8">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={formData.photoURL || "/default-avatar.png"}
+                        alt="Profile"
+                        className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-indigo-500 shadow-lg"
+                      />
+                      <label
+                        htmlFor="profileImageUpload"
+                        className="absolute bottom-0 right-0 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-full p-2 cursor-pointer hover:from-indigo-700 hover:to-indigo-600 transition shadow-lg"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15.232 5.232l3.536 3.536M9 13l6.536-6.536a2 2 0 112.828 2.828L11.828 15.828A2 2 0 019 17.657V13z"
-                        />
-                      </svg>
-                    </label>
-                    <input
-                      id="profileImageUpload"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={async (e) => {
-                        const file = e.target.files[0];
-                        if (!file) return;
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15.232 5.232l3.536 3.536M9 13l6.536-6.536a2 2 0 112.828 2.828L11.828 15.828A2 2 0 019 17.657V13z"
+                          />
+                        </svg>
+                      </label>
+                      <input
+                        id="profileImageUpload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
 
-                        toast.info("Uploading image...");
-                        try {
-                          const imageUrls = await Promise.all([
-                            uploadToCloudinary(file),
-                          ]);
-                          setFormData({
-                            ...formData,
-                            photoURL: imageUrls[0],
-                          });
-                          toast.success("Profile picture updated!");
-                        } catch (uploadError) {
-                          toast.error(
-                            "Failed to upload image. Please try again."
-                          );
-                        }
-                      }}
-                    />
+                          toast.info("Uploading image...");
+                          try {
+                            const imageUrl = await uploadToCloudinary(file);
+                            setFormData({
+                              ...formData,
+                              photoURL: imageUrl,
+                            });
+                            toast.success("Profile picture updated!");
+                          } catch (uploadError) {
+                            toast.error(
+                              "Failed to upload image. Please try again."
+                            );
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 text-center sm:text-left">
+                      <p className="text-sm text-indigo-300/70">
+                        Click the edit icon to change your photo
+                      </p>
+                      <p className="text-xs text-indigo-200/50 mt-2">
+                        Supported formats: JPG, PNG (Max 5MB)
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm text-indigo-300/70 mt-3">
-                    Click the edit icon to change your photo
-                  </p>
                 </div>
 
-                {/* Personal Info Form */}
-                <div className="mb-8 relative z-10">
-                  <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent mb-2">
-                    Personal info
-                  </h2>
-                  <p className="text-indigo-200/70">
-                    Update your personal details
-                  </p>
-                </div>
+                {/* Form Fields */}
+                <form className="space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* Full Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-indigo-200 mb-2">
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        name="fullName"
+                        value={formData.fullName}
+                        onChange={handleChange}
+                        className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
+                      />
+                    </div>
 
-                <form className="space-y-5 relative z-10">
-                  {/* Full Name */}
-                  <div>
-                    <label className="block text-sm font-medium text-indigo-200 mb-2">
-                      Legal name
-                    </label>
-                    <input
-                      type="text"
-                      name="fullName"
-                      value={formData.fullName}
-                      onChange={handleChange}
-                      className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
-                    />
-                  </div>
+                    {/* Email */}
+                    <div>
+                      <label className="block text-sm font-medium text-indigo-200 mb-2">
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
+                      />
+                    </div>
 
-                  {/* Email */}
-                  <div>
-                    <label className="block text-sm font-medium text-indigo-200 mb-2">
-                      Email address
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
-                    />
-                  </div>
+                    {/* Phone */}
+                    <div>
+                      <label className="block text-sm font-medium text-indigo-200 mb-2">
+                        Phone Number
+                      </label>
+                      <input
+                        type="text"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
+                      />
+                    </div>
 
-                  {/* Phone */}
-                  <div>
-                    <label className="block text-sm font-medium text-indigo-200 mb-2">
-                      Phone number
-                    </label>
-                    <input
-                      type="text"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
-                    />
-                  </div>
-
-                  {/* Address */}
-                  <div>
-                    <label className="block text-sm font-medium text-indigo-200 mb-2">
-                      Address
-                    </label>
-                    <input
-                      type="text"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
-                      className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
-                    />
+                    {/* Address */}
+                    <div>
+                      <label className="block text-sm font-medium text-indigo-200 mb-2">
+                        Address
+                      </label>
+                      <input
+                        type="text"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleChange}
+                        className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
+                      />
+                    </div>
                   </div>
 
                   {/* Save Button */}
@@ -525,45 +585,45 @@ export default function ProfilePage() {
                       type="button"
                       onClick={handleSaveChanges}
                       disabled={isSaving}
-                      className={`flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-semibold px-6 py-2.5 rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition shadow-lg ${
-                        isSaving ? "opacity-70 cursor-not-allowed" : ""
-                      }`}
+                      className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-semibold px-6 py-2.5 rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                      {isSaving ? "Saving..." : "Save Changes"}
-                      <ChevronRight className="w-4 h-4" />
+                      {isSaving ? (
+                        <>
+                          <Loader className="w-4 h-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          Save Changes
+                          <ChevronRight className="w-4 h-4" />
+                        </>
+                      )}
                     </button>
                   </div>
                 </form>
               </div>
             )}
 
+            {/* Security Tab */}
             {activeTab === "security" && (
-              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-xl shadow-2xl p-8 relative border border-indigo-500/20 overflow-hidden">
-                {/* Interactive Background */}
-                <div className="absolute inset-0 overflow-hidden">
-                  <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl"></div>
-                  <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/10 rounded-full blur-2xl"></div>
-                </div>
+              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-xl shadow-2xl p-6 md:p-8 border border-indigo-500/20">
+                <h2 className="text-2xl md:text-3xl font-bold text-transparent bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text mb-2">
+                  Login & Security
+                </h2>
+                <p className="text-indigo-200/70 mb-8">
+                  Manage your password and account security
+                </p>
 
-                <div className="mb-8 relative z-10">
-                  <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent mb-2">
-                    Login & security
-                  </h2>
-                  <p className="text-indigo-200/70">
-                    Update your password and secure your account
-                  </p>
-                </div>
-
-                <div className="space-y-6 relative z-10">
+                <div className="space-y-6">
                   {!isGoogleUser && (
-                    <div className="border border-indigo-500/30 rounded-xl p-6 bg-slate-700/30 backdrop-blur-sm">
-                      <h3 className="text-xl font-bold text-indigo-300 mb-6">
+                    <div className="border border-indigo-500/30 rounded-xl p-6 bg-slate-700/30">
+                      <h3 className="text-lg md:text-xl font-bold text-indigo-300 mb-6">
                         Password
                       </h3>
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-semibold text-indigo-200 mb-2">
-                            Current password
+                          <label className="block text-sm font-medium text-indigo-200 mb-2">
+                            Current Password
                           </label>
                           <input
                             type="password"
@@ -574,8 +634,8 @@ export default function ProfilePage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold text-indigo-200 mb-2">
-                            New password
+                          <label className="block text-sm font-medium text-indigo-200 mb-2">
+                            New Password
                           </label>
                           <input
                             type="password"
@@ -586,8 +646,8 @@ export default function ProfilePage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold text-indigo-200 mb-2">
-                            Confirm new password
+                          <label className="block text-sm font-medium text-indigo-200 mb-2">
+                            Confirm New Password
                           </label>
                           <input
                             type="password"
@@ -599,20 +659,21 @@ export default function ProfilePage() {
                         </div>
                         <button
                           onClick={handlePasswordUpdate}
-                          className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg"
+                          disabled={loading}
+                          className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                          Update password
+                          {loading ? "Updating..." : "Update Password"}
                         </button>
                       </div>
                     </div>
                   )}
 
                   {isGoogleUser && (
-                    <div className="border border-indigo-500/30 rounded-xl p-6 bg-slate-700/30 backdrop-blur-sm">
-                      <h3 className="text-xl font-bold text-indigo-300 mb-2">
+                    <div className="border border-indigo-500/30 rounded-xl p-6 bg-slate-700/30">
+                      <h3 className="text-lg font-bold text-indigo-300 mb-2">
                         Password
                       </h3>
-                      <p className="text-indigo-200/70">
+                      <p className="text-indigo-200/70 mb-4">
                         You signed in using <strong>Google</strong>. Password
                         changes are managed through your Google account
                         settings.
@@ -621,177 +682,349 @@ export default function ProfilePage() {
                         href="https://myaccount.google.com/security"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-block mt-3 px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg"
+                        className="inline-block px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg"
                       >
                         Manage in Google Account
                       </a>
                     </div>
                   )}
-                  <div className="border border-indigo-500/30 rounded-xl p-6 bg-slate-700/30 backdrop-blur-sm">
-                    <h3 className="text-xl font-bold text-indigo-300 mb-4">
-                      Account management
+
+                  <div className="border border-red-500/30 rounded-xl p-6 bg-red-500/10">
+                    <h3 className="text-lg font-bold text-red-300 mb-4">
+                      Account Management
                     </h3>
-                    <div className="space-y-3">
-                      <button
-                        onClick={handleDeleteAccount}
-                        className="text-red-400 hover:text-red-300 hover:underline font-semibold transition"
-                      >
-                        Delete your account
-                      </button>
-                    </div>
+                    <button
+                      onClick={handleDeleteAccount}
+                      className="text-red-400 hover:text-red-300 hover:underline font-semibold transition"
+                    >
+                      Delete your account permanently
+                    </button>
                   </div>
                 </div>
               </div>
             )}
 
-            {activeTab === "bookings" && userData.role === "guest" && (
-              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-xl shadow-2xl p-8 relative border border-indigo-500/20 overflow-hidden">
-                {/* Interactive Background */}
-                <div className="absolute inset-0 overflow-hidden">
-                  <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl"></div>
-                  <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/10 rounded-full blur-2xl"></div>
-                </div>
+            {/* Bookings Tab */}
+            {activeTab === "bookings" && userData?.role === "guest" && (
+              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-xl shadow-2xl p-6 md:p-8 border border-indigo-500/20">
 
-                <div className="mb-8 relative z-10">
-                  <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent mb-2">
-                    Trips
-                  </h2>
-                  <p className="text-indigo-200/70">
-                    View and manage your bookings
-                  </p>
-                </div>
-
-                <div className="space-y-6 relative z-10">
-                  {loadingBookings ? (
-                    <div className="flex items-center justify-center py-12">
-                      <div className="text-center">
-                        <div className="relative w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                          <div className="absolute inset-0 rounded-full border-4 border-slate-700"></div>
-                          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-500 border-r-indigo-500 animate-spin"></div>
-                          <div className="absolute w-2 h-2 bg-indigo-500 rounded-full"></div>
-                        </div>
-                        <p className="text-white text-lg font-semibold">
-                          Loading bookings...
-                        </p>
-                      </div>
+                {loadingBookings ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <Loader className="w-8 h-8 animate-spin text-indigo-500 mx-auto mb-3" />
+                      <p className="text-indigo-200">Loading bookings...</p>
                     </div>
-                  ) : bookings.length > 0 ? (
-                    bookings.map((booking) => (
+                  </div>
+                ) : bookings.length > 0 ? (
+                  <>
+                    <div className="space-y-4">
+                      {bookings
+                        .slice(
+                          (bookingsPage - 1) * bookingsPerPage,
+                          bookingsPage * bookingsPerPage
+                        )
+                        .map((booking) => (
                       <div
                         key={booking.id}
                         className="border border-indigo-500/30 rounded-xl overflow-hidden hover:shadow-2xl hover:border-indigo-500/50 transition-all bg-slate-700/20 backdrop-blur-sm"
                       >
-                        <div className="flex flex-col md:flex-row gap-6 p-6">
+                        <div className="flex flex-col sm:flex-row gap-6 p-4 md:p-6">
                           <img
                             src={booking.image}
                             alt={booking.property}
-                            className="w-full md:w-48 h-48 md:h-36 object-cover rounded-lg flex-shrink-0 ring-2 ring-indigo-500/30"
+                            className="w-full sm:w-40 h-40 sm:h-32 object-cover rounded-lg flex-shrink-0"
                           />
 
                           <div className="flex-1 flex flex-col justify-between">
                             <div>
-                              <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-3">
                                 <div>
-                                  <h3 className="text-2xl font-bold text-indigo-100 mb-1">
+                                  <h3 className="text-lg md:text-xl font-bold text-indigo-100">
                                     {booking.property}
                                   </h3>
-                                  <p className="text-indigo-200/70 flex items-center gap-1.5">
+                                  <p className="text-indigo-200/70 flex items-center gap-1 text-sm">
                                     <MapPin className="w-4 h-4" />
                                     {booking.location}
                                   </p>
                                 </div>
                                 <span
-                                  className={`px-4 py-1.5 rounded-full text-sm font-semibold ${
-                                    booking.status === "Upcoming"
-                                      ? "bg-green-500/20 text-green-300 border border-green-500/30"
-                                      : "bg-slate-600/30 text-slate-300 border border-slate-500/30"
+                                  className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border ${
+                                    booking.bookingStatus === "confirmed"
+                                      ? "bg-green-500/20 text-green-300 border-green-500/30"
+                                      : booking.bookingStatus === "pending"
+                                      ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
+                                      : booking.bookingStatus === "rejected"
+                                      ? "bg-red-500/20 text-red-300 border-red-500/30"
+                                      : "bg-blue-500/20 text-blue-300 border-blue-500/30"
                                   }`}
                                 >
-                                  {booking.status}
+                                  {booking.bookingStatus?.charAt(0).toUpperCase() +
+                                    booking.bookingStatus?.slice(1) || "Unknown"}
                                 </span>
                               </div>
 
-                              <div className="flex items-center gap-6 text-indigo-200/70 mb-4">
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 text-indigo-200/70 mb-4 text-sm">
                                 <span className="flex items-center gap-2">
                                   <Calendar className="w-4 h-4" />
-                                  <span className="text-sm font-medium">
-                                    {booking.checkIn}
-                                  </span>
+                                  {booking.checkIn}
                                 </span>
                                 <span className="flex items-center gap-2">
                                   <Clock className="w-4 h-4" />
-                                  <span className="text-sm font-medium">
-                                    {booking.checkOut}
-                                  </span>
+                                  {booking.checkOut}
                                 </span>
                               </div>
                             </div>
 
-                            <div className="flex gap-3 flex-wrap">
+                            <div className="flex flex-col sm:flex-row gap-3">
                               <button
                                 onClick={() =>
                                   navigate(
                                     `${ROUTES.GUEST.MY_BOOKINGS}?booking=${booking.id}`
                                   )
                                 }
-                                className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg"
+                                className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg text-sm"
                               >
-                                View reservation
+                                View Details
                               </button>
-                              <button className="px-6 py-2.5 border-2 border-indigo-500/50 text-indigo-200 rounded-lg hover:bg-indigo-500/20 hover:border-indigo-400 transition-all font-semibold">
-                                Get help
+                              <button className="w-full sm:w-auto px-6 py-2 border-2 border-indigo-500/50 text-indigo-200 rounded-lg hover:bg-indigo-500/20 transition-all font-semibold text-sm">
+                                Get Help
                               </button>
                             </div>
                           </div>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <div className="border border-dashed border-indigo-500/30 rounded-lg p-12 text-center bg-slate-700/20 backdrop-blur-sm">
-                      <Calendar className="w-16 h-16 mx-auto mb-4 text-indigo-400/50" />
-                      <p className="text-indigo-200/70 text-lg">
-                        No bookings yet
-                      </p>
-                      <p className="text-indigo-200/50 mt-2">
-                        Start exploring and book your first trip!
-                      </p>
+                        ))}
                     </div>
-                  )}
-                </div>
+
+                    {/* Pagination */}
+                    {bookings.length > bookingsPerPage && (
+                      <div className="flex items-center justify-center gap-2 mt-8 pt-6 border-t border-indigo-500/20">
+                        <button
+                          onClick={() => setBookingsPage(Math.max(1, bookingsPage - 1))}
+                          disabled={bookingsPage === 1}
+                          className="px-4 py-2 border border-indigo-500/30 text-indigo-200 rounded-lg hover:bg-indigo-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                          Previous
+                        </button>
+
+                        <div className="flex gap-1">
+                          {Array.from({
+                            length: Math.ceil(bookings.length / bookingsPerPage),
+                          }).map((_, index) => (
+                            <button
+                              key={index + 1}
+                              onClick={() => setBookingsPage(index + 1)}
+                              className={`w-10 h-10 rounded-lg font-medium transition-all ${
+                                bookingsPage === index + 1
+                                  ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg"
+                                  : "border border-indigo-500/30 text-indigo-200 hover:bg-indigo-500/20"
+                              }`}
+                            >
+                              {index + 1}
+                            </button>
+                          ))}
+                        </div>
+
+                        <button
+                          onClick={() =>
+                            setBookingsPage(
+                              Math.min(
+                                Math.ceil(bookings.length / bookingsPerPage),
+                                bookingsPage + 1
+                              )
+                            )
+                          }
+                          disabled={
+                            bookingsPage ===
+                            Math.ceil(bookings.length / bookingsPerPage)
+                          }
+                          className="px-4 py-2 border border-indigo-500/30 text-indigo-200 rounded-lg hover:bg-indigo-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="border border-dashed border-indigo-500/30 rounded-lg p-12 text-center bg-slate-700/20">
+                    <Calendar className="w-12 h-12 mx-auto mb-4 text-indigo-400/50" />
+                    <p className="text-indigo-200/70">No bookings yet</p>
+                    <p className="text-indigo-200/50 mt-2">
+                      Start exploring and book your first trip!
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
-            {activeTab === "coupons" && userData.role === "host" && (
-              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-xl shadow-2xl p-8 max-h-[500px] overflow-y-auto relative border border-indigo-500/20">
-                {/* Interactive Background */}
-                <div className="absolute inset-0 overflow-hidden">
-                  <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl"></div>
-                  <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/10 rounded-full blur-2xl"></div>
+            {/* Wishlist Tab */}
+            {activeTab === "wishlists" && userData?.role === "guest" && (
+              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-xl shadow-2xl p-6 md:p-8 border border-indigo-500/20">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+                  <div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-transparent bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text">
+                      My Wishlist
+                    </h2>
+                    <p className="text-indigo-200/70 mt-1">
+                      Share what you're looking for with hosts
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowWishlistModal(true)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg text-sm whitespace-nowrap"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Item
+                  </button>
                 </div>
 
-                <div className="mb-8 relative z-10">
-                  <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent mb-2">
-                    Coupons & Discounts
-                  </h2>
-                  <p className="text-indigo-200/70">
-                    Manage your active coupons and promotions
-                  </p>
-                </div>
+                {loadingWishlists ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <Loader className="w-8 h-8 animate-spin text-indigo-500 mx-auto mb-3" />
+                      <p className="text-indigo-200">Loading wishlists...</p>
+                    </div>
+                  </div>
+                ) : wishlists.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {wishlists.map((wishlistItem) => (
+                      <div
+                        key={wishlistItem.id}
+                        className="border border-indigo-500/30 rounded-xl p-4 md:p-5 bg-slate-700/20 hover:shadow-lg hover:border-indigo-500/50 transition-all backdrop-blur-sm group"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <h4 className="text-base md:text-lg font-bold text-indigo-100 mb-1">
+                              {wishlistItem.item}
+                            </h4>
+                            {wishlistItem.description && (
+                              <p className="text-sm text-indigo-200/70">
+                                {wishlistItem.description}
+                              </p>
+                            )}
+                            <p className="text-xs text-indigo-200/50 mt-2">
+                              Added{" "}
+                              {wishlistItem.createdAt
+                                ? new Date(
+                                    wishlistItem.createdAt.toDate?.() ||
+                                      wishlistItem.createdAt
+                                  ).toLocaleDateString()
+                                : "recently"}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() =>
+                              handleDeleteWishlistItem(wishlistItem.id)
+                            }
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="border border-dashed border-indigo-500/30 rounded-lg p-12 text-center bg-slate-700/20">
+                    <Heart className="w-12 h-12 mx-auto mb-4 text-indigo-400/50" />
+                    <p className="text-indigo-200/70">No wishlist items yet</p>
+                    <p className="text-indigo-200/50 mt-2">
+                      Add items to help hosts understand what you're looking
+                      for!
+                    </p>
+                  </div>
+                )}
 
-                {/* Add Coupon Button */}
-                <div className="mb-8 relative z-10">
+                {/* Add Wishlist Modal */}
+                {showWishlistModal && (
+                  <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-2xl max-w-md w-full p-6 border border-indigo-500/30">
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">
+                          Add Wishlist Item
+                        </h3>
+                        <button
+                          onClick={() => setShowWishlistModal(false)}
+                          className="text-indigo-300/70 hover:text-indigo-300 transition"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-indigo-200 mb-2">
+                            What are you looking for?
+                          </label>
+                          <input
+                            type="text"
+                            value={wishlistItem}
+                            onChange={(e) => setWishlistItem(e.target.value)}
+                            placeholder="e.g., 3 bedroom apartment"
+                            className="w-full px-4 py-3 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-indigo-200 mb-2">
+                            Additional Details (Optional)
+                          </label>
+                          <textarea
+                            value={wishlistDescription}
+                            onChange={(e) =>
+                              setWishlistDescription(e.target.value)
+                            }
+                            placeholder="e.g., Near public transport, WiFi required..."
+                            rows={3}
+                            className="w-full px-4 py-3 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition resize-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 mt-6">
+                        <button
+                          onClick={() => setShowWishlistModal(false)}
+                          className="flex-1 px-4 py-2.5 border-2 border-indigo-500/30 text-indigo-200 rounded-lg hover:bg-indigo-500/10 hover:border-indigo-500/50 transition-all font-semibold"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleAddWishlistItem}
+                          className="flex-1 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg"
+                        >
+                          Add Item
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Coupons Tab */}
+            {activeTab === "coupons" && userData?.role === "host" && (
+              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-xl shadow-2xl p-6 md:p-8 border border-indigo-500/20">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+                  <div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-transparent bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text">
+                      Coupons & Discounts
+                    </h2>
+                    <p className="text-indigo-200/70 mt-1">
+                      Manage your promotional codes
+                    </p>
+                  </div>
                   <button
                     onClick={() => setShowAddModal(true)}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg"
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg text-sm whitespace-nowrap"
                   >
-                    <Plus className="w-5 h-5" />
+                    <Plus className="w-4 h-4" />
                     Add Coupon
                   </button>
                 </div>
 
-                {/* Active Coupons Section */}
-                <div className="mb-10 relative z-10">
-                  <h3 className="text-xl font-bold text-indigo-300 mb-4 flex items-center gap-2">
+                {/* Active Coupons */}
+                <div className="mb-10">
+                  <h3 className="text-lg font-bold text-indigo-300 mb-4 flex items-center gap-2">
                     <Tag className="w-5 h-5 text-green-400" />
                     Active Coupons ({activeCoupons.length})
                   </h3>
@@ -801,10 +1034,10 @@ export default function ProfilePage() {
                       {activeCoupons.map((coupon) => (
                         <div
                           key={coupon.id}
-                          className="border border-green-500/30 bg-green-500/10 rounded-lg p-5 flex items-center justify-between hover:shadow-lg hover:border-green-500/50 transition-all backdrop-blur-sm"
+                          className="border border-green-500/30 bg-green-500/10 rounded-lg p-4 md:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:shadow-lg transition-all"
                         >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
+                          <div className="flex-1 w-full">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-2">
                               <span className="text-lg font-bold text-indigo-200 bg-slate-700/50 px-4 py-2 rounded-lg border-2 border-indigo-500/50">
                                 {coupon.code}
                               </span>
@@ -812,14 +1045,14 @@ export default function ProfilePage() {
                                 {coupon.type === "percentage" ? (
                                   <>
                                     <Percent className="w-5 h-5 text-green-400" />
-                                    <span className="text-2xl font-bold text-green-400">
+                                    <span className="text-xl font-bold text-green-400">
                                       {coupon.discount}%
                                     </span>
                                   </>
                                 ) : (
                                   <>
                                     <DollarSign className="w-5 h-5 text-green-400" />
-                                    <span className="text-2xl font-bold text-green-400">
+                                    <span className="text-xl font-bold text-green-400">
                                       ${coupon.discount}
                                     </span>
                                   </>
@@ -830,25 +1063,25 @@ export default function ProfilePage() {
                               Expires: {coupon.expiryDate}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 w-full sm:w-auto">
                             <button
                               onClick={() => toggleCouponStatus(coupon.id)}
-                              className="px-4 py-2 bg-slate-700/50 border border-indigo-500/30 text-indigo-200 rounded-lg hover:bg-slate-700 hover:border-indigo-500/50 transition-all font-medium"
+                              className="flex-1 sm:flex-none px-3 py-2 bg-slate-700/50 border border-indigo-500/30 text-indigo-200 rounded-lg hover:bg-slate-700 hover:border-indigo-500/50 transition-all font-medium text-sm"
                             >
                               Deactivate
                             </button>
                             <button
                               onClick={() => deleteCoupon(coupon.id)}
-                              className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all border border-red-500/30"
+                              className="flex-1 sm:flex-none px-3 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all border border-red-500/30"
                             >
-                              <Trash2 className="w-5 h-5" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="border border-dashed border-indigo-500/30 rounded-lg p-6 text-center bg-slate-700/20 backdrop-blur-sm">
+                    <div className="border border-dashed border-indigo-500/30 rounded-lg p-8 text-center bg-slate-700/20">
                       <p className="text-indigo-200/70">
                         No active coupons. Add one to get started!
                       </p>
@@ -856,10 +1089,10 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                {/* Inactive Coupons Section */}
+                {/* Inactive Coupons */}
                 {inactiveCoupons.length > 0 && (
-                  <div className="relative z-10">
-                    <h3 className="text-xl font-bold text-indigo-300 mb-4 flex items-center gap-2">
+                  <div>
+                    <h3 className="text-lg font-bold text-indigo-300 mb-4 flex items-center gap-2">
                       <Tag className="w-5 h-5 text-slate-400" />
                       Inactive Coupons ({inactiveCoupons.length})
                     </h3>
@@ -868,10 +1101,10 @@ export default function ProfilePage() {
                       {inactiveCoupons.map((coupon) => (
                         <div
                           key={coupon.id}
-                          className="border border-slate-500/20 bg-slate-700/10 rounded-lg p-5 flex items-center justify-between hover:shadow-lg hover:border-slate-500/30 transition-all opacity-75 backdrop-blur-sm"
+                          className="border border-slate-500/20 bg-slate-700/10 rounded-lg p-4 md:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 opacity-75 hover:shadow-lg transition-all"
                         >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
+                          <div className="flex-1 w-full">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-2">
                               <span className="text-lg font-bold text-slate-400 bg-slate-700/50 px-4 py-2 rounded-lg border-2 border-slate-500/30">
                                 {coupon.code}
                               </span>
@@ -879,14 +1112,14 @@ export default function ProfilePage() {
                                 {coupon.type === "percentage" ? (
                                   <>
                                     <Percent className="w-5 h-5 text-slate-400" />
-                                    <span className="text-2xl font-bold text-slate-400">
+                                    <span className="text-xl font-bold text-slate-400">
                                       {coupon.discount}%
                                     </span>
                                   </>
                                 ) : (
                                   <>
                                     <DollarSign className="w-5 h-5 text-slate-400" />
-                                    <span className="text-2xl font-bold text-slate-400">
+                                    <span className="text-xl font-bold text-slate-400">
                                       ${coupon.discount}
                                     </span>
                                   </>
@@ -897,18 +1130,18 @@ export default function ProfilePage() {
                               Expires: {coupon.expiryDate}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 w-full sm:w-auto">
                             <button
                               onClick={() => toggleCouponStatus(coupon.id)}
-                              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-medium"
+                              className="flex-1 sm:flex-none px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-medium text-sm"
                             >
                               Activate
                             </button>
                             <button
                               onClick={() => deleteCoupon(coupon.id)}
-                              className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all border border-red-500/30"
+                              className="flex-1 sm:flex-none px-3 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all border border-red-500/30"
                             >
-                              <Trash2 className="w-5 h-5" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
@@ -919,17 +1152,17 @@ export default function ProfilePage() {
 
                 {/* Add Coupon Modal */}
                 {showAddModal && (
-                  <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+                  <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
                     <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-2xl max-w-md w-full p-6 border border-indigo-500/30">
                       <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-2xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">
+                        <h3 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">
                           Add Coupon
                         </h3>
                         <button
                           onClick={() => setShowAddModal(false)}
                           className="text-indigo-300/70 hover:text-indigo-300 transition"
                         >
-                          <X className="w-6 h-6" />
+                          <X className="w-5 h-5" />
                         </button>
                       </div>
 
@@ -940,9 +1173,12 @@ export default function ProfilePage() {
                           </label>
                           <input
                             type="text"
-                            value={formData.code}
+                            value={couponFormData.code}
                             onChange={(e) =>
-                              setFormData({ ...formData, code: e.target.value })
+                              setCouponFormData({
+                                ...couponFormData,
+                                code: e.target.value,
+                              })
                             }
                             placeholder="e.g., SUMMER20"
                             className="w-full px-4 py-2.5 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
@@ -956,10 +1192,10 @@ export default function ProfilePage() {
                             </label>
                             <input
                               type="number"
-                              value={formData.discount}
+                              value={couponFormData.discount}
                               onChange={(e) =>
-                                setFormData({
-                                  ...formData,
+                                setCouponFormData({
+                                  ...couponFormData,
                                   discount: e.target.value,
                                 })
                               }
@@ -973,10 +1209,10 @@ export default function ProfilePage() {
                               Type
                             </label>
                             <select
-                              value={formData.type}
+                              value={couponFormData.type}
                               onChange={(e) =>
-                                setFormData({
-                                  ...formData,
+                                setCouponFormData({
+                                  ...couponFormData,
                                   type: e.target.value,
                                 })
                               }
@@ -994,10 +1230,10 @@ export default function ProfilePage() {
                           </label>
                           <input
                             type="date"
-                            value={formData.expiryDate}
+                            value={couponFormData.expiryDate}
                             onChange={(e) =>
-                              setFormData({
-                                ...formData,
+                              setCouponFormData({
+                                ...couponFormData,
                                 expiryDate: e.target.value,
                               })
                             }

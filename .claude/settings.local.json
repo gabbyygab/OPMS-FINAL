@@ -15,7 +15,8 @@
       "Bash(cd D:Web AppsOPMS-FINAL)",
       "Bash(awk:*)",
       "Bash(\"cd\" \"D:\\Web Apps\\OPMS-FINAL\")",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(node -e:*)"
     ],
     "deny": [],
     "ask": []

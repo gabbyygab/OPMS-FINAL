@@ -336,116 +336,129 @@ export default function HostDashboard({ isVerified, user }) {
           <VerificationBanner handleVerification={handleVerification} />
         )}
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent">Dashboard</h1>
-          <p className="text-indigo-300/60 mt-1">
+        <div className="mb-12">
+          <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-indigo-300 via-purple-300 to-indigo-200 bg-clip-text text-transparent mb-2">
+            Dashboard
+          </h1>
+          <p className="text-indigo-300/70 mt-2 text-base lg:text-lg font-medium">
             Welcome back! Here's what's happening with your listings.
           </p>
         </div>
 
         {/* Period Selector */}
-        <div className="flex gap-2 mb-6">
-          {["today", "week", "month", "year"].map((period) => (
-            <button
-              key={period}
-              onClick={() => setSelectedPeriod(period)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                selectedPeriod === period
-                  ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white"
-                  : "bg-slate-800/50 text-indigo-300 hover:bg-slate-700/50 border border-indigo-500/20"
-              }`}
-            >
-              {period.charAt(0).toUpperCase() + period.slice(1)}
-            </button>
-          ))}
+        <div className="mb-8">
+          <p className="text-sm font-semibold text-indigo-300 mb-3 uppercase tracking-wide">Time Period</p>
+          <div className="flex gap-2 flex-wrap">
+            {["today", "week", "month", "year"].map((period) => (
+              <button
+                key={period}
+                onClick={() => setSelectedPeriod(period)}
+                className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${
+                  selectedPeriod === period
+                    ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/30"
+                    : "bg-slate-800/50 text-indigo-300 hover:bg-slate-700/70 border border-indigo-500/20 hover:border-indigo-500/40"
+                }`}
+              >
+                {period.charAt(0).toUpperCase() + period.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           {/* Total Earnings */}
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6 hover:shadow-indigo-500/20 transition-shadow">
+            <div className="flex items-center justify-between mb-5">
               <div className="w-12 h-12 bg-green-500/20 border border-green-500/30 rounded-lg flex items-center justify-center">
                 <DollarSign className="w-6 h-6 text-green-400" />
               </div>
               <span
-                className={`flex items-center text-sm font-medium ${
-                  stats.earningsChange >= 0 ? "text-green-400" : "text-red-400"
+                className={`flex items-center text-xs font-bold px-2.5 py-1 rounded-full ${
+                  stats.earningsChange >= 0
+                    ? "text-green-300 bg-green-500/20 border border-green-500/30"
+                    : "text-red-300 bg-red-500/20 border border-red-500/30"
                 }`}
               >
                 {stats.earningsChange >= 0 ? (
-                  <ArrowUpRight className="w-4 h-4" />
+                  <ArrowUpRight className="w-3.5 h-3.5 mr-1" />
                 ) : (
-                  <ArrowDownRight className="w-4 h-4" />
+                  <ArrowDownRight className="w-3.5 h-3.5 mr-1" />
                 )}
                 {Math.abs(stats.earningsChange)}%
               </span>
             </div>
-            <h3 className="text-2xl font-bold text-indigo-100">
+            <h3 className="text-3xl lg:text-4xl font-bold text-white mb-2">
               ₱{Number(stats.totalEarnings || 0).toLocaleString()}
             </h3>
-            <p className="text-indigo-300/70 text-sm mt-1">Total Earnings</p>
+            <p className="text-indigo-300/60 text-sm font-medium">Total Earnings</p>
           </div>
 
           {/* Total Bookings */}
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6 hover:shadow-indigo-500/20 transition-shadow">
+            <div className="flex items-center justify-between mb-5">
               <div className="w-12 h-12 bg-blue-500/20 border border-blue-500/30 rounded-lg flex items-center justify-center">
                 <Calendar className="w-6 h-6 text-blue-400" />
               </div>
               <span
-                className={`flex items-center text-sm font-medium ${
-                  stats.bookingsChange >= 0 ? "text-green-400" : "text-red-400"
+                className={`flex items-center text-xs font-bold px-2.5 py-1 rounded-full ${
+                  stats.bookingsChange >= 0
+                    ? "text-green-300 bg-green-500/20 border border-green-500/30"
+                    : "text-red-300 bg-red-500/20 border border-red-500/30"
                 }`}
               >
                 {stats.bookingsChange >= 0 ? (
-                  <ArrowUpRight className="w-4 h-4" />
+                  <ArrowUpRight className="w-3.5 h-3.5 mr-1" />
                 ) : (
-                  <ArrowDownRight className="w-4 h-4" />
+                  <ArrowDownRight className="w-3.5 h-3.5 mr-1" />
                 )}
                 {Math.abs(stats.bookingsChange)}%
               </span>
             </div>
-            <h3 className="text-2xl font-bold text-indigo-100">
+            <h3 className="text-3xl lg:text-4xl font-bold text-white mb-2">
               {Number(stats.totalBookings || 0)}
             </h3>
-            <p className="text-indigo-300/70 text-sm mt-1">Total Bookings</p>
+            <p className="text-indigo-300/60 text-sm font-medium">Total Bookings</p>
           </div>
 
           {/* Active Listings */}
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6 hover:shadow-indigo-500/20 transition-shadow">
+            <div className="flex items-center justify-between mb-5">
               <div className="w-12 h-12 bg-purple-500/20 border border-purple-500/30 rounded-lg flex items-center justify-center">
                 <Home className="w-6 h-6 text-purple-400" />
               </div>
               <span
-                className={`flex items-center text-sm font-medium ${
-                  stats.listingsChange >= 0 ? "text-green-400" : "text-red-400"
+                className={`flex items-center text-xs font-bold px-2.5 py-1 rounded-full ${
+                  stats.listingsChange >= 0
+                    ? "text-green-300 bg-green-500/20 border border-green-500/30"
+                    : "text-red-300 bg-red-500/20 border border-red-500/30"
                 }`}
               >
                 {stats.listingsChange >= 0 ? (
-                  <ArrowUpRight className="w-4 h-4" />
+                  <ArrowUpRight className="w-3.5 h-3.5 mr-1" />
                 ) : (
-                  <ArrowDownRight className="w-4 h-4" />
+                  <ArrowDownRight className="w-3.5 h-3.5 mr-1" />
                 )}
                 {Math.abs(stats.listingsChange)}
               </span>
             </div>
-            <h3 className="text-2xl font-bold text-indigo-100">
+            <h3 className="text-3xl lg:text-4xl font-bold text-white mb-2">
               {Number(stats.activeListings || 0)}
             </h3>
-            <p className="text-indigo-300/70 text-sm mt-1">Active Listings</p>
+            <p className="text-indigo-300/60 text-sm font-medium">Active Listings</p>
           </div>
 
           {/* Average Rating */}
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6 hover:shadow-indigo-500/20 transition-shadow">
+            <div className="flex items-center justify-between mb-5">
               <div className="w-12 h-12 bg-yellow-500/20 border border-yellow-500/30 rounded-lg flex items-center justify-center">
                 <Star className="w-6 h-6 text-yellow-400" />
               </div>
               <span
-                className={`flex items-center text-sm font-medium ${
-                  stats.ratingChange >= 0 ? "text-green-400" : "text-red-400"
+                className={`flex items-center text-xs font-bold px-2.5 py-1 rounded-full ${
+                  stats.ratingChange >= 0
+                    ? "text-green-300 bg-green-500/20 border border-green-500/30"
+                    : "text-red-300 bg-red-500/20 border border-red-500/30"
                 }`}
               >
                 {stats.ratingChange >= 0 ? (
@@ -456,21 +469,21 @@ export default function HostDashboard({ isVerified, user }) {
                 {Math.abs(stats.ratingChange)}
               </span>
             </div>
-            <h3 className="text-2xl font-bold text-indigo-100">
+            <h3 className="text-3xl lg:text-4xl font-bold text-white mb-2">
               {Number.isFinite(Number(stats.avgRating))
                 ? Number(stats.avgRating).toFixed(1)
                 : "0.0"}
             </h3>
-            <p className="text-indigo-300/70 text-sm mt-1">Average Rating</p>
+            <p className="text-indigo-300/60 text-sm font-medium">Average Rating</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-10">
           {/* Today's Bookings */}
-          <div className="lg:col-span-2 bg-gradient-to-br from-slate-800/60 to-slate-900/60 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
+          <div className="lg:col-span-2 bg-gradient-to-br from-slate-800/60 to-slate-900/60 rounded-2xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-indigo-100">Today's Bookings</h2>
-              <span className="text-indigo-300/70 text-sm">
+              <h2 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-indigo-300 to-indigo-100 bg-clip-text text-transparent">Today's Bookings</h2>
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                 {todayBookings.length} today
               </span>
             </div>
@@ -521,12 +534,12 @@ export default function HostDashboard({ isVerified, user }) {
           </div>
 
           {/* Recent Messages */}
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-indigo-100">Messages</h2>
+              <h2 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-indigo-300 to-indigo-100 bg-clip-text text-transparent">Messages</h2>
               <a
                 href="/host/messages"
-                className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                className="text-indigo-400 hover:text-indigo-300 text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-indigo-500/10 transition"
               >
                 View All
               </a>
@@ -559,15 +572,15 @@ export default function HostDashboard({ isVerified, user }) {
         </div>
 
         {/* Upcoming - full width on desktop */}
-        <div className="grid grid-cols-1 gap-6 mt-6">
+        <div className="grid grid-cols-1 gap-6 mt-10">
           {/* Upcoming Bookings */}
           <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl shadow-xl shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent">
+                <h2 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-indigo-300 via-purple-300 to-indigo-100 bg-clip-text text-transparent">
                   Upcoming Bookings
                 </h2>
-                <p className="text-indigo-300/60 text-sm mt-1">Next confirmed reservations in chronological order</p>
+                <p className="text-indigo-300/60 text-sm font-medium mt-2">Next confirmed reservations in chronological order</p>
               </div>
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full bg-slate-700/60 border border-slate-600/50 text-indigo-200">
@@ -629,8 +642,8 @@ export default function HostDashboard({ isVerified, user }) {
         </div>
 
         {/* Listing Performance */}
-        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6 mt-6">
-          <h2 className="text-xl font-bold text-indigo-100 mb-6">
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm p-6 mt-10">
+          <h2 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-indigo-300 to-indigo-100 bg-clip-text text-transparent mb-6">
             Listing Performance
           </h2>
 

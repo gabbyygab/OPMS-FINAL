@@ -1,6 +1,9 @@
 import { useRef } from "react";
-import { jsPDF } from "jspdf";
 import { toast } from "react-toastify";
+import pdfMake from "pdfmake/build/pdfmake";
+import vfsFonts from "pdfmake/build/vfs_fonts";
+
+pdfMake.vfs = vfsFonts;
 
 export default function ReceiptModal({ transaction, user, onClose }) {
   const receiptRef = useRef(null);
@@ -27,132 +30,291 @@ export default function ReceiptModal({ transaction, user, onClose }) {
     return labels[type] || type;
   };
 
-  const getTransactionColor = (type) => {
-    const colors = {
-      payment: { bg: "bg-red-50", border: "border-red-200" },
-      refund: { bg: "bg-blue-50", border: "border-blue-200" },
-      deposit: { bg: "bg-green-50", border: "border-green-200" },
-      withdrawal: { bg: "bg-orange-50", border: "border-orange-200" },
-    };
-    return colors[type] || { bg: "bg-gray-50", border: "border-gray-200" };
-  };
-
   const exportToPDF = async () => {
     try {
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: [80, 200], // Thermal printer format (80mm width)
-      });
+      // Define fonts for pdfmake
+      const fonts = {
+        Roboto: {
+          normal: "Roboto-Regular.ttf",
+          bold: "Roboto-Medium.ttf",
+          italics: "Roboto-Italic.ttf",
+          bolditalics: "Roboto-MediumItalic.ttf",
+        },
+      };
 
-      // Set font
-      pdf.setFont("helvetica");
+      // Define the PDF document structure
+      const docDefinition = {
+        content: [
+          // Header
+          {
+            text: "BookingNest",
+            fontSize: 32,
+            bold: true,
+            alignment: "center",
+            margin: [0, 0, 0, 8],
+          },
+          {
+            text: "E-Wallet Transaction Receipt",
+            fontSize: 14,
+            color: "#6b7280",
+            alignment: "center",
+            margin: [0, 0, 0, 15],
+          },
+          {
+            canvas: [
+              {
+                type: "line",
+                x1: 0,
+                y1: 0,
+                x2: 515,
+                y2: 0,
+                lineWidth: 0.5,
+                lineColor: "#e5e7eb",
+              },
+            ],
+            margin: [0, 0, 0, 12],
+          },
 
-      // Logo and Header
-      pdf.setFontSize(14);
-      pdf.text("BookingNest", 40, 15, { align: "center" });
+          // Receipt Info
+          {
+            columns: [
+              { text: "Receipt Number:", bold: true, width: "50%" },
+              {
+                text: transaction.id.slice(0, 12).toUpperCase(),
+                width: "50%",
+                alignment: "right",
+              },
+            ],
+            margin: [0, 0, 0, 8],
+            fontSize: 11,
+          },
+          {
+            columns: [
+              { text: "Transaction Type:", bold: true, width: "50%" },
+              {
+                text: getTransactionTypeLabel(transaction.type),
+                width: "50%",
+                alignment: "right",
+              },
+            ],
+            margin: [0, 0, 0, 8],
+            fontSize: 11,
+          },
+          {
+            columns: [
+              { text: "Status:", bold: true, width: "50%" },
+              {
+                text: transaction.status.toUpperCase(),
+                width: "50%",
+                alignment: "right",
+                bold: true,
+              },
+            ],
+            margin: [0, 0, 0, 15],
+            fontSize: 11,
+          },
 
-      pdf.setFontSize(10);
-      pdf.setTextColor(100, 100, 100);
-      pdf.text("E-Wallet Transaction Receipt", 40, 23, { align: "center" });
+          // Separator
+          {
+            canvas: [
+              {
+                type: "line",
+                x1: 0,
+                y1: 0,
+                x2: 515,
+                y2: 0,
+                lineWidth: 0.5,
+                lineColor: "#e5e7eb",
+              },
+            ],
+            margin: [0, 0, 0, 12],
+          },
 
-      // Divider
-      pdf.setDrawColor(200, 200, 200);
-      pdf.line(5, 28, 75, 28);
+          // Transaction Details Section
+          {
+            text: "TRANSACTION DETAILS",
+            fontSize: 12,
+            bold: true,
+            margin: [0, 0, 0, 10],
+          },
 
-      // Transaction Type
-      pdf.setFontSize(12);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text(`${getTransactionTypeLabel(transaction.type).toUpperCase()}`, 40, 36, {
-        align: "center",
-      });
+          {
+            text: "Transaction ID",
+            fontSize: 10,
+            bold: true,
+            color: "#6b7280",
+            margin: [0, 0, 0, 2],
+          },
+          {
+            text: transaction.id,
+            fontSize: 11,
+            margin: [0, 0, 0, 10],
+          },
 
-      // Amount
-      pdf.setFontSize(18);
-      const amountColor = transaction.amount > 0 ? [34, 197, 94] : [239, 68, 68];
-      pdf.setTextColor(...amountColor);
-      pdf.text(
-        `${transaction.amount > 0 ? "+" : ""}₱${Math.abs(
-          transaction.amount
-        ).toFixed(2)}`,
-        40,
-        48,
-        { align: "center" }
-      );
+          {
+            text: "Date & Time",
+            fontSize: 10,
+            bold: true,
+            color: "#6b7280",
+            margin: [0, 0, 0, 2],
+          },
+          {
+            text: formatDate(transaction.created_at),
+            fontSize: 11,
+            margin: [0, 0, 0, 10],
+          },
 
-      // Status
-      pdf.setFontSize(10);
-      pdf.setTextColor(100, 100, 100);
-      const statusColor = transaction.status === "completed" ? [34, 197, 94] : [239, 68, 68];
-      pdf.setTextColor(...statusColor);
-      pdf.text(`Status: ${transaction.status.toUpperCase()}`, 40, 56, {
-        align: "center",
-      });
+          {
+            text: "Guest Name",
+            fontSize: 10,
+            bold: true,
+            color: "#6b7280",
+            margin: [0, 0, 0, 2],
+          },
+          {
+            text: transaction.guestName || user?.displayName || "N/A",
+            fontSize: 11,
+            margin: [0, 0, 0, 10],
+          },
 
-      // Divider
-      pdf.setDrawColor(200, 200, 200);
-      pdf.line(5, 60, 75, 60);
+          {
+            text: "Email",
+            fontSize: 10,
+            bold: true,
+            color: "#6b7280",
+            margin: [0, 0, 0, 2],
+          },
+          {
+            text: transaction.email || user?.email || "N/A",
+            fontSize: 11,
+            margin: [0, 0, 0, 10],
+          },
 
-      // Details
-      pdf.setFontSize(9);
-      pdf.setTextColor(0, 0, 0);
-      let yPosition = 68;
+          ...(transaction.type === "withdrawal" && transaction.paypal_email
+            ? [
+                {
+                  text: "PayPal Email",
+                  fontSize: 10,
+                  bold: true,
+                  color: "#6b7280",
+                  margin: [0, 0, 0, 2],
+                },
+                {
+                  text: transaction.paypal_email,
+                  fontSize: 11,
+                  margin: [0, 0, 0, 10],
+                },
+              ]
+            : []),
 
-      const details = [
-        ["Transaction ID", transaction.id],
-        ["Date & Time", formatDate(transaction.created_at)],
-        ["Guest Name", transaction.guestName || user?.displayName || "N/A"],
-        ["Email", transaction.email || user?.email || "N/A"],
-        ["Type", getTransactionTypeLabel(transaction.type)],
-      ];
+          ...(transaction.paypal_batch_id
+            ? [
+                {
+                  text: "Batch ID",
+                  fontSize: 10,
+                  bold: true,
+                  color: "#6b7280",
+                  margin: [0, 0, 0, 2],
+                },
+                {
+                  text: transaction.paypal_batch_id,
+                  fontSize: 11,
+                  margin: [0, 0, 0, 10],
+                },
+              ]
+            : []),
 
-      details.forEach(([label, value]) => {
-        pdf.setTextColor(100, 100, 100);
-        pdf.text(`${label}:`, 8, yPosition);
+          // Separator
+          {
+            canvas: [
+              {
+                type: "line",
+                x1: 0,
+                y1: 0,
+                x2: 515,
+                y2: 0,
+                lineWidth: 0.5,
+                lineColor: "#e5e7eb",
+              },
+            ],
+            margin: [0, 15, 0, 15],
+          },
 
-        pdf.setTextColor(50, 50, 50);
-        const splitValue = pdf.splitTextToSize(value || "N/A", 50);
-        pdf.text(splitValue, 35, yPosition);
+          // Amount Section
+          {
+            columns: [
+              { text: "Total Amount", fontSize: 16, bold: true, width: "50%" },
+              {
+                text: `\u20B1${Math.abs(transaction.amount).toFixed(2)}`,
+                fontSize: 28,
+                bold: true,
+                width: "50%",
+                alignment: "right",
+              },
+            ],
+            margin: [0, 0, 0, 8],
+          },
+          {
+            text:
+              transaction.amount > 0
+                ? "Amount credited to your wallet"
+                : "Amount deducted from your wallet",
+            fontSize: 10,
+            color: "#6b7280",
+            alignment: "right",
+            margin: [0, 0, 0, 15],
+          },
 
-        yPosition += splitValue.length * 5 + 3;
-      });
+          // Separator
+          {
+            canvas: [
+              {
+                type: "line",
+                x1: 0,
+                y1: 0,
+                x2: 515,
+                y2: 0,
+                lineWidth: 0.5,
+                lineColor: "#e5e7eb",
+              },
+            ],
+            margin: [0, 0, 0, 12],
+          },
 
-      // Special fields for different transaction types
-      if (transaction.type === "withdrawal" && transaction.paypal_email) {
-        pdf.setTextColor(100, 100, 100);
-        pdf.text("PayPal Email:", 8, yPosition);
-        pdf.setTextColor(50, 50, 50);
-        pdf.text(transaction.paypal_email, 35, yPosition);
-        yPosition += 8;
-      }
+          // Footer
+          {
+            text: "Thank you for using BookingNest!",
+            fontSize: 11,
+            bold: true,
+            alignment: "center",
+            margin: [0, 0, 0, 8],
+          },
+          {
+            text: "www.bookingnest.com",
+            fontSize: 11,
+            alignment: "center",
+            margin: [0, 0, 0, 8],
+          },
+          {
+            text: `© ${new Date().getFullYear()} BookingNest. All rights reserved.`,
+            fontSize: 9,
+            color: "#9ca3af",
+            alignment: "center",
+          },
+        ],
+        pageSize: "A4",
+        pageMargins: [40, 40, 40, 40],
+        defaultStyle: {
+          font: "Roboto",
+        },
+      };
 
-      if (transaction.paypal_batch_id) {
-        pdf.setTextColor(100, 100, 100);
-        pdf.text("Batch ID:", 8, yPosition);
-        pdf.setTextColor(50, 50, 50);
-        pdf.text(transaction.paypal_batch_id, 35, yPosition);
-        yPosition += 8;
-      }
-
-      // Divider
-      pdf.setDrawColor(200, 200, 200);
-      pdf.line(5, yPosition + 2, 75, yPosition + 2);
-
-      // Footer
-      yPosition += 10;
-      pdf.setFontSize(8);
-      pdf.setTextColor(150, 150, 150);
-      pdf.text("Thank you for using BookingNest!", 40, yPosition, {
-        align: "center",
-      });
-
-      yPosition += 6;
-      pdf.text("www.bookingnest.com", 40, yPosition, { align: "center" });
-
-      // Save PDF
-      pdf.save(
-        `Receipt-${transaction.type}-${new Date().getTime()}.pdf`
-      );
+      // Generate and download PDF
+      pdfMake
+        .createPdf(docDefinition, null, fonts, pdfMake.vfs)
+        .download(
+          `BookingNest-Receipt-${transaction.id.slice(0, 8)}.pdf`
+        );
 
       toast.success("Receipt downloaded successfully!");
     } catch (error) {
@@ -165,25 +327,79 @@ export default function ReceiptModal({ transaction, user, onClose }) {
     if (!receiptRef.current) return;
 
     const printWindow = window.open("", "_blank");
-    printWindow.document.write(receiptRef.current.innerHTML);
+    const receiptHtml = receiptRef.current.innerHTML;
+
+    const styles = `
+      <style>
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          margin: 0;
+          padding: 20px;
+          background-color: #f9fafb;
+        }
+        .receipt-container {
+          max-width: 320px;
+          margin: 0 auto;
+          padding: 20px;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          background-color: #ffffff;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        .text-center { text-align: center; }
+        .mb-4 { margin-bottom: 1rem; }
+        .pb-3 { padding-bottom: 0.75rem; }
+        .border-b { border-bottom: 1px solid #e5e7eb; }
+        .text-xl { font-size: 1.25rem; }
+        .font-bold { font-weight: 700; }
+        .text-gray-900 { color: #111827; }
+        .text-xs { font-size: 0.75rem; }
+        .text-gray-500 { color: #6b7280; }
+        .space-y-2 > * + * { margin-top: 0.5rem; }
+        .flex { display: flex; }
+        .justify-between { justify-content: space-between; }
+        .text-gray-600 { color: #4b5563; }
+        .font-semibold { font-weight: 600; }
+        .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .break-all { word-break: break-all; }
+        .items-center { align-items: center; }
+        .text-base { font-size: 1rem; }
+        .space-y-1 > * + * { margin-top: 0.25rem; }
+      </style>
+    `;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Print Receipt</title>
+          ${styles}
+        </head>
+        <body>
+          <div class="receipt-container">
+            ${receiptHtml}
+          </div>
+        </body>
+      </html>
+    `);
+
     printWindow.document.close();
 
     setTimeout(() => {
       printWindow.print();
-    }, 250);
+    }, 300);
   };
-
-  const colors = getTransactionColor(transaction.type);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex items-center justify-between">
-          <h3 className="text-xl font-bold text-white">Receipt</h3>
+        <div className="sticky top-0 bg-white px-6 py-4 flex items-center justify-between border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-800">
+            Transaction Receipt
+          </h3>
           <button
             onClick={onClose}
-            className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+            className="text-gray-500 hover:bg-gray-100 rounded-full p-2 transition-colors"
           >
             <svg
               className="w-5 h-5"
@@ -201,128 +417,104 @@ export default function ReceiptModal({ transaction, user, onClose }) {
           </button>
         </div>
 
-        {/* Thermal Printer Receipt Preview */}
-        <div
-          ref={receiptRef}
-          className={`m-6 p-6 border-2 ${colors.border} ${colors.bg} rounded-lg font-mono text-sm`}
-          style={{
-            maxWidth: "280px",
-            margin: "24px auto",
-            backgroundColor: "#ffffff",
-            borderColor: "#e5e7eb",
-          }}
-        >
-          {/* Logo Section */}
-          <div className="text-center mb-4 pb-3 border-b-2 border-gray-300">
-            <div className="flex justify-center mb-2">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="40"
-                height="40"
-                viewBox="0 0 24 24"
-                fill="oklch(0.511 0.262 276.966)"
-              >
-                <path d="M7 2v2H5a2 2 0 0 0-2 2v2h18V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zm13 8H4v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10zm-4 4h-4v4h4v-4z" />
-              </svg>
-            </div>
-            <p className="font-bold text-gray-900 text-base">BookingNest</p>
-            <p className="text-gray-600 text-xs">E-Wallet Receipt</p>
-          </div>
-
-          {/* Transaction Type */}
-          <div className="text-center mb-4 pb-3 border-b-2 border-gray-300">
-            <p className="text-xs text-gray-500 mb-1">Transaction Type</p>
-            <p className="font-bold text-lg text-gray-900">
-              {getTransactionTypeLabel(transaction.type)}
-            </p>
-          </div>
-
-          {/* Amount */}
-          <div className="text-center mb-4 pb-3 border-b-2 border-gray-300">
-            <p
-              className={`text-3xl font-bold ${
-                transaction.amount > 0 ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {transaction.amount > 0 ? "+" : ""}₱{Math.abs(
-                transaction.amount
-              ).toFixed(2)}
-            </p>
-            <p
-              className={`text-xs font-semibold mt-1 ${
-                transaction.status === "completed"
-                  ? "text-green-600"
-                  : "text-orange-600"
-              }`}
-            >
-              [{transaction.status.toUpperCase()}]
-            </p>
-          </div>
-
-          {/* Details */}
-          <div className="mb-4 pb-3 border-b-2 border-gray-300 space-y-2">
-            <div className="flex justify-between text-xs">
-              <span className="text-gray-600">Receipt ID:</span>
-              <span className="text-gray-900 font-semibold">
-                {transaction.id.slice(0, 12)}...
-              </span>
+        {/* Receipt Container - For Display and PDF */}
+        <div className="flex flex-col gap-4">
+          {/* Screen Display Receipt */}
+          <div
+            ref={receiptRef}
+            className="p-6 border border-gray-300 bg-white rounded-lg font-mono text-sm shadow-sm"
+            style={{
+              maxWidth: "320px",
+              margin: "24px auto",
+              boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+            }}
+          >
+            {/* Header */}
+            <div className="text-center mb-4 pb-3 border-b border-gray-300">
+              <h2 className="text-xl font-bold text-gray-900">BookingNest</h2>
+              <p className="text-xs text-gray-500">
+                E-Wallet Transaction Receipt
+              </p>
             </div>
 
-            <div className="flex justify-between text-xs">
-              <span className="text-gray-600">Date & Time:</span>
-              <span className="text-gray-900 font-semibold">
-                {formatDate(transaction.created_at)}
-              </span>
-            </div>
-
-            <div className="flex justify-between text-xs">
-              <span className="text-gray-600">Name:</span>
-              <span className="text-gray-900 font-semibold">
-                {user?.displayName || "Guest"}
-              </span>
-            </div>
-
-            <div className="flex justify-between text-xs">
-              <span className="text-gray-600">Email:</span>
-              <span className="text-gray-900 font-semibold break-all">
-                {user?.email || "N/A"}
-              </span>
-            </div>
-
-            {transaction.type === "withdrawal" && transaction.paypal_email && (
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-600">PayPal:</span>
-                <span className="text-gray-900 font-semibold break-all">
-                  {transaction.paypal_email}
+            {/* Details */}
+            <div className="mb-4 pb-3 border-b border-gray-300 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Transaction ID:</span>
+                <span className="text-gray-900 font-semibold truncate">
+                  {transaction.id}
                 </span>
               </div>
-            )}
-
-            {transaction.paypal_batch_id && (
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-600">Batch ID:</span>
-                <span className="text-gray-900 font-semibold break-all">
-                  {transaction.paypal_batch_id}
+              <div className="flex justify-between">
+                <span className="text-gray-600">Date & Time:</span>
+                <span className="text-gray-900 font-semibold">
+                  {formatDate(transaction.created_at)}
                 </span>
               </div>
-            )}
-          </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Guest Name:</span>
+                <span className="text-gray-900 font-semibold">
+                  {transaction.guestName || user?.displayName || "N/A"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Email:</span>
+                <span className="text-gray-900 font-semibold break-all">
+                  {transaction.email || user?.email || "N/A"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Type:</span>
+                <span className="text-gray-900 font-semibold">
+                  {getTransactionTypeLabel(transaction.type)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Status:</span>
+                <span className="font-bold text-gray-900">
+                  {transaction.status.toUpperCase()}
+                </span>
+              </div>
+              {transaction.type === "withdrawal" && transaction.paypal_email && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">PayPal Email:</span>
+                  <span className="text-gray-900 font-semibold break-all">
+                    {transaction.paypal_email}
+                  </span>
+                </div>
+              )}
+              {transaction.paypal_batch_id && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Batch ID:</span>
+                  <span className="text-gray-900 font-semibold break-all">
+                    {transaction.paypal_batch_id}
+                  </span>
+                </div>
+              )}
+            </div>
 
-          {/* Footer */}
-          <div className="text-center text-xs text-gray-500 space-y-1">
-            <p>═══════════════════════════</p>
-            <p className="font-semibold">Thank you for using BookingNest!</p>
-            <p>www.bookingnest.com</p>
-            <p>support@bookingnest.com</p>
-            <p>═══════════════════════════</p>
+            {/* Amount */}
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-300">
+              <span className="text-base font-bold text-gray-900">Amount</span>
+              <span className="text-xl font-bold text-gray-900">
+                {transaction.amount > 0 ? "+" : "-"} ₱
+                {Math.abs(transaction.amount).toFixed(2)}
+              </span>
+            </div>
+
+            {/* Footer */}
+            <div className="text-center text-xs text-gray-500 space-y-1">
+              <p className="font-semibold">Thank you for choosing BookingNest!</p>
+              <p>www.bookingnest.com</p>
+            </div>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="px-6 pb-6 flex gap-3">
+        <div className="px-6 pb-6 flex flex-col sm:flex-row gap-3">
           <button
             onClick={printReceipt}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="flex-1 bg-gray-800 hover:bg-gray-900 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
           >
             <svg
               className="w-4 h-4"
@@ -342,7 +534,7 @@ export default function ReceiptModal({ transaction, user, onClose }) {
 
           <button
             onClick={exportToPDF}
-            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
           >
             <svg
               className="w-4 h-4"
@@ -354,17 +546,10 @@ export default function ReceiptModal({ transaction, user, onClose }) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
               />
             </svg>
-            PDF
-          </button>
-
-          <button
-            onClick={onClose}
-            className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-900 font-semibold py-2 px-4 rounded-lg transition-colors"
-          >
-            Close
+            Download PDF
           </button>
         </div>
       </div>

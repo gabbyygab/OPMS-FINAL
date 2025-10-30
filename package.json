@@ -33,6 +33,7 @@
     "lucide-react": "^0.544.0",
     "node-fetch": "^3.3.2",
     "parser": "^0.1.4",
+    "pdfmake": "^0.2.20",
     "prop-types": "^15.8.1",
     "react": "^19.1.1",
     "react-confirm-alert": "^3.0.6",
