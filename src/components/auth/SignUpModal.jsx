@@ -15,6 +15,7 @@ import RoleSelectionModal from "./RoleSelectionModal";
 import ProgressBar from "./ProgressBar";
 import PolicyAcceptanceModal from "./PolicyAcceptanceModal";
 import { sendSignupOtp } from "../../utils/sendSignupOtp";
+import { initializeUserRewards } from "../../utils/rewardsUtils";
 
 export default function SignUpModal() {
   const navigate = useNavigate();
@@ -207,6 +208,20 @@ export default function SignUpModal() {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
+
+        // Create wallet for the user
+        await setDoc(doc(db, "wallets", user.uid), {
+          user_id: user.uid,
+          balance: 0,
+          createdAt: new Date(),
+          currency: "PHP",
+          total_cash_in: 0,
+          total_spent: 0,
+          updated_at: new Date(),
+        });
+
+        // Initialize rewards/points system for the user
+        await initializeUserRewards(user.uid, signUpRole);
       }
 
       toast.success("You have registered successfully!", {

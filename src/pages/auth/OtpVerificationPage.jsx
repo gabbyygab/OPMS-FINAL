@@ -7,6 +7,7 @@ import { db, auth } from "../../firebase/firebase";
 import { useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { serverTimestamp } from "firebase/firestore";
+import { initializeUserRewards } from "../../utils/rewardsUtils";
 
 export default function OTPVerificationPage({ user, userData }) {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -153,6 +154,22 @@ export default function OTPVerificationPage({ user, userData }) {
 
         // Create wallet for host accounts
         if (role === "host") {
+          await setDoc(doc(db, "wallets", newUser.uid), {
+            user_id: newUser.uid,
+            balance: 0,
+            createdAt: new Date(),
+            currency: "PHP",
+            total_cash_in: 0,
+            total_spent: 0,
+            updated_at: new Date(),
+          });
+        }
+
+        // Initialize rewards/points system for both host and guest
+        await initializeUserRewards(newUser.uid, role);
+
+        // Create wallet for guest accounts
+        if (role === "guest") {
           await setDoc(doc(db, "wallets", newUser.uid), {
             user_id: newUser.uid,
             balance: 0,

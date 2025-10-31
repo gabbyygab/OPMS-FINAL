@@ -85,32 +85,8 @@ export default function ProfilePage() {
     expiryDate: "",
   });
   const [showAddModal, setShowAddModal] = useState(false);
-  const [coupons, setCoupons] = useState([
-    {
-      id: 1,
-      code: "SUMMER20",
-      discount: 20,
-      type: "percentage",
-      active: true,
-      expiryDate: "2025-12-31",
-    },
-    {
-      id: 2,
-      code: "SAVE50",
-      discount: 50,
-      type: "fixed",
-      active: true,
-      expiryDate: "2025-11-15",
-    },
-    {
-      id: 3,
-      code: "WELCOME10",
-      discount: 10,
-      type: "percentage",
-      active: false,
-      expiryDate: "2025-10-30",
-    },
-  ]);
+  const [coupons, setCoupons] = useState([]);
+  const [loadingCoupons, setLoadingCoupons] = useState(true);
 
   const activeCoupons = coupons.filter((c) => c.active);
   const inactiveCoupons = coupons.filter((c) => !c.active);
@@ -208,6 +184,37 @@ export default function ProfilePage() {
     };
 
     fetchWishlists();
+  }, [userData?.id, userData?.role]);
+
+  // Fetch coupons from Firestore (hosts only)
+  useEffect(() => {
+    const fetchCoupons = async () => {
+      if (!userData?.id || userData?.role !== "host") return;
+
+      try {
+        setLoadingCoupons(true);
+        const couponsRef = collection(db, "coupons");
+        const couponsQuery = query(
+          couponsRef,
+          where("hostId", "==", userData.id)
+        );
+        const couponsSnapshot = await getDocs(couponsQuery);
+
+        const couponsData = couponsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        setCoupons(couponsData);
+      } catch (error) {
+        console.error("Error fetching coupons:", error);
+        toast.error("Failed to load coupons.");
+      } finally {
+        setLoadingCoupons(false);
+      }
+    };
+
+    fetchCoupons();
   }, [userData?.id, userData?.role]);
 
   // Wishlist handlers
@@ -344,19 +351,64 @@ export default function ProfilePage() {
     }
   };
 
-  const handleAddCoupon = () => {
-    if (couponFormData.code && couponFormData.discount && couponFormData.expiryDate) {
+  const handleAddCoupon = async () => {
+    // Validation
+    if (!couponFormData.code.trim()) {
+      toast.error("Please enter a coupon code");
+      return;
+    }
+    if (!couponFormData.discount || parseFloat(couponFormData.discount) <= 0) {
+      toast.error("Please enter a valid discount value");
+      return;
+    }
+    if (!couponFormData.expiryDate) {
+      toast.error("Please select an expiry date");
+      return;
+    }
+
+    // Validate expiry date is in the future
+    const expiryDate = new Date(couponFormData.expiryDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (expiryDate <= today) {
+      toast.error("Expiry date must be in the future");
+      return;
+    }
+
+    // Check if code already exists
+    const codeExists = coupons.some(
+      (c) => c.code.toUpperCase() === couponFormData.code.toUpperCase()
+    );
+    if (codeExists) {
+      toast.error("Coupon code already exists");
+      return;
+    }
+
+    try {
+      const couponsRef = collection(db, "coupons");
+      const newCoupon = {
+        hostId: userData.id,
+        code: couponFormData.code.toUpperCase(),
+        discount: parseFloat(couponFormData.discount),
+        type: couponFormData.type, // "percentage" or "fixed"
+        expiryDate: couponFormData.expiryDate,
+        active: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const docRef = await addDoc(couponsRef, newCoupon);
+
+      // Add to local state
       setCoupons([
         ...coupons,
         {
-          id: Date.now(),
-          code: couponFormData.code.toUpperCase(),
-          discount: parseFloat(couponFormData.discount),
-          type: couponFormData.type,
-          active: true,
-          expiryDate: couponFormData.expiryDate,
+          id: docRef.id,
+          ...newCoupon,
         },
       ]);
+
+      // Reset form
       setCouponFormData({
         code: "",
         discount: "",
@@ -365,20 +417,57 @@ export default function ProfilePage() {
       });
       setShowAddModal(false);
       toast.success("Coupon added successfully!");
+    } catch (error) {
+      console.error("Error adding coupon:", error);
+      toast.error("Failed to add coupon. Please try again.");
     }
   };
 
-  const toggleCouponStatus = (id) => {
-    setCoupons(
-      coupons.map((coupon) =>
-        coupon.id === id ? { ...coupon, active: !coupon.active } : coupon
-      )
-    );
+  const toggleCouponStatus = async (id) => {
+    try {
+      const couponToToggle = coupons.find((c) => c.id === id);
+      if (!couponToToggle) return;
+
+      const newStatus = !couponToToggle.active;
+
+      // Update in Firestore
+      await updateDoc(doc(db, "coupons", id), {
+        active: newStatus,
+        updatedAt: new Date(),
+      });
+
+      // Update local state
+      setCoupons(
+        coupons.map((coupon) =>
+          coupon.id === id ? { ...coupon, active: newStatus } : coupon
+        )
+      );
+
+      toast.success(
+        `Coupon ${newStatus ? "activated" : "deactivated"} successfully!`
+      );
+    } catch (error) {
+      console.error("Error toggling coupon status:", error);
+      toast.error("Failed to update coupon status.");
+    }
   };
 
-  const deleteCoupon = (id) => {
-    setCoupons(coupons.filter((coupon) => coupon.id !== id));
-    toast.success("Coupon deleted!");
+  const deleteCoupon = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this coupon?")) {
+      return;
+    }
+
+    try {
+      // Delete from Firestore
+      await deleteDoc(doc(db, "coupons", id));
+
+      // Update local state
+      setCoupons(coupons.filter((coupon) => coupon.id !== id));
+      toast.success("Coupon deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting coupon:", error);
+      toast.error("Failed to delete coupon.");
+    }
   };
 
   return (
@@ -1022,6 +1111,15 @@ export default function ProfilePage() {
                   </button>
                 </div>
 
+                {loadingCoupons ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <Loader className="w-8 h-8 animate-spin text-indigo-500 mx-auto mb-3" />
+                      <p className="text-indigo-200">Loading coupons...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
                 {/* Active Coupons */}
                 <div className="mb-10">
                   <h3 className="text-lg font-bold text-indigo-300 mb-4 flex items-center gap-2">
@@ -1258,6 +1356,8 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   </div>
+                )}
+                  </>
                 )}
               </div>
             )}

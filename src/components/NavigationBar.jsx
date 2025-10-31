@@ -107,12 +107,18 @@ const MessagesLinkWithBadge = ({ to, unreadCount = 0, className, onClick }) => {
 // Logo Component
 const Logo = () => (
   <Link to={ROUTES.HOME} className="flex-shrink-0">
-    <div className="flex items-center cursor-pointer">
+    <div className="flex items-center gap-2 cursor-pointer">
       <img
         src="/bookingNestLogoFInal.png"
         alt=""
         className="w-16 h-16 sm:w-24 sm:h-24 lg:w-32 lg:h-32 hover:scale-105 transition-transform"
       />
+      <div className="hidden sm:flex flex-col items-start">
+        <div className="text-base sm:text-lg lg:text-2xl font-bold leading-none">
+          <span className="text-white">Booking</span>
+          <span className="text-indigo-600">Nest</span>
+        </div>
+      </div>
     </div>
   </Link>
 );
@@ -1545,13 +1551,19 @@ const GuestTabNavigation = ({
         {/* Top Row - Logo, Tabs, Profile */}
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="flex items-center justify-between gap-2 sm:gap-3 lg:gap-6">
-            {/* Logo - Left */}
-            <Link to={ROUTES.GUEST.HOME} className="flex-shrink-0">
+            {/* Logo & Brand Name - Left */}
+            <Link to={ROUTES.GUEST.HOME} className="flex-shrink-0 flex items-center gap-2">
               <img
                 src="/bookingNestLogoFInal.png"
                 alt="BookingNest Logo"
                 className="w-16 h-16 sm:w-20 sm:h-20 hover:scale-105 transition-transform"
               />
+              <div className="hidden sm:flex flex-col items-start">
+                <div className="text-base sm:text-lg lg:text-xl font-bold leading-none">
+                  <span className="text-white">Booking</span>
+                  <span className="text-indigo-600">Nest</span>
+                </div>
+              </div>
             </Link>
 
             {/* Center - Tabs (hidden when scrolled) - Hidden on mobile */}

@@ -23,6 +23,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { db } from "../../firebase/firebase";
+import { validateCoupon, calculateDiscount } from "../../utils/couponUtils";
 import {
   doc,
   getDoc,
@@ -91,6 +92,8 @@ export default function ExperienceDetailPage() {
   const [selectedDateTime, setSelectedDateTime] = useState(null);
   const [guests, setGuests] = useState(2);
   const [promoCode, setPromoCode] = useState("");
+  const [guestRewards, setGuestRewards] = useState(null);
+  const [pointsToUse, setPointsToUse] = useState(0);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [reviewsData, setReviewsData] = useState([]);
@@ -190,8 +193,12 @@ export default function ExperienceDetailPage() {
         selectedDate: selectedDateTime?.date || selectedDateTime,
         selectedTime: selectedDateTime?.time || "",
         guests: guests,
-        totalAmount: grandTotal,
+        baseAmount: basePrice,
+        discountAmount: discountAmount,
+        pointsUsed: pointsToUse || 0,
+        totalAmount: totalPrice,
         serviceFee: serviceFee,
+        grandTotal: grandTotal,
         status: "pending",
         createdAt: serverTimestamp(),
       };
@@ -232,24 +239,38 @@ export default function ExperienceDetailPage() {
 
   const basePrice = (experienceData?.price || 0) * guests;
 
-  // Calculate discount if promo code matches
-  let discountAmount = 0;
-  let isValidPromo = false;
+  // Calculate discount if promo code is valid
+  const [couponValidationResult, setCouponValidationResult] = useState({
+    valid: false,
+    coupon: null,
+    message: "",
+  });
 
-  if (promoCode && experienceData.promoCode && promoCode.trim().toUpperCase() === experienceData.promoCode.toUpperCase()) {
-    isValidPromo = true;
-    const discount = experienceData.discount;
-
-    if (discount) {
-      if (discount.type === "percentage") {
-        discountAmount = basePrice * (discount.value / 100);
-      } else if (discount.type === "fixed") {
-        discountAmount = discount.value;
+  // Validate coupon when it changes
+  useEffect(() => {
+    const validatePromoCode = async () => {
+      if (!promoCode || !experienceData.hostId) {
+        setCouponValidationResult({ valid: false, coupon: null, message: "" });
+        return;
       }
-    }
+
+      const result = await validateCoupon(promoCode, experienceData.hostId);
+      setCouponValidationResult(result);
+    };
+
+    const debounceTimer = setTimeout(validatePromoCode, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [promoCode, experienceData.hostId]);
+
+  let discountAmount = 0;
+  let isValidPromo = couponValidationResult.valid;
+
+  if (isValidPromo && couponValidationResult.coupon) {
+    discountAmount = calculateDiscount(basePrice, couponValidationResult.coupon);
   }
 
-  const totalPrice = basePrice - discountAmount;
+  const pointsDiscount = pointsToUse;
+  const totalPrice = basePrice - discountAmount - pointsDiscount;
   const serviceFee = totalPrice * 0.1;
   const grandTotal = totalPrice + serviceFee;
 
@@ -408,6 +429,26 @@ export default function ExperienceDetailPage() {
 
     fetchCoordinatesFromLocation();
   }, [experienceData?.location, experienceData?.coordinates]);
+
+  // Fetch guest rewards for points redemption
+  useEffect(() => {
+    const fetchRewards = async () => {
+      if (!user?.uid) return;
+      try {
+        const rewardsQuery = query(
+          collection(db, "rewards"),
+          where("userId", "==", user.uid)
+        );
+        const rewardsSnap = await getDocs(rewardsQuery);
+        if (!rewardsSnap.empty) {
+          setGuestRewards(rewardsSnap.docs[0].data());
+        }
+      } catch (error) {
+        console.error("Error fetching rewards:", error);
+      }
+    };
+    fetchRewards();
+  }, [user?.uid]);
 
   if (loading) return <LoadingSpinner />;
 
@@ -838,7 +879,7 @@ export default function ExperienceDetailPage() {
 
                 <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
                   <label className="text-xs font-medium text-slate-300 block mb-1">
-                    PROMO CODE (OPTIONAL)
+                    COUPON OR PROMO CODE (OPTIONAL)
                   </label>
                   <input
                     type="text"
@@ -848,6 +889,47 @@ export default function ExperienceDetailPage() {
                     className="w-full text-sm font-medium focus:outline-none rounded-lg bg-slate-600/50 text-white placeholder-slate-400 px-3 py-2 border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
                   />
                 </div>
+
+                {/* Points Redemption Section */}
+                {guestRewards && (guestRewards.availablePoints || 0) > 0 && (
+                  <div className="border-2 border-indigo-500/30 rounded-xl p-4 bg-gradient-to-br from-indigo-700/20 to-indigo-800/20">
+                    <label className="text-xs font-semibold text-indigo-400 block mb-3 uppercase tracking-wider flex items-center gap-2">
+                      <Award className="w-4 h-4" />
+                      Redeem Points (Optional)
+                    </label>
+                    <p className="text-xs text-slate-300 mb-3">
+                      Available: <span className="font-bold text-indigo-300">{guestRewards.availablePoints || 0}</span> points (₱{guestRewards.availablePoints || 0})
+                    </p>
+                    <div className="flex items-center gap-3 mb-3">
+                      <input
+                        type="range"
+                        min="0"
+                        max={guestRewards.availablePoints || 0}
+                        value={pointsToUse}
+                        onChange={(e) => setPointsToUse(Number(e.target.value))}
+                        className="flex-1 h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max={guestRewards.availablePoints || 0}
+                        value={pointsToUse}
+                        onChange={(e) =>
+                          setPointsToUse(
+                            Math.min(
+                              Number(e.target.value),
+                              guestRewards.availablePoints || 0
+                            )
+                          )
+                        }
+                        className="w-16 px-2 py-1 bg-slate-600/50 border border-slate-500 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <p className="text-xs text-indigo-300">
+                      Using <span className="font-bold">₱{pointsToUse}</span> in points
+                    </p>
+                  </div>
+                )}
               </div>
 
               <button
@@ -878,12 +960,24 @@ export default function ExperienceDetailPage() {
                 {isValidPromo && discountAmount > 0 && (
                   <div className="flex items-center justify-between text-emerald-400">
                     <span className="text-emerald-300/80">
-                      Discount ({experienceData.discount?.type === "percentage"
-                        ? `${experienceData.discount?.value}%`
+                      Discount ({couponValidationResult.coupon?.type === "percentage"
+                        ? `${couponValidationResult.coupon?.discount}%`
                         : "Fixed"})
                     </span>
                     <span className="font-semibold text-emerald-400">
                       -₱{discountAmount.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+
+                {/* Points Redemption Row - Only show if points are being used */}
+                {pointsToUse > 0 && (
+                  <div className="flex items-center justify-between text-indigo-400">
+                    <span className="text-indigo-300/80">
+                      Points Redeemed
+                    </span>
+                    <span className="font-semibold text-indigo-400">
+                      -₱{pointsToUse?.toLocaleString() || 0}
                     </span>
                   </div>
                 )}
@@ -1022,6 +1116,14 @@ export default function ExperienceDetailPage() {
                   </span>
                 </div>
               )}
+              {pointsToUse > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Points Used</span>
+                  <span className="font-medium text-indigo-400">
+                    {pointsToUse} points
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="border-t border-slate-600 pt-4 mb-6">
@@ -1034,8 +1136,14 @@ export default function ExperienceDetailPage() {
                 </div>
                 {isValidPromo && discountAmount > 0 && (
                   <div className="flex items-center justify-between text-sm text-emerald-400">
-                    <span>Discount ({experienceData.discount?.type === "percentage" ? `${experienceData.discount?.value}%` : "Fixed"})</span>
+                    <span>Discount ({couponValidationResult.coupon?.type === "percentage" ? `${couponValidationResult.coupon?.discount}%` : "Fixed"})</span>
                     <span className="font-medium">-₱{discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
+                {pointsToUse > 0 && (
+                  <div className="flex items-center justify-between text-sm text-indigo-400">
+                    <span>Points Redeemed</span>
+                    <span className="font-medium">-₱{pointsToUse?.toLocaleString() || 0}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between text-sm">

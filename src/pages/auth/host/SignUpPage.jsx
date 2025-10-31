@@ -11,6 +11,7 @@ import { db, auth, googleAuthProvider } from "../../../firebase/firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import LoadingSpinner from "../../../loading/Loading";
 import { sendSignupOtp } from "../../../utils/sendSignupOtp";
+import { initializeUserRewards } from "../../../utils/rewardsUtils";
 
 export default function SignUpPageHost() {
   const [fullName, setFullName] = useState("");
@@ -131,6 +132,10 @@ export default function SignUpPageHost() {
           total_spent: 0,
           updated_at: new Date(),
         });
+
+        // Initialize rewards/points system for host
+        await initializeUserRewards(user.uid, "host");
+
         toast.success("You have Registered Successfully", {
           position: "top-right",
         });

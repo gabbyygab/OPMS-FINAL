@@ -385,15 +385,7 @@ export default function NotificationsPage() {
             {filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
-                onClick={() => {
-                  if (typeof notification.onClick === 'function') {
-                    notification.onClick();
-                  } else if (notification.actionUrl) {
-                    navigate(notification.actionUrl);
-                  }
-                  markAsRead(notification.id);
-                }}
-                className={`bg-slate-800 rounded-lg border border-slate-700 p-4 transition hover:border-slate-600 cursor-pointer ${
+                className={`bg-slate-800 rounded-lg border border-slate-700 p-4 transition hover:border-slate-600 ${
                   !notification.isRead ? "border-indigo-500 bg-slate-800/50" : ""
                 }`}
               >
@@ -421,8 +413,18 @@ export default function NotificationsPage() {
                     )}
                   </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
+                  {/* Content - Clickable area */}
+                  <div
+                    onClick={() => {
+                      if (typeof notification.onClick === 'function') {
+                        notification.onClick();
+                      } else if (notification.actionUrl) {
+                        navigate(notification.actionUrl);
+                      }
+                      markAsRead(notification.id);
+                    }}
+                    className="flex-1 min-w-0 cursor-pointer hover:opacity-80 transition"
+                  >
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <h3 className="font-semibold text-white">
                         {notification.title}
@@ -443,7 +445,10 @@ export default function NotificationsPage() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {!notification.isRead && (
                       <button
-                        onClick={() => markAsRead(notification.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markAsRead(notification.id);
+                        }}
                         className="p-2 rounded-lg hover:bg-slate-700 transition text-slate-400 hover:text-slate-200"
                         title="Mark as read"
                       >
@@ -451,7 +456,10 @@ export default function NotificationsPage() {
                       </button>
                     )}
                     <button
-                      onClick={() => deleteNotification(notification.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteNotification(notification.id);
+                      }}
                       className="p-2 rounded-lg hover:bg-red-600/20 transition text-slate-400 hover:text-red-400"
                       title="Delete"
                     >

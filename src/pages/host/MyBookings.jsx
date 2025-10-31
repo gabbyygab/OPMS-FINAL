@@ -32,6 +32,8 @@ import emailjs from "@emailjs/browser";
 import LoadingSpinner from "../../loading/Loading";
 import { useAuth } from "../../context/AuthContext";
 import { toast } from "react-toastify";
+import { addPointsToUser } from "../../utils/rewardsUtils";
+import { approveRefund, denyRefund } from "../../utils/refundUtils";
 
 export default function HostMyBookings() {
   const [bookings, setBookings] = useState([]);
@@ -45,7 +47,10 @@ export default function HostMyBookings() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [showRefundApprovalModal, setShowRefundApprovalModal] = useState(false);
+  const [showRefundDenialModal, setShowRefundDenialModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [refundDenialReason, setRefundDenialReason] = useState("");
   const [bookingToAction, setBookingToAction] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewMode, setViewMode] = useState("list"); // "list" or "calendar"
@@ -480,6 +485,73 @@ export default function HostMyBookings() {
         confirmedAt: serverTimestamp(),
       });
 
+      // Award points to both host and guest on booking confirmation
+      try {
+        // Fetch listing to get the type
+        const listingRef = doc(db, "listings", bookingToAction.listing_id);
+        const listingSnap = await getDoc(listingRef);
+        const listingType = listingSnap.exists() ? listingSnap.data().type : "stays";
+
+        // Award points to host
+        await addPointsToUser(
+          userData.id,
+          bookingToAction.id,
+          listingType,
+          10
+        );
+
+        // Award points to guest
+        await addPointsToUser(
+          bookingToAction.guest_id,
+          bookingToAction.id,
+          listingType,
+          10
+        );
+
+        // Deduct points if guest used points during booking
+        if (bookingToAction.pointsUsed && bookingToAction.pointsUsed > 0) {
+          const rewardsRef = collection(db, "rewards");
+          const q = query(
+            rewardsRef,
+            where("userId", "==", bookingToAction.guest_id)
+          );
+          const guestRewardsSnap = await getDocs(q);
+
+          if (!guestRewardsSnap.empty) {
+            const guestRewardsDoc = guestRewardsSnap.docs[0];
+            const guestRewards = guestRewardsDoc.data();
+            const pointsToDeduct = Math.min(
+              bookingToAction.pointsUsed,
+              guestRewards.availablePoints || 0
+            );
+
+            const pointsHistory = guestRewards.pointsHistory || [];
+            pointsHistory.push({
+              action: "points_used_for_booking",
+              bookingId: bookingToAction.id,
+              pointsDeducted: pointsToDeduct,
+              reason: "Points redeemed for booking discount",
+              createdAt: new Date().toISOString(),
+            });
+
+            const guestRewardsRef = doc(db, "rewards", guestRewardsDoc.id);
+            await updateDoc(guestRewardsRef, {
+              availablePoints: Math.max(
+                0,
+                (guestRewards.availablePoints || 0) - pointsToDeduct
+              ),
+              redeemedPoints:
+                (guestRewards.redeemedPoints || 0) + pointsToDeduct,
+              pointsHistory,
+              updatedAt: serverTimestamp(),
+            });
+          }
+        }
+      } catch (pointsError) {
+        console.error("Error awarding/deducting points:", pointsError);
+        // Don't fail the booking if points operations fail
+      }
+
       // Create notification for guest
       await addDoc(collection(db, "notifications"), {
         userId: bookingToAction.guest_id,
@@ -637,6 +709,119 @@ export default function HostMyBookings() {
     }
   };
 
+  // Handle refund approval
+  const handleApproveRefund = async () => {
+    if (!bookingToAction) return;
+
+    try {
+      setIsProcessing(true);
+      const loadingToast = toast.loading("Processing refund approval...");
+
+      // Call refund approval function
+      await approveRefund(bookingToAction.id, userData.id);
+
+      // Create notification for guest about refund approval
+      const refundAmount = bookingToAction.totalAmount;
+      await addDoc(collection(db, "notifications"), {
+        userId: bookingToAction.guest_id,
+        guestId: bookingToAction.guest_id,
+        type: "refund_approved",
+        title: "Refund Approved",
+        message: `Your refund of ₱${refundAmount.toLocaleString()} for "${
+          bookingToAction.listing?.title
+        }" has been approved and credited to your wallet.`,
+        listingId: bookingToAction.listing_id,
+        bookingId: bookingToAction.id,
+        refundAmount: refundAmount,
+        isRead: false,
+        createdAt: serverTimestamp(),
+      });
+
+      // Update local state
+      const updatedBooking = {
+        ...bookingToAction,
+        status: "refunded",
+      };
+
+      const updatedBookings = bookings.map((b) =>
+        b.id === bookingToAction.id ? updatedBooking : b
+      );
+
+      setBookings(updatedBookings);
+      filterBookings(updatedBookings, statusFilter, searchTerm);
+
+      toast.dismiss(loadingToast);
+      toast.success(
+        "Refund approved! Money returned to guest and points deducted."
+      );
+
+      setShowRefundApprovalModal(false);
+      setBookingToAction(null);
+      setShowDetailsModal(false);
+    } catch (error) {
+      console.error("Error approving refund:", error);
+      toast.error(error.message || "Failed to approve refund");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle refund denial
+  const handleDenyRefund = async () => {
+    if (!bookingToAction) return;
+
+    try {
+      setIsProcessing(true);
+      const loadingToast = toast.loading("Processing refund denial...");
+
+      // Call refund denial function
+      await denyRefund(bookingToAction.id, userData.id, refundDenialReason);
+
+      // Create notification for guest about refund denial
+      await addDoc(collection(db, "notifications"), {
+        userId: bookingToAction.guest_id,
+        guestId: bookingToAction.guest_id,
+        type: "refund_denied",
+        title: "Refund Request Denied",
+        message: `Your refund request for "${
+          bookingToAction.listing?.title
+        }" has been denied. Reason: ${
+          refundDenialReason || "No reason provided"
+        }. Your booking remains confirmed.`,
+        listingId: bookingToAction.listing_id,
+        bookingId: bookingToAction.id,
+        isRead: false,
+        createdAt: serverTimestamp(),
+      });
+
+      // Update local state
+      const updatedBooking = {
+        ...bookingToAction,
+        status: "confirmed",
+      };
+
+      const updatedBookings = bookings.map((b) =>
+        b.id === bookingToAction.id ? updatedBooking : b
+      );
+
+      setBookings(updatedBookings);
+      filterBookings(updatedBookings, statusFilter, searchTerm);
+
+      toast.dismiss(loadingToast);
+      toast.success("Refund request denied. Booking remains confirmed.");
+
+      setShowRefundDenialModal(false);
+      setRefundDenialReason("");
+      setBookingToAction(null);
+      setShowDetailsModal(false);
+    } catch (error) {
+      console.error("Error denying refund:", error);
+      toast.error("Failed to deny refund");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Pagination
   const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
   const startIdx = (currentPage - 1) * itemsPerPage;
@@ -696,9 +881,10 @@ export default function HostMyBookings() {
         checkInDate = booking.selectedDateTime.date;
       } else if (booking.selectedDate) {
         // Handle if selectedDate is a string
-        checkInDate = typeof booking.selectedDate === 'string'
-          ? booking.selectedDate.split("T")[0]
-          : booking.selectedDate.toDate?.().toISOString().split("T")[0];
+        checkInDate =
+          typeof booking.selectedDate === "string"
+            ? booking.selectedDate.split("T")[0]
+            : booking.selectedDate.toDate?.().toISOString().split("T")[0];
       } else {
         return false;
       }
@@ -1398,6 +1584,36 @@ export default function HostMyBookings() {
                   </button>
                 </div>
               )}
+              {selectedBooking.status === "refund_requested" && (
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
+                    <p className="text-yellow-300 text-sm mb-3">
+                      <strong>Refund Requested:</strong>{" "}
+                      {selectedBooking.refund_request_reason}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowRefundApprovalModal(true);
+                      setBookingToAction(selectedBooking);
+                    }}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-5 h-5" />
+                    Approve Refund
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowRefundDenialModal(true);
+                      setBookingToAction(selectedBooking);
+                    }}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+                  >
+                    <X className="w-5 h-5" />
+                    Deny Refund
+                  </button>
+                </div>
+              )}
 
               {selectedBooking.status === "completed" && (
                 <div className="text-center py-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
@@ -1539,6 +1755,92 @@ export default function HostMyBookings() {
                 onClick={() => {
                   setShowCompleteModal(false);
                   setBookingToAction(null);
+                }}
+                disabled={isProcessing}
+                className="flex-1 border border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold py-3 rounded-lg transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Refund Approval Modal */}
+      {showRefundApprovalModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-slate-800 rounded-2xl shadow-lg w-full max-w-md p-6 border border-slate-700">
+            <h2 className="text-2xl font-bold text-white mb-4">
+              Approve Refund?
+            </h2>
+            <p className="text-slate-300 mb-6">
+              You are about to approve a refund for this booking. The guest will
+              receive ₱{bookingToAction?.totalAmount?.toLocaleString() || 0}{" "}
+              back to their wallet, and both guest and host points will be
+              deducted.
+            </p>
+
+            <div className="bg-slate-700 rounded-lg p-4 mb-6">
+              <div className="text-sm text-slate-400 mb-2">Refund Amount</div>
+              <div className="text-2xl font-bold text-white">
+                ₱{bookingToAction?.totalAmount?.toLocaleString() || 0}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleApproveRefund}
+                disabled={isProcessing}
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition"
+              >
+                {isProcessing ? "Processing..." : "Approve"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowRefundApprovalModal(false);
+                  setBookingToAction(null);
+                }}
+                disabled={isProcessing}
+                className="flex-1 border border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold py-3 rounded-lg transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Refund Denial Modal */}
+      {showRefundDenialModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-slate-800 rounded-2xl shadow-lg w-full max-w-md p-6 border border-slate-700">
+            <h2 className="text-2xl font-bold text-white mb-4">Deny Refund?</h2>
+            <p className="text-slate-300 mb-4">
+              Please provide a reason for denying this refund request. The guest
+              will be notified with your reason.
+            </p>
+
+            <textarea
+              value={refundDenialReason}
+              onChange={(e) => setRefundDenialReason(e.target.value)}
+              placeholder="Enter reason for denial..."
+              className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 mb-6 resize-none"
+              rows={4}
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleDenyRefund}
+                disabled={isProcessing || !refundDenialReason.trim()}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition"
+              >
+                {isProcessing ? "Processing..." : "Deny"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowRefundDenialModal(false);
+                  setBookingToAction(null);
+                  setRefundDenialReason("");
                 }}
                 disabled={isProcessing}
                 className="flex-1 border border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold py-3 rounded-lg transition"

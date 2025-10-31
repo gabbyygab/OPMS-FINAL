@@ -17,6 +17,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import VerificationBanner from "./Verification";
 import { sendOtpToUser } from "../utils/sendOtpToUser";
+import { getRecommendedListings, getRecommendationsByType } from "../utils/recommendationUtils";
+import RecommendationCard from "./RecommendationCard";
 // Extract city or province from location string
 function extractCity(location) {
   if (!location) return "Other";
@@ -199,6 +201,8 @@ export default function BookingsSection({ userData, isFavoritePage }) {
 
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [recommendations, setRecommendations] = useState([]);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const closeModal = () => {
     setSelectedListing(null);
   };
@@ -368,6 +372,19 @@ export default function BookingsSection({ userData, isFavoritePage }) {
 
           setListings(listingsWithFavs);
           setLoading(false);
+
+          // 🔥 Fetch recommendations based on guest's previous bookings
+          if (!isFavoritePage && userData?.id) {
+            try {
+              setRecommendationsLoading(true);
+              const recs = await getRecommendedListings(userData.id, listingsWithFavs);
+              setRecommendations(recs);
+            } catch (error) {
+              console.error("Error fetching recommendations:", error);
+            } finally {
+              setRecommendationsLoading(false);
+            }
+          }
         } catch (error) {
           console.error("Error fetching listings:", error);
           setLoading(false);
@@ -831,6 +848,98 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                 >
                   Next
                 </button>
+              </div>
+            )}
+
+            {/* 🔥 RECOMMENDATIONS SECTION - Shows if user has booking history */}
+            {!isFavoritePage && !recommendationsLoading && recommendations.length > 0 && (
+              <div className="mt-20 pt-20 border-t border-slate-700">
+                {/* Recommendations for Stays */}
+                {getRecommendationsByType(recommendations, "stays", 6).length > 0 && (
+                  <div className="mb-16">
+                    <div className="mb-8">
+                      <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2">
+                        <span className="text-indigo-400">⭐</span>
+                        Recommended Homes for You
+                      </h2>
+                      <p className="text-slate-400">
+                        Based on your previous bookings, we think you'll love these stays
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
+                      {getRecommendationsByType(recommendations, "stays", 6).map((rec) => (
+                        <RecommendationCard
+                          key={rec.id}
+                          listing={rec}
+                          recommendationReason={rec.recommendationReason}
+                          recommendationScore={rec.recommendationScore}
+                          isFavorite={rec.isFavorite}
+                          onToggleFavorite={(listingId) =>
+                            toggleFavorite(listingId, userData.id, setListings, false)
+                          }
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recommendations for Experiences */}
+                {getRecommendationsByType(recommendations, "experiences", 6).length > 0 && (
+                  <div className="mb-16">
+                    <div className="mb-8">
+                      <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2">
+                        <span className="text-indigo-400">✨</span>
+                        Recommended Experiences for You
+                      </h2>
+                      <p className="text-slate-400">
+                        Adventure awaits - explore experiences similar to your past bookings
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
+                      {getRecommendationsByType(recommendations, "experiences", 6).map((rec) => (
+                        <RecommendationCard
+                          key={rec.id}
+                          listing={rec}
+                          recommendationReason={rec.recommendationReason}
+                          recommendationScore={rec.recommendationScore}
+                          isFavorite={rec.isFavorite}
+                          onToggleFavorite={(listingId) =>
+                            toggleFavorite(listingId, userData.id, setListings, false)
+                          }
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recommendations for Services */}
+                {getRecommendationsByType(recommendations, "services", 6).length > 0 && (
+                  <div className="mb-16">
+                    <div className="mb-8">
+                      <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2">
+                        <span className="text-indigo-400">🔧</span>
+                        Recommended Services for You
+                      </h2>
+                      <p className="text-slate-400">
+                        Quality services matched to your needs and preferences
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
+                      {getRecommendationsByType(recommendations, "services", 6).map((rec) => (
+                        <RecommendationCard
+                          key={rec.id}
+                          listing={rec}
+                          recommendationReason={rec.recommendationReason}
+                          recommendationScore={rec.recommendationScore}
+                          isFavorite={rec.isFavorite}
+                          onToggleFavorite={(listingId) =>
+                            toggleFavorite(listingId, userData.id, setListings, false)
+                          }
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

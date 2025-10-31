@@ -32,6 +32,7 @@ import { DateRange } from "react-date-range";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import { db } from "../../firebase/firebase";
+import { validateCoupon, calculateDiscount } from "../../utils/couponUtils";
 import {
   doc,
   getDoc,
@@ -119,6 +120,9 @@ export default function ListingDetailPage() {
   const [isLoadingVerification, setIsLoadingVerification] = useState(false);
   const [userData, setUserData] = useState(null);
   const [mapCenter, setMapCenter] = useState([14.5994, 120.9842]);
+  const [guestRewards, setGuestRewards] = useState(null);
+  const [pointsToUse, setPointsToUse] = useState(0);
+  const [showPointsSlider, setShowPointsSlider] = useState(false);
 
   const { user, isVerified } = useAuth();
   //navigation
@@ -254,6 +258,7 @@ export default function ListingDetailPage() {
         baseAmount: basePrice,
         discountAmount: discountAmount,
         discountType: isValidPromo ? listingData.discount?.type || null : null,
+        pointsUsed: pointsToUse || 0,
         totalAmount: totalPrice,
         serviceFee: serviceFee,
         grandTotal: grandTotal,
@@ -343,28 +348,41 @@ export default function ListingDetailPage() {
   const nights = calculateNights();
   const basePrice = nights * listingData.price;
 
-  // Calculate discount if promo code matches
-  let discountAmount = 0;
-  let isValidPromo = false;
+  // Calculate discount if promo code is valid
+  // Note: We'll validate against Firestore coupons instead of listing.promoCode
+  const [couponValidationResult, setCouponValidationResult] = useState({
+    valid: false,
+    coupon: null,
+    message: "",
+  });
 
-  if (
-    promoCode &&
-    listingData.promoCode &&
-    promoCode.trim().toUpperCase() === listingData.promoCode.toUpperCase()
-  ) {
-    isValidPromo = true;
-    const discount = listingData.discount;
-
-    if (discount) {
-      if (discount.type === "percentage") {
-        discountAmount = basePrice * (discount.value / 100);
-      } else if (discount.type === "fixed") {
-        discountAmount = discount.value;
+  // Validate coupon when it changes
+  useEffect(() => {
+    const validatePromoCode = async () => {
+      if (!promoCode || !listingData.hostId) {
+        setCouponValidationResult({ valid: false, coupon: null, message: "" });
+        return;
       }
-    }
+
+      const result = await validateCoupon(promoCode, listingData.hostId);
+      setCouponValidationResult(result);
+    };
+
+    const debounceTimer = setTimeout(validatePromoCode, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [promoCode, listingData.hostId]);
+
+  let discountAmount = 0;
+  let isValidPromo = couponValidationResult.valid;
+
+  if (isValidPromo && couponValidationResult.coupon) {
+    discountAmount = calculateDiscount(basePrice, couponValidationResult.coupon);
   }
 
-  const totalPrice = basePrice - discountAmount;
+  // Calculate points discount (1 point = ₱1)
+  const pointsDiscount = pointsToUse;
+
+  const totalPrice = basePrice - discountAmount - pointsDiscount;
   const serviceFee = totalPrice * 0.1;
   const grandTotal = totalPrice + serviceFee;
 
@@ -403,6 +421,16 @@ export default function ListingDetailPage() {
           if (!walletSnap.empty) {
             const walletData = walletSnap.docs[0].data();
             setWalletBalance(walletData.balance || 0);
+          }
+
+          // Fetch guest rewards/points
+          const rewardsQuery = query(
+            collection(db, "rewards"),
+            where("userId", "==", user.uid)
+          );
+          const rewardsSnap = await getDocs(rewardsQuery);
+          if (!rewardsSnap.empty) {
+            setGuestRewards(rewardsSnap.docs[0].data());
           }
 
           // Check if listing is favorited
@@ -935,7 +963,7 @@ export default function ListingDetailPage() {
 
                 <div className="border-2 border-slate-600 rounded-xl p-4 bg-gradient-to-br from-slate-700 to-slate-800 hover:border-indigo-500/50 transition-colors">
                   <label className="text-xs font-semibold text-slate-400 block mb-2 uppercase tracking-wider">
-                    Promo Code (Optional)
+                    Coupon or Promo Code (Optional)
                   </label>
                   <input
                     type="text"
@@ -945,6 +973,47 @@ export default function ListingDetailPage() {
                     className="w-full text-sm font-medium focus:outline-none rounded-lg bg-slate-600/50 text-white placeholder-slate-400 px-3 py-2 border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
                   />
                 </div>
+
+                {/* Points Redemption */}
+                {guestRewards && (guestRewards.availablePoints || 0) > 0 && (
+                  <div className="border-2 border-indigo-500/30 rounded-xl p-4 bg-gradient-to-br from-indigo-700/20 to-indigo-800/20 hover:border-indigo-500/50 transition-colors">
+                    <label className="text-xs font-semibold text-indigo-400 block mb-3 uppercase tracking-wider flex items-center gap-2">
+                      <Award className="w-4 h-4" />
+                      Redeem Points (Optional)
+                    </label>
+                    <p className="text-xs text-slate-300 mb-3">
+                      Available: <span className="font-bold text-indigo-300">{guestRewards.availablePoints || 0}</span> points (₱{guestRewards.availablePoints || 0})
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range"
+                        min="0"
+                        max={guestRewards.availablePoints || 0}
+                        value={pointsToUse}
+                        onChange={(e) => setPointsToUse(Number(e.target.value))}
+                        className="flex-1 h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max={guestRewards.availablePoints || 0}
+                        value={pointsToUse}
+                        onChange={(e) =>
+                          setPointsToUse(
+                            Math.min(
+                              Number(e.target.value),
+                              guestRewards.availablePoints || 0
+                            )
+                          )
+                        }
+                        className="w-16 px-2 py-1 bg-slate-600/50 border border-slate-500 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <p className="text-xs text-indigo-300 mt-2">
+                      Using <span className="font-bold">₱{pointsToUse}</span> in points
+                    </p>
+                  </div>
+                )}
               </div>
 
               <button
@@ -980,13 +1049,25 @@ export default function ListingDetailPage() {
                   <div className="flex items-center justify-between pb-3 text-emerald-400">
                     <span className="text-emerald-300/80">
                       Discount (
-                      {listingData.discount?.type === "percentage"
-                        ? `${listingData.discount?.value}%`
+                      {couponValidationResult.coupon?.type === "percentage"
+                        ? `${couponValidationResult.coupon?.discount}%`
                         : "Fixed"}
                       )
                     </span>
                     <span className="font-semibold text-emerald-400">
                       -₱{discountAmount?.toLocaleString() || 0}
+                    </span>
+                  </div>
+                )}
+
+                {/* Points Redemption Row - Only show if points are being used */}
+                {pointsToUse > 0 && (
+                  <div className="flex items-center justify-between pb-3 text-indigo-400">
+                    <span className="text-indigo-300/80">
+                      Points Redeemed
+                    </span>
+                    <span className="font-semibold text-indigo-400">
+                      -₱{pointsToUse?.toLocaleString() || 0}
                     </span>
                   </div>
                 )}
@@ -1122,6 +1203,14 @@ export default function ListingDetailPage() {
                   </span>
                 </div>
               )}
+              {pointsToUse > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Points Used</span>
+                  <span className="font-medium text-indigo-400">
+                    {pointsToUse} points
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="border-t border-slate-600 pt-4 mb-6">
@@ -1136,13 +1225,21 @@ export default function ListingDetailPage() {
                   <div className="flex items-center justify-between text-sm text-emerald-400">
                     <span>
                       Discount (
-                      {listingData.discount?.type === "percentage"
-                        ? `${listingData.discount?.value}%`
+                      {couponValidationResult.coupon?.type === "percentage"
+                        ? `${couponValidationResult.coupon?.discount}%`
                         : "Fixed"}
                       )
                     </span>
                     <span className="font-medium">
                       -₱{discountAmount?.toLocaleString() || 0}
+                    </span>
+                  </div>
+                )}
+                {pointsToUse > 0 && (
+                  <div className="flex items-center justify-between text-sm text-indigo-400">
+                    <span>Points Redeemed</span>
+                    <span className="font-medium">
+                      -₱{pointsToUse?.toLocaleString() || 0}
                     </span>
                   </div>
                 )}

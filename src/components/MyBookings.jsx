@@ -32,6 +32,7 @@ import { useAuth } from "../context/AuthContext";
 import { toast } from "react-toastify";
 import LoadingSpinner from "../loading/Loading";
 import { sendBookingCancellationEmail } from "../utils/sendBookingCancellationEmail";
+import { requestRefund, canRequestRefund } from "../utils/refundUtils";
 
 function parseDate(dateStr) {
   return dateStr ? new Date(dateStr) : null;
@@ -61,6 +62,9 @@ export default function MyBookingsSection() {
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [showRefundModal, setShowRefundModal] = useState(false);
+  const [showRefundReasonModal, setShowRefundReasonModal] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
+  const [isProcessingRefund, setIsProcessingRefund] = useState(false);
   const bookingsPerPage = 4;
 
   // Fetch bookings from Firestore
@@ -180,151 +184,46 @@ export default function MyBookingsSection() {
     }
   };
 
-  // Handle refund
-  const handleRefund = async () => {
+  // Handle refund request (sends to host for approval)
+  const handleRequestRefund = async () => {
     if (!selectedBooking) return;
 
-    const checkInDate = new Date(selectedBooking.checkIn);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (checkInDate <= today) {
-      toast.error("Cannot refund bookings on or after check-in date");
+    // Check if booking can be refunded
+    const refundEligibility = canRequestRefund(selectedBooking);
+    if (!refundEligibility.canRefund) {
+      toast.error(refundEligibility.reason);
+      setShowRefundReasonModal(false);
+      setRefundReason("");
       return;
     }
 
     try {
-      const loadingToast = toast.loading("Processing refund...");
+      setIsProcessingRefund(true);
+      const loadingToast = toast.loading("Submitting refund request...");
 
-      // Get guest wallet
-      const guestWalletQuery = query(
-        collection(db, "wallets"),
-        where("user_id", "==", user.uid)
+      // Call refund request function
+      await requestRefund(selectedBooking.id, user.uid, refundReason);
+
+      // Update local booking status
+      const updatedBooking = { ...selectedBooking, status: "refund_requested" };
+      setBookings(
+        bookings.map((b) => (b.id === selectedBooking.id ? updatedBooking : b))
       );
-      const guestWalletSnap = await getDocs(guestWalletQuery);
-
-      if (guestWalletSnap.empty) {
-        toast.dismiss(loadingToast);
-        toast.error("Wallet not found");
-        return;
-      }
-
-      const guestWalletDoc = guestWalletSnap.docs[0];
-      const guestWalletId = guestWalletDoc.id;
-      const guestBalance = guestWalletDoc.data().balance || 0;
-      const guestTotalSpent = guestWalletDoc.data().total_spent || 0;
-
-      // Get host wallet
-      const hostWalletQuery = query(
-        collection(db, "wallets"),
-        where("user_id", "==", selectedBooking.host_id)
-      );
-      const hostWalletSnap = await getDocs(hostWalletQuery);
-
-      if (hostWalletSnap.empty) {
-        toast.dismiss(loadingToast);
-        toast.error("Host wallet not found");
-        return;
-      }
-
-      const hostWalletDoc = hostWalletSnap.docs[0];
-      const hostWalletId = hostWalletDoc.id;
-      const hostBalance = hostWalletDoc.data().balance || 0;
-      const hostTotalCashIn = hostWalletDoc.data().total_cash_in || 0;
-
-      // Update guest wallet (add refund)
-      await updateDoc(doc(db, "wallets", guestWalletDoc.id), {
-        balance: guestBalance + selectedBooking.totalAmount,
-        total_spent: Math.max(0, guestTotalSpent - selectedBooking.totalAmount),
-      });
-
-      // Update host wallet (deduct refund)
-      await updateDoc(doc(db, "wallets", hostWalletDoc.id), {
-        balance: hostBalance - selectedBooking.totalAmount,
-        total_cash_in: Math.max(
-          0,
-          hostTotalCashIn - selectedBooking.totalAmount
-        ),
-      });
-
-      // Create guest transaction (refund - added)
-      await addDoc(collection(db, "transactions"), {
-        amount: selectedBooking.totalAmount,
-        created_at: serverTimestamp(),
-        paypal_batch_id: null,
-        paypal_email: null,
-        status: "completed",
-        type: "refund",
-        user_id: user.uid,
-        wallet_id: guestWalletId,
-      });
-
-      // Create host transaction (refund - deducted)
-      await addDoc(collection(db, "transactions"), {
-        amount: -selectedBooking.totalAmount,
-        created_at: serverTimestamp(),
-        paypal_batch_id: null,
-        paypal_email: null,
-        status: "completed",
-        type: "refund",
-        user_id: selectedBooking.host_id,
-        wallet_id: hostWalletId,
-      });
-
-      // Remove booked dates from listing
-      const listingRef = doc(db, "listings", selectedBooking.listing_id);
-      const checkInDate = new Date(selectedBooking.checkIn);
-      const checkOutDate = new Date(selectedBooking.checkOut);
-      const datesToRemove = [];
-
-      for (
-        let d = new Date(checkInDate);
-        d <= checkOutDate;
-        d.setDate(d.getDate() + 1)
-      ) {
-        datesToRemove.push(new Date(d));
-      }
-
-      await updateDoc(listingRef, {
-        bookedDates: arrayRemove(...datesToRemove),
-      });
-
-      // Delete booking
-      await deleteDoc(doc(db, "bookings", selectedBooking.id));
-
-      // Update local state
-      setBookings(bookings.filter((b) => b.id !== selectedBooking.id));
-
-      // Send cancellation/refund email to guest
-      try {
-        const basePriceAmount = selectedBooking.totalAmount || selectedBooking.price;
-        const serviceFeeAmount = Math.round(basePriceAmount * 0.05 * 100) / 100;
-
-        await sendBookingCancellationEmail(
-          selectedBooking,
-          {
-            email: user.email,
-            fullName: user.displayName || "Guest",
-          },
-          {
-            cancellationReason: "Booking cancelled by guest",
-            basePrice: basePriceAmount,
-            serviceFee: serviceFeeAmount,
-            refundAmount: selectedBooking.totalAmount,
-          }
-        );
-      } catch (emailError) {
-        console.error("Error sending refund email:", emailError);
-        // Don't fail the refund if email fails
-      }
 
       toast.dismiss(loadingToast);
-      toast.success("Booking cancelled and refund processed successfully!");
+      toast.success(
+        "Refund request submitted! Waiting for host approval. You'll be notified of the decision."
+      );
+
+      setShowRefundReasonModal(false);
       setShowRefundModal(false);
+      setRefundReason("");
       setSelectedBooking(null);
     } catch (error) {
-      console.error("Error processing refund:", error);
-      toast.error("Failed to process refund. Please try again.");
+      console.error("Error requesting refund:", error);
+      toast.error(error.message || "Failed to submit refund request.");
+    } finally {
+      setIsProcessingRefund(false);
     }
   };
 
@@ -964,20 +863,38 @@ export default function MyBookingsSection() {
               </div>
 
               {selectedBooking.status === "confirmed" && (
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-6">
-                  <p className="text-xs text-amber-300 flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>
-                      The refund will be processed to your wallet immediately.
-                      The amount will be deducted from the host's wallet.
-                    </span>
-                  </p>
-                </div>
+                <>
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-6">
+                    <p className="text-xs text-amber-300 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <span>
+                        Your refund request will be sent to the host for approval.
+                        You'll be notified once the host reviews your request.
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Reason for Refund (Optional)
+                    </label>
+                    <textarea
+                      value={refundReason}
+                      onChange={(e) => setRefundReason(e.target.value)}
+                      placeholder="Please let the host know why you're requesting a refund..."
+                      className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder:text-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent transition-all resize-none"
+                      rows="3"
+                    />
+                  </div>
+                </>
               )}
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => setShowRefundModal(false)}
+                  onClick={() => {
+                    setShowRefundModal(false);
+                    setRefundReason("");
+                  }}
                   className="flex-1 bg-slate-700 text-white py-3 rounded-lg font-semibold hover:bg-slate-600 transition-all border border-slate-600"
                 >
                   Keep Booking
@@ -986,19 +903,121 @@ export default function MyBookingsSection() {
                   onClick={
                     selectedBooking.status === "pending"
                       ? handleCancelBooking
-                      : handleRefund
+                      : () => setShowRefundReasonModal(true)
                   }
-                  className="flex-1 bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40 flex items-center justify-center gap-2"
+                  disabled={selectedBooking.status === "confirmed" && isProcessingRefund}
+                  className="flex-1 bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {selectedBooking.status === "pending" ? (
                     <>
                       <Trash2 className="w-4 h-4" />
                       Confirm Cancel
                     </>
+                  ) : isProcessingRefund ? (
+                    <>
+                      <span className="animate-spin">⚙</span>
+                      Processing...
+                    </>
                   ) : (
                     <>
                       <RefreshCw className="w-4 h-4" />
                       Confirm Refund
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Refund Confirmation Modal */}
+        {showRefundReasonModal && selectedBooking && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start justify-center z-50 px-4 mt-[110px]">
+            <div className="bg-slate-800/90 backdrop-blur-lg border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+              <button
+                onClick={() => setShowRefundReasonModal(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white hover:bg-slate-700 p-2 rounded-lg transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border-2 bg-amber-500/10 border-amber-500/20">
+                  <AlertCircle className="w-8 h-8 text-amber-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Confirm Refund Request
+                </h2>
+                <p className="text-slate-400 text-sm">
+                  Submit your refund request to the host for approval
+                </p>
+              </div>
+
+              <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4 mb-6">
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Booking:</span>
+                    <span className="font-semibold text-white">
+                      {selectedBooking.title}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Check-in:</span>
+                    <span className="font-semibold text-white">
+                      {formatDate(selectedBooking.checkIn)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Refund Amount:</span>
+                    <span className="font-bold text-emerald-400 text-lg">
+                      ₱
+                      {selectedBooking.totalAmount?.toFixed(2) ||
+                        selectedBooking.price?.toFixed(2) ||
+                        0}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {refundReason && (
+                <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4 mb-6">
+                  <p className="text-xs text-slate-400 mb-2">Your reason:</p>
+                  <p className="text-white text-sm">{refundReason}</p>
+                </div>
+              )}
+
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-6">
+                <p className="text-xs text-blue-300 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>
+                    The host will review your request and notify you of their decision.
+                    Points earned from this booking will be deducted if approved.
+                  </span>
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowRefundReasonModal(false)}
+                  disabled={isProcessingRefund}
+                  className="flex-1 bg-slate-700 text-white py-3 rounded-lg font-semibold hover:bg-slate-600 transition-all border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRequestRefund}
+                  disabled={isProcessingRefund}
+                  className="flex-1 bg-amber-600 text-white py-3 rounded-lg font-semibold hover:bg-amber-700 transition-all shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessingRefund ? (
+                    <>
+                      <span className="animate-spin">⚙</span>
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      Submit Request
                     </>
                   )}
                 </button>

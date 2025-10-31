@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { db } from "../../firebase/firebase";
+import { validateCoupon, calculateDiscount } from "../../utils/couponUtils";
 import {
   doc,
   getDoc,
@@ -78,6 +79,8 @@ export default function ServiceDetailPage() {
   const [serviceType, setServiceType] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
   const [promoCode, setPromoCode] = useState("");
+  const [guestRewards, setGuestRewards] = useState(null);
+  const [pointsToUse, setPointsToUse] = useState(0);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [serviceData, setServiceData] = useState({});
   const [reviewsData, setReviewsData] = useState([]);
@@ -143,6 +146,7 @@ export default function ServiceDetailPage() {
         baseAmount: basePrice,
         discountAmount: discountAmount,
         discountType: isValidPromo ? serviceData.discount?.type || null : null,
+        pointsUsed: pointsToUse || 0,
         totalAmount: totalPrice,
         serviceFee: serviceFee,
         grandTotal: finalTotal,
@@ -187,24 +191,38 @@ export default function ServiceDetailPage() {
 
   const basePrice = serviceData?.price || 0;
 
-  // Calculate discount if promo code matches
-  let discountAmount = 0;
-  let isValidPromo = false;
+  // Calculate discount if promo code is valid
+  const [couponValidationResult, setCouponValidationResult] = useState({
+    valid: false,
+    coupon: null,
+    message: "",
+  });
 
-  if (promoCode && serviceData.promoCode && promoCode.trim().toUpperCase() === serviceData.promoCode.toUpperCase()) {
-    isValidPromo = true;
-    const discount = serviceData.discount;
-
-    if (discount) {
-      if (discount.type === "percentage") {
-        discountAmount = basePrice * (discount.value / 100);
-      } else if (discount.type === "fixed") {
-        discountAmount = discount.value;
+  // Validate coupon when it changes
+  useEffect(() => {
+    const validatePromoCode = async () => {
+      if (!promoCode || !serviceData.hostId) {
+        setCouponValidationResult({ valid: false, coupon: null, message: "" });
+        return;
       }
-    }
+
+      const result = await validateCoupon(promoCode, serviceData.hostId);
+      setCouponValidationResult(result);
+    };
+
+    const debounceTimer = setTimeout(validatePromoCode, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [promoCode, serviceData.hostId]);
+
+  let discountAmount = 0;
+  let isValidPromo = couponValidationResult.valid;
+
+  if (isValidPromo && couponValidationResult.coupon) {
+    discountAmount = calculateDiscount(basePrice, couponValidationResult.coupon);
   }
 
-  const totalPrice = basePrice - discountAmount;
+  const pointsDiscount = pointsToUse;
+  const totalPrice = basePrice - discountAmount - pointsDiscount;
   const serviceFee = totalPrice * 0.12;
   const finalTotal = totalPrice + serviceFee;
 
@@ -309,6 +327,26 @@ export default function ServiceDetailPage() {
     };
     getSelectedService();
   }, [listing_id]);
+
+  // Fetch guest rewards for points redemption
+  useEffect(() => {
+    const fetchRewards = async () => {
+      if (!user?.uid) return;
+      try {
+        const rewardsQuery = query(
+          collection(db, "rewards"),
+          where("userId", "==", user.uid)
+        );
+        const rewardsSnap = await getDocs(rewardsQuery);
+        if (!rewardsSnap.empty) {
+          setGuestRewards(rewardsSnap.docs[0].data());
+        }
+      } catch (error) {
+        console.error("Error fetching rewards:", error);
+      }
+    };
+    fetchRewards();
+  }, [user?.uid]);
 
   if (loading) return <LoadingSpinner />;
   console.log(serviceData);
@@ -795,7 +833,7 @@ export default function ServiceDetailPage() {
 
                 <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
                   <label className="text-xs font-medium text-slate-300 block mb-1">
-                    PROMO CODE (OPTIONAL)
+                    COUPON OR PROMO CODE (OPTIONAL)
                   </label>
                   <input
                     type="text"
@@ -818,6 +856,47 @@ export default function ServiceDetailPage() {
                     className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white resize-none"
                   />
                 </div>
+
+                {/* Points Redemption Section */}
+                {guestRewards && (guestRewards.availablePoints || 0) > 0 && (
+                  <div className="border-2 border-indigo-500/30 rounded-xl p-4 bg-gradient-to-br from-indigo-700/20 to-indigo-800/20">
+                    <label className="text-xs font-semibold text-indigo-400 block mb-3 uppercase tracking-wider flex items-center gap-2">
+                      <Award className="w-4 h-4" />
+                      Redeem Points (Optional)
+                    </label>
+                    <p className="text-xs text-slate-300 mb-3">
+                      Available: <span className="font-bold text-indigo-300">{guestRewards.availablePoints || 0}</span> points (₱{guestRewards.availablePoints || 0})
+                    </p>
+                    <div className="flex items-center gap-3 mb-3">
+                      <input
+                        type="range"
+                        min="0"
+                        max={guestRewards.availablePoints || 0}
+                        value={pointsToUse}
+                        onChange={(e) => setPointsToUse(Number(e.target.value))}
+                        className="flex-1 h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max={guestRewards.availablePoints || 0}
+                        value={pointsToUse}
+                        onChange={(e) =>
+                          setPointsToUse(
+                            Math.min(
+                              Number(e.target.value),
+                              guestRewards.availablePoints || 0
+                            )
+                          )
+                        }
+                        className="w-16 px-2 py-1 bg-slate-600/50 border border-slate-500 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <p className="text-xs text-indigo-300">
+                      Using <span className="font-bold">₱{pointsToUse}</span> in points
+                    </p>
+                  </div>
+                )}
               </div>
 
               <button
@@ -845,12 +924,24 @@ export default function ServiceDetailPage() {
                 {isValidPromo && discountAmount > 0 && (
                   <div className="flex items-center justify-between text-emerald-400">
                     <span className="text-emerald-300/80">
-                      Discount ({serviceData.discount?.type === "percentage"
-                        ? `${serviceData.discount?.value}%`
+                      Discount ({couponValidationResult.coupon?.type === "percentage"
+                        ? `${couponValidationResult.coupon?.discount}%`
                         : "Fixed"})
                     </span>
                     <span className="font-semibold text-emerald-400">
                       -₱{discountAmount.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+
+                {/* Points Redemption Row - Only show if points are being used */}
+                {pointsToUse > 0 && (
+                  <div className="flex items-center justify-between text-indigo-400">
+                    <span className="text-indigo-300/80">
+                      Points Redeemed
+                    </span>
+                    <span className="font-semibold text-indigo-400">
+                      -₱{pointsToUse?.toLocaleString() || 0}
                     </span>
                   </div>
                 )}
@@ -1005,6 +1096,14 @@ export default function ServiceDetailPage() {
                   </p>
                 </div>
               )}
+              {pointsToUse > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Points Used</span>
+                  <span className="font-medium text-indigo-400">
+                    {pointsToUse} points
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="border-t border-slate-600 pt-4 mb-6">
@@ -1017,8 +1116,14 @@ export default function ServiceDetailPage() {
                 </div>
                 {isValidPromo && discountAmount > 0 && (
                   <div className="flex items-center justify-between text-sm text-emerald-400">
-                    <span>Discount ({serviceData.discount?.type === "percentage" ? `${serviceData.discount?.value}%` : "Fixed"})</span>
+                    <span>Discount ({couponValidationResult.coupon?.type === "percentage" ? `${couponValidationResult.coupon?.discount}%` : "Fixed"})</span>
                     <span className="font-medium">-₱{discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
+                {pointsToUse > 0 && (
+                  <div className="flex items-center justify-between text-sm text-indigo-400">
+                    <span>Points Redeemed</span>
+                    <span className="font-medium">-₱{pointsToUse?.toLocaleString() || 0}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between text-sm">

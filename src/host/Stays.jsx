@@ -50,6 +50,7 @@ import { useAuth } from "../context/AuthContext";
 import { DateRange } from "react-date-range";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
+import { canCreateListing, calculateUpgradeCost } from "../utils/rewardsUtils";
 //uploadthing
 
 //Map integrations
@@ -442,6 +443,25 @@ export default function HostMyStays({ user, userData }) {
       if (!formData.title || !formData.location) {
         toast.error("Please fill in Title and Location first.");
         return;
+      }
+
+      // Check listing limit for active (non-draft) listings
+      if (!isDraft) {
+        try {
+          const listingCheck = await canCreateListing(userData.id, "stays", "host");
+          if (!listingCheck.canCreate) {
+            const upgradeCost = calculateUpgradeCost();
+            toast.error(
+              `You've reached your listing limit of ${listingCheck.limit} stays. Upgrade to add more! Cost: ₱${upgradeCost.baseCost}`,
+              { autoClose: 5000 }
+            );
+            return;
+          }
+        } catch (error) {
+          console.error("Error checking listing limit:", error);
+          toast.warning("Could not verify listing limit. Please try again.");
+          return;
+        }
       }
 
       const loadingToast = toast.loading(

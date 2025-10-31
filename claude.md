@@ -1,7 +1,42 @@
 # BookingNest Project Documentation
 
+**Last Updated:** October 31, 2025
+**Project Status:** Active Development
+**Maintained By:** Development Team
+
+---
+
+## Table of Contents
+
+1. [Project Overview](#project-overview)
+2. [Tech Stack](#tech-stack)
+3. [Project Structure](#project-structure)
+4. [Firebase Configuration](#firebase-configuration)
+5. [PayPal Server](#paypal-server)
+6. [Key Features](#key-features)
+7. [Listing Data Structure](#listing-data-structure)
+8. [Bookings Data Structure](#bookings-data-structure)
+9. [Notifications Data Structure](#notifications-data-structure)
+10. [Points & Rewards System](#points--rewards-system)
+11. [Refund System](#refund-system)
+12. [Firestore Collections Reference](#firestore-collections-reference)
+13. [Privacy Policy & Terms of Service](#privacy-policy--terms-of-service)
+14. [Development Commands](#development-commands)
+15. [Recent Updates & Implementation](#recent-updates--implementation)
+
+---
+
 ## Project Overview
-BookingNest is a booking and reservation platform built with React and Firebase, supporting multiple service types including stays, experiences, and services.
+
+**BookingNest** is a comprehensive multi-role booking and reservation platform built with modern web technologies. It enables users to:
+
+- **Guests**: Browse, search, and book accommodations (stays, experiences, services)
+- **Hosts**: List and manage properties with earnings tracking and guest communication
+- **Administrators**: Manage platform content and users
+
+The platform features real-time messaging, favorites management, payment processing (PayPal integration), notifications, E-wallet functionality, points & rewards system, and refund management.
+
+---
 
 ## Tech Stack
 
@@ -16,54 +51,62 @@ BookingNest is a booking and reservation platform built with React and Firebase,
 - **State Management**: React Context API
 
 ### Backend & Services
-- **Database**: Firebase Firestore
-- **Authentication**: Firebase Auth (includes Google OAuth)
+- **Database**: Firebase Firestore (NoSQL)
+- **Authentication**: Firebase Auth (Email/Password & Google OAuth)
 - **Storage**: Firebase Storage
-- **Payment Processing**: Separate Node.js/Express server for PayPal integration only
+- **Payment Processing**: Separate Node.js/Express server (PayPal only)
 - **Email Service**: EmailJS
 - **File Uploads**: UploadThing
+- **Image Upload**: Cloudinary
 
 ### Maps & Location
 - Google Maps API (@react-google-maps/api)
 - React Leaflet for map visualization
+
+---
 
 ## Project Structure
 
 ```
 bookingNest/
 ├── src/
-│   ├── firebase/           # Firebase configuration and initialization
+│   ├── firebase/           # Firebase configuration
 │   ├── pages/              # Page components
-│   │   ├── auth/           # Authentication pages (SignIn, SignUp, OTP, ForgotPassword)
-│   │   ├── guest/          # Guest user pages (Bookings, Favorites, Viewing pages)
-│   │   ├── host/           # Host pages (MyStays, MyExperience, MyService)
-│   │   └── profile/        # User profile pages
+│   │   ├── auth/           # Auth pages (SignIn, SignUp, OTP, ForgotPassword)
+│   │   ├── guest/          # Guest pages (Bookings, Favorites, Viewing)
+│   │   ├── host/           # Host pages (MyBookings, Profile)
+│   │   └── profile/        # Shared profile pages
 │   ├── components/         # Reusable UI components
-│   ├── host/               # Host-specific components (Stays, Experience, Services, Dashboard)
-│   ├── context/            # React Context for state management
-│   ├── routing/            # Route protection and navigation
+│   ├── host/               # Host components (Stays, Experience, Services, Dashboard)
+│   ├── context/            # React Context (AuthContext, AuthModalContext)
+│   ├── routing/            # Route protection (ProtectedRoute.jsx)
 │   ├── messages/           # Messaging system
 │   ├── notifications/      # Notification system
-│   ├── e-wallet/           # Wallet functionality
-│   ├── paypal/             # PayPal integration components
+│   ├── e-wallet/           # Wallet & Points/Rewards functionality
+│   ├── paypal/             # PayPal integration
 │   ├── cloudinary/         # Image upload utilities
 │   ├── animation/          # Animation components
 │   ├── loading/            # Loading states
 │   ├── error/              # Error pages (404)
 │   ├── utils/              # Utility functions
-│   ├── App.jsx             # Main application component
-│   ├── main.jsx            # Application entry point
+│   │   ├── rewardsUtils.js  # Points & Rewards functions
+│   │   ├── refundUtils.js   # Refund management functions
+│   │   └── ...
+│   ├── App.jsx             # Main app component
+│   ├── main.jsx            # React entry point
 │   └── index.css           # Global styles
-├── server/                 # Separate Node.js server (PayPal only)
-│   ├── index.js            # Express server setup
+├── server/                 # Separate Node.js server
+│   ├── index.js            # Express setup
 │   ├── paypal.js           # PayPal API routes
 │   └── package.json        # Server dependencies
 ├── public/                 # Static assets
 ├── vite.config.js          # Vite configuration
-├── tailwind.config.js      # Tailwind CSS configuration
+├── tailwind.config.js      # Tailwind CSS config
 ├── .env                    # Environment variables
 └── package.json            # Project dependencies
 ```
+
+---
 
 ## Firebase Configuration
 
@@ -84,7 +127,12 @@ VITE_FIREBASE_STORAGE_BUCKET
 VITE_FIREBASE_MESSAGING_SENDER_ID
 VITE_FIREBASE_APP_ID
 VITE_FIREBASE_MEASUREMENT_ID
+VITE_EMAIL_JS_PUBLIC_KEY
+VITE_EMAIL_JS_SERVICE_ID
+VITE_BOOKING_EMAIL_JS_TEMPLATE_ID
 ```
+
+---
 
 ## PayPal Server
 
@@ -103,34 +151,35 @@ Separate Node.js/Express server handling PayPal payment processing exclusively.
 ### Environment Variables
 PayPal credentials stored in root `.env` file
 
-## Path Aliases
-
-The project uses Vite path aliases:
-- `@/` → `./src/`
-
-Example: `import { auth } from '@/src/firebase'`
+---
 
 ## Key Features
 
 ### User Roles
-- **Guest**: Book stays, experiences, and services
-- **Host**: List and manage stays, experiences, and services
+- **Guest**: Browse and book listings
+- **Host**: Create and manage listings
+- **Admin**: Platform management
 
 ### Core Functionality
-- User authentication (email/password and Google)
-- Booking management
-- Favorites/wishlists
-- Messaging system
-- Notifications
-- E-wallet for payments
-- PayPal integration for funding wallet
-- Profile management
-- Image uploads (Cloudinary and UploadThing)
-- Interactive maps for location selection
+- ✅ Multi-role authentication (email/password & Google OAuth)
+- ✅ Booking management with confirmation workflow
+- ✅ Favorites/wishlists system
+- ✅ Real-time messaging
+- ✅ Notifications system
+- ✅ E-wallet for payments
+- ✅ PayPal integration for funding wallet
+- ✅ Points & Rewards gamification
+- ✅ Refund management system
+- ✅ Profile management
+- ✅ Image uploads (Cloudinary & UploadThing)
+- ✅ Interactive maps for location selection
+- ✅ OTP email verification
+
+---
 
 ## Listing Data Structure
 
-The application supports three listing types, each with specific fields stored in Firestore:
+The application supports three listing types with specific fields:
 
 ### Stays Listing Fields
 ```javascript
@@ -140,27 +189,27 @@ The application supports three listing types, each with specific fields stored i
   description: string,                 // Property description
   location: string,                    // Full address
   price: number,                       // Price per night
-  numberOfGuests: number,              // Total capacity (from formData.guests)
+  numberOfGuests: number,              // Total capacity
   bedrooms: number,                    // Number of bedrooms
   bathrooms: number,                   // Number of bathrooms
   beds: number,                        // Total number of beds
   amenities: string[],                 // e.g., ["WiFi", "Pool", "Kitchen"]
   houseRules: string[],                // e.g., ["No Smoking", "No Pets"]
-  photos: string[],                    // Array of image URLs from Cloudinary
-  availableDates: [{                   // Array of availability ranges
+  photos: string[],                    // Image URLs from Cloudinary
+  availableDates: [{                   // Availability ranges
     startDate: string,                 // "YYYY-MM-DD"
     endDate: string                    // "YYYY-MM-DD"
   }],
-  bookedDates: string[],               // Dates that are already booked
-  promoCode: string | null,            // Promotional code if applicable
+  bookedDates: string[],               // Already booked dates
+  promoCode: string | null,            // Promotional code
   discount: {                          // Discount information
     type: string,                      // "percentage" or "fixed"
     value: number                      // Discount amount
   },
-  ratings: number,                     // Average rating
-  isDraft: boolean,                    // Whether listing is in draft mode
+  ratings: number,                     // Average rating (0-5)
+  isDraft: boolean,                    // Draft status
   status: string,                      // "active" or "inactive"
-  hostId: string,                      // Reference to host user ID
+  hostId: string,                      // Host user ID
   created_at: timestamp,               // Creation timestamp
   updated_at: timestamp                // Last update timestamp
 }
@@ -171,38 +220,35 @@ The application supports three listing types, each with specific fields stored i
 {
   type: "experiences",
   title: string,                       // Experience name
-  description: string,                 // Experience description
+  description: string,                 // Description
   location: string,                    // Location/address
   price: number,                       // Price per person
   duration: number,                    // Duration in hours
-  maxGuests: number,                   // Maximum number of participants
-  category: string,                    // e.g., "Adventure", "Culture", "Food", "Wellness"
-  language: string,                    // Language spoken during experience
+  maxGuests: number,                   // Maximum participants
+  category: string,                    // e.g., "Adventure", "Culture"
+  language: string,                    // Language spoken
   ageMin: number,                      // Minimum age requirement
-  availableTimes: [{                   // Array of available dates with time slots
+  availableTimes: [{                   // Available dates with times
     date: string,                      // "YYYY-MM-DD"
-    time: string                       // "HH:MM" (e.g., "09:00", "14:30")
+    time: string                       // "HH:MM" (e.g., "09:00")
   }],
-  availableDates: [{                   // Array of availability ranges
-    startDate: string,                 // "YYYY-MM-DD"
-    endDate: string                    // "YYYY-MM-DD"
+  availableDates: [{                   // Availability ranges
+    startDate: string,
+    endDate: string
   }],
-  activities: string[],                // Activities included (e.g., "Hiking", "Photography")
-  thingsToKnow: string[],              // Important information for participants
-  included: string[],                  // What's included in the experience
-  toBring: string[],                   // What participants should bring
-  photos: string[],                    // Array of image URLs from Cloudinary
-  discount: {                          // Discount information
-    type: string,                      // "percentage" or "fixed"
-    value: number                      // Discount amount
-  },
-  promoCode: string | null,            // Promotional code if applicable
-  rating: number,                      // Average rating
-  isDraft: boolean,                    // Whether listing is in draft mode
-  status: string,                      // "active" or "inactive"
-  hostId: string,                      // Reference to host user ID
-  createdAt: timestamp,                // Creation timestamp
-  updatedAt: timestamp                 // Last update timestamp
+  activities: string[],                // Activities included
+  thingsToKnow: string[],              // Important information
+  included: string[],                  // What's included
+  toBring: string[],                   // What to bring
+  photos: string[],                    // Image URLs
+  discount: { type: string, value: number },
+  promoCode: string | null,
+  rating: number,
+  isDraft: boolean,
+  status: string,
+  hostId: string,
+  createdAt: timestamp,
+  updatedAt: timestamp
 }
 ```
 
@@ -211,114 +257,39 @@ The application supports three listing types, each with specific fields stored i
 {
   type: "services",
   title: string,                       // Service name
-  description: string,                 // Service description
-  location: string,                    // Service location or area
-  price: number,                       // Price per hour (from formData.basePrice)
+  description: string,                 // Description
+  location: string,                    // Service location/area
+  price: number,                       // Price per hour
   duration: number,                    // Duration in hours
-  category: string,                    // Service category (e.g., "Home Services")
+  category: string,                    // Service category
   responseTime: string,                // Response time (e.g., "within 1 hour")
-  photos: string[],                    // Array of image URLs from Cloudinary
-  serviceTypes: string[],              // e.g., ["Deep Cleaning", "Window Cleaning"]
-  highlights: string[],                // Key features/highlights of the service
+  photos: string[],                    // Image URLs
+  serviceTypes: string[],              // e.g., ["Deep Cleaning"]
+  highlights: string[],                // Key features
   serviceAreas: string[],              // Geographic areas served
   certifications: string[],            // Professional certifications
   terms: string[],                     // Terms and conditions
   experienceYears: number,             // Years of experience
-  completedJobs: number,               // Number of completed jobs
-  availableDates: [{                   // Array of availability ranges
-    startDate: string,                 // "YYYY-MM-DD"
-    endDate: string                    // "YYYY-MM-DD"
+  completedJobs: number,               // Completed jobs count
+  availableDates: [{                   // Availability ranges
+    startDate: string,
+    endDate: string
   }],
-  discount: {                          // Discount information
-    type: string,                      // "percentage" or "fixed"
-    value: number                      // Discount amount
-  },
-  promoCode: string | null,            // Promotional code if applicable
-  isVerified: boolean,                 // Whether provider is verified
-  isDraft: boolean,                    // Whether listing is in draft mode
-  status: string,                      // "active" or "inactive"
-  hostId: string,                      // Reference to host user ID
-  created_at: timestamp,               // Creation timestamp
-  updated_at: timestamp                // Last update timestamp
+  discount: { type: string, value: number },
+  promoCode: string | null,
+  isVerified: boolean,
+  isDraft: boolean,
+  status: string,
+  hostId: string,
+  created_at: timestamp,
+  updated_at: timestamp
 }
 ```
 
-### Common Fields Across All Types
-- **type**: "stays" | "experiences" | "services"
-- **title**: Name of the listing
-- **description**: Detailed information about the listing
-- **location**: Physical address or service area
-- **latitude/longitude**: Geographic coordinates for map integration
-- **images**: Array of image URLs stored in Firebase Storage
-- **availableDates**: Array of date ranges when the listing is available
-- **hostId**: User ID of the host who created the listing
-- **rating**: Average rating (0-5)
-- **reviews**: Number of reviews received
-- **createdAt/updatedAt**: Firestore timestamps
+### Field Naming Convention
+The database uses `hostId` (camelCase) for storing the host/seller's user ID in listing documents.
 
-### Searching & Filtering
-Listings are filtered based on:
-- **Location**: String search/matching
-- **Check-in/Check-out dates**: Date range overlap with availableDates
-- **Guests**: Minimum guest requirement (stays: numberOfGuests, experiences: maxParticipants)
-- **Service Type**: Available serviceTypes array (services only)
-
-## Development Commands
-
-```bash
-npm run dev      # Start development server
-npm run build    # Build for production
-npm run preview  # Preview production build
-npm run lint     # Run ESLint
-```
-
-## Server Commands
-
-```bash
-cd server
-node index.js    # Start PayPal server on port 5000
-```
-
-## Important Notes
-
-1. **No TypeScript**: This project uses JavaScript exclusively
-2. **Firebase for Everything**: Database, auth, and storage all through Firebase except PayPal
-3. **Separate PayPal Server**: Payment processing runs on independent Node.js server
-4. **Offline Persistence**: Firestore cache is cleared and re-enabled on app initialization
-5. **Module Type**: Both main project and server use ES modules (`"type": "module"`)
-6. **React 19**: Latest React version with new features and patterns
-
-## State Management
-
-Uses React Context API located in `src/context/`:
-- AuthContext for user authentication state
-
-## Protected Routes
-
-Route protection implemented in `src/routing/ProtectedRoute.jsx` to guard authenticated pages.
-
-## Field Naming Convention
-
-### Listing Host Reference
-The database uses `hostId` (camelCase) for storing the host/seller's user ID in listing documents:
-
-```javascript
-{
-  hostId: "WMdkYEhTTrYUsHw9XpeH3xw1T9s2",  // Firestore user ID of the host
-  // ... other listing fields
-}
-```
-
-All host-side CRUD operations in `src/host/` pages use `hostId` for:
-- Querying listings: `where("hostId", "==", userData.id)`
-- Creating new listings: `hostId: userData.id`
-- Updating listings
-
-### Files Updated (host_id → hostId)
-- `src/host/Dashboard.jsx` - Dashboard fetch queries
-- `src/host/Stays.jsx` - Create/Update stays, fetch stays listings
-- `src/host/Experience.jsx` - Create/Update experiences, fetch experiences listings
-- `src/host/Services.jsx` - Create/Update services, fetch services listings
+---
 
 ## Bookings Data Structure
 
@@ -327,7 +298,7 @@ Bookings are stored in the `bookings` collection with the following fields:
 ```javascript
 {
   type: string,                        // "stays" | "experiences" | "services"
-  listing_id: string,                  // Reference to the listing (stays/experiences/services)
+  listing_id: string,                  // Reference to listing
   hostId: string,                      // Host user ID
   guest_id: string,                    // Guest user ID
   guestName: string,                   // Guest's full name
@@ -335,20 +306,26 @@ Bookings are stored in the `bookings` collection with the following fields:
   checkOut: string,                    // "YYYY-MM-DD" (stays only)
   selectedDateTime: {                  // (experiences/services)
     date: string,                      // "YYYY-MM-DD"
-    time: string                       // "HH:MM" (e.g., "09:00")
+    time: string                       // "HH:MM"
   },
   totalGuests: number,                 // Number of guests/participants
   numberOfGuests: number,              // Number of guests (stays only)
-  numberOfAdults: number,              // Number of adults (stays only)
-  numberOfChildren: number,            // Number of children (stays only)
-  numberOfInfants: number,             // Number of infants (stays only)
-  totalAmount: number,                 // Total booking amount (calculated during confirmation)
-  status: string,                      // "pending" | "confirmed" | "rejected"
-  createdAt: timestamp,                // Booking creation timestamp
-  confirmedAt: timestamp,              // When host confirmed the booking
-  rejectionReason: string,             // Reason for rejection (if rejected)
-  rejectedAt: timestamp,               // When host rejected the booking
-  listing: {                           // Embedded listing data for quick access
+  numberOfAdults: number,              // Number of adults
+  numberOfChildren: number,            // Number of children
+  numberOfInfants: number,             // Number of infants
+  totalAmount: number,                 // Total booking amount
+  pointsUsed: number,                  // Points used for discount (if any)
+  status: string,                      // "pending" | "confirmed" | "rejected" | "refund_requested" | "refunded"
+  createdAt: timestamp,                // Booking creation time
+  confirmedAt: timestamp,              // When host confirmed
+  rejectionReason: string,             // Reason for rejection
+  rejectedAt: timestamp,               // When rejected
+  refund_requested_at: timestamp,      // When guest requested refund
+  refund_request_reason: string,       // Guest's reason for refund
+  refund_approved_at: timestamp,       // When refund was approved
+  refund_denied_at: timestamp,         // When refund was denied
+  refund_denial_reason: string,        // Why refund was denied
+  listing: {                           // Embedded listing data
     title: string,
     type: string,
     price: number
@@ -358,536 +335,418 @@ Bookings are stored in the `bookings` collection with the following fields:
 
 ### Booking Status Flow
 1. **pending** - Guest creates booking, awaits host confirmation
-2. **confirmed** - Host accepts booking, payment is processed, guest notified
-3. **rejected** - Host rejects booking, guest notified with reason
+2. **confirmed** - Host accepts booking, payment deducted
+3. **rejected** - Host rejects booking
+4. **refund_requested** - Guest requests refund
+5. **refunded** - Refund approved by host
+
+---
 
 ## Notifications Data Structure
 
-Notifications are stored in the `notifications` collection with the following fields:
+Notifications are stored in the `notifications` collection:
 
 ```javascript
 {
-  userId: string,                      // User who should receive the notification (host or guest)
-  guestId: string,                     // ID of the guest involved in the notification
-  guestName: string,                   // Name of the guest (optional, for quick display)
-  guestAvatar: string | null,          // Avatar URL of guest (optional)
-  type: string,                        // Notification type: "booking" | "booking_confirmed" | "booking_rejected" | "payment" | "message" | "review" | "alert"
-  title: string,                       // Short notification title
-  message: string,                     // Detailed notification message
-  listingId: string,                   // Reference to related listing
-  bookingId: string,                   // Reference to related booking
-  isRead: boolean,                     // Whether notification has been read
+  userId: string,                      // Recipient user ID
+  guestId: string,                     // Guest involved in notification
+  guestName: string,                   // Guest name (optional)
+  guestAvatar: string | null,          // Guest avatar URL (optional)
+  type: string,                        // Notification type
+  title: string,                       // Short title
+  message: string,                     // Detailed message
+  listingId: string,                   // Related listing ID
+  bookingId: string,                   // Related booking ID
+  isRead: boolean,                     // Whether read
   createdAt: timestamp                 // Creation timestamp
 }
 ```
 
-### Notification Types and Recipients
+### Notification Types
+| Type | Recipient | Trigger |
+|------|-----------|---------|
+| `booking` | Host | Guest creates booking |
+| `booking_confirmed` | Guest | Host confirms booking |
+| `booking_rejected` | Guest | Host rejects booking |
+| `refund_requested` | Host | Guest requests refund |
+| `refund_approved` | Guest | Host approves refund |
+| `refund_denied` | Guest | Host denies refund |
+| `payment` | Guest | Payment deducted |
+| `message` | Either party | New message |
+| `review` | Host | Guest leaves review |
+| `alert` | Either party | System alerts |
 
-| Type | Recipient | Trigger | Example |
-|------|-----------|---------|---------|
-| `booking` | Host | Guest creates a new booking | "Guest has booked your property" |
-| `booking_confirmed` | Guest | Host confirms the booking & payment succeeds | "Your booking has been confirmed" |
-| `booking_rejected` | Guest | Host rejects the booking | "Your booking was rejected" |
-| `payment` | Guest | Payment deducted from wallet during confirmation | "₱5,000 has been deducted from your wallet" |
-| `message` | Either party | New message in conversation | User receives message notifications |
-| `review` | Host | Guest leaves a review | "Guest left a review on your listing" |
-| `alert` | Either party | System alerts | Generic system notifications |
+---
 
-### Key Design Principles
+## Points & Rewards System
 
-1. **Single userId Field**: Each notification has ONE `userId` field that identifies who should receive it:
-   - For booking notifications: `userId` = Host's ID
-   - For confirmation/rejection/payment notifications: `userId` = Guest's ID
+### Overview
+Gamification and monetization feature that incentivizes bookings while allowing hosts to unlock additional listing capabilities.
 
-2. **Guest Information Included**: All notifications include `guestId` and optionally `guestName` and `guestAvatar` for context
+### Configuration
+```javascript
+POINTS_CONFIG = {
+  POINTS_PER_BOOKING: 10,              // Points earned per confirmed booking
+  POINT_TO_PESO_RATIO: 1,              // 1 point = 1 peso
+  INITIAL_LISTING_LIMIT_PER_CATEGORY: 3,  // Starting limit per category
+  LISTING_LIMIT_INCREASE: 5,           // Increase per upgrade
+  LISTING_LIMIT_UPGRADE_COST: 500,     // ₱500 per upgrade
+}
+```
 
-3. **Querying**: Notifications are queried using:
-   ```javascript
-   const q = query(
-     collection(db, "notifications"),
-     where("userId", "==", userData.id),
-     orderBy("createdAt", "desc")
-   );
-   ```
+### Rewards Collection Structure
+```javascript
+{
+  userId: string,                      // User ID
+  role: string,                        // "guest" or "host"
+  totalPoints: number,                 // Cumulative points earned
+  availablePoints: number,             // Points available to redeem
+  redeemedPoints: number,              // Total points redeemed
+  pointsHistory: [
+    {
+      bookingId: string,               // Reference to booking
+      pointsEarned: number,            // Points awarded
+      listingType: string,             // "stays", "experiences", "services"
+      source: string,                  // "booking_completion"
+      createdAt: timestamp
+    }
+  ],
+  listingLimits: {
+    stays: number,                     // Current limit for stays
+    experiences: number,               // Current limit for experiences
+    services: number                   // Current limit for services
+  },
+  listingUpgrades: {
+    stays: number,                     // Times upgraded
+    experiences: number,
+    services: number
+  },
+  createdAt: timestamp,
+  updatedAt: timestamp
+}
+```
+
+### Key Features
+- ✅ Automatic point awarding on booking confirmation (host + guest)
+- ✅ Listing limits per category (starts at 3)
+- ✅ Point redemption for listing limit upgrades
+- ✅ Hybrid payment (points + wallet) for upgrades
+- ✅ Points history tracking
+- ✅ New host initialization
+
+### Utility Functions (src/utils/rewardsUtils.js)
+
+**`initializeUserRewards(userId, role)`**
+- Initializes rewards document for new user
+
+**`getUserRewards(userId)`**
+- Fetches user's rewards data by querying `where("userId", "==", userId)`
+- Returns object with document ID: `{ id: docId, ...data }`
+
+**`addPointsToUser(userId, bookingId, listingType, pointsAmount)`**
+- Awards points for completed booking
+- Properly uses DocumentReference: `doc(db, "rewards", userRewards.id)`
+
+**`redeemPointsForListingUpgrade(userId, listingType, pointsToRedeem)`**
+- Redeems points for listing limit upgrade
+- Validates sufficient points available
+- Updates listing limits and points history
+
+**`canCreateListing(userId, listingType)`**
+- Checks if user can create new listing
+- Returns: `{ canCreate, currentCount, limit, remainingSlots }`
+
+**`formatPoints(points)`**
+- Formats points for display with commas
+
+---
+
+## Refund System
+
+### Overview
+Two-tier approval process where guests request refunds and hosts approve/deny them. Points earned from bookings are deducted on approval.
+
+### Booking Status Flow for Refunds
+```
+confirmed
+   ↓
+refund_requested (guest initiates)
+   ├→ approved → refunded (points deducted)
+   └→ denied → confirmed (booking continues)
+```
+
+### Features
+- **Guest-Initiated**: Can request refund on confirmed bookings before check-in
+- **Host Approval/Denial**: Hosts approve or deny with optional reason
+- **Money Flow**: Full refund (including 5% service fee) returned to guest wallet
+- **Points Deduction**: Both guest and host lose 10 points on approval
+- **Notifications**: Guests and hosts notified at each stage
+
+### Utility Functions (src/utils/refundUtils.js)
+
+**`requestRefund(bookingId, guestId, reason)`**
+- Submits refund request from guest
+- Validates: confirmed status, future check-in date
+- Creates host notification
+
+**`approveRefund(bookingId, hostId)`**
+- Host approves refund request
+- Returns money to guest wallet
+- Deducts points from both users
+- Frees up booked dates
+- Creates guest notification
+
+**`denyRefund(bookingId, hostId, reason)`**
+- Host denies refund request
+- Reverts booking to confirmed
+- No money returned, no points deducted
+- Creates guest notification with reason
+
+---
+
+## Firestore Collections Reference
+
+### Collections Overview
+1. **bookings** - Guest booking records
+2. **conversations** - User messaging conversations
+3. **coupons** - Discount coupons
+4. **favorites** - User favorite listings
+5. **listings** - Property/service listings
+6. **messages** - Messages within conversations
+7. **notifications** - User notifications
+8. **reviews** - Booking/listing reviews
+9. **transactions** - Wallet transactions
+10. **users** - User profiles
+11. **wallets** - User wallet balances
+12. **rewards** - Points & rewards documents
+13. **refunds** - Historical refund records
+
+### Key Relationships
+| Collection | References |
+|------------|-----------|
+| bookings | → users (guest_id, hostId), listings (listing_id) |
+| conversations | → users (participants array) |
+| messages | → users (senderId) |
+| favorites | → users (guest_id), listings (listing_id) |
+| reviews | → listings, users (guest_id), bookings |
+| transactions | → users (user_id), wallets (wallet_id) |
+| wallets | → users (user_id) |
+| rewards | → users (userId field) |
+| notifications | → users (userId) |
+
+---
 
 ## Privacy Policy & Terms of Service
 
 ### Overview
-BookingNest is committed to protecting user privacy and ensuring transparent, fair business practices. This policy outlines how data is collected, used, and protected, along with terms governing bookings, payments, cancellations, and refunds.
-
----
-
-## GUEST PRIVACY POLICY & TERMS
-
-### 1. Data Collection & Privacy
-
-#### Information We Collect
-- **Account Information**: Full name, email address, phone number, profile photo
-- **Payment Information**: Wallet balance, transaction history, payment methods (processed through PayPal)
-- **Booking Information**: Check-in/check-out dates, number of guests, selected listings, booking preferences
-- **Location Data**: Search locations, saved addresses
-- **Communication Data**: Messages with hosts, reviews, ratings
-
-#### Data Usage
-- To facilitate bookings and payments
-- To provide customer support via messages
-- To send booking confirmations and notifications
-- To improve service recommendations
-- To comply with legal obligations
-
-#### Data Security
-- All payment data is processed through PayPal's secure servers
-- Passwords are encrypted and never stored in plaintext
-- Firebase Firestore encryption at rest is enabled
-- Access to personal data is restricted to authorized staff
-
----
-
-### 2. Booking Policy for Guests
-
-#### Creating a Booking
-1. Guest browses listings (stays, experiences, or services)
-2. Guest selects dates/times and number of guests
-3. Guest reviews total amount including service fee (5% of booking amount)
-4. Booking is created with status: **PENDING**
-5. Host receives notification to confirm or reject booking
-6. Payment is **NOT deducted until host confirms** the booking
-
-#### Booking Confirmation Process
-1. Host reviews guest information and booking details
-2. Host either:
-   - **Confirms**: Booking status changes to CONFIRMED, payment is deducted from guest wallet
-   - **Rejects**: Booking status changes to REJECTED, guest is notified with reason
-3. Once confirmed, guest receives notification with confirmation details
-
-#### Service Fee
-- **5% service fee** is charged on every confirmed booking
-- Service fee is deducted from the booking amount to the platform (admin)
-- Guest pays: `Booking Amount + (Booking Amount × 0.05)`
-- Example: ₱1,000 booking = ₱1,050 total (₱50 service fee to admin)
-
----
-
-### 3. Cancellation & Refund Policy for Guests
-
-#### Cancellation Rights
-- **Guest-initiated cancellation is NOT allowed without host approval**
-- Guest must contact host or submit cancellation request
-- Host can accept or deny cancellation request
-- Cancellation requests are visible to hosts through notifications
-
-#### Refund Process
-1. Guest initiates cancellation request before booking date
-2. Host receives notification of cancellation request
-3. Host has right to:
-   - **Approve**: Full refund (including service fee) returned to guest wallet
-   - **Deny**: Booking remains confirmed, guest loses deposit
-
-#### Refund Timeline
-- Refunds are processed within 24-48 hours after host approval
-- Refund amount includes full booking cost + 5% service fee
-- Refunded amount is credited back to guest e-wallet
-
-#### Non-Refundable Bookings
-- Bookings within 24 hours of booking date: Host may deny refund
-- No-show bookings: No refund (guest did not cancel)
-- Cancelled by guest after checking in: No refund
-
----
-
-### 4. Payment & Wallet for Guests
-
-#### E-Wallet Features
-- Guest can fund wallet using PayPal
-- Wallet balance is used for booking payments
-- No additional transaction fees for wallet funding (PayPal rates apply)
-- Wallet transactions are tracked with full history
-
-#### Payment Processing
-1. Guest selects dates and confirms booking
-2. Booking status: PENDING (no payment yet)
-3. Host confirms booking
-4. System deducts: `Booking Amount + (5% Service Fee)` from guest wallet
-5. Guest receives confirmation notification
-
-#### Payment Issues
-- If insufficient wallet balance: Booking cannot be confirmed by host
-- Guest must fund wallet before host can confirm
-- Failed transactions are retried automatically
-
----
-
-### 5. Guest Rights & Responsibilities
-
-#### Guest Rights
-- Right to view full booking details before confirmation
-- Right to communicate with host via messages
-- Right to submit cancellation requests
-- Right to leave reviews and ratings
-- Right to dispute unfair rejections
-
-#### Guest Responsibilities
-- Provide accurate personal information
-- Fund wallet before host confirms booking
-- Communicate respectfully with hosts
-- Comply with host house rules/terms
-- Appear for confirmed bookings on time
-
----
-
-## HOST PRIVACY POLICY & TERMS
-
-### 1. Data Collection & Privacy
-
-#### Information We Collect
-- **Account Information**: Full name, email, phone number, profile photo, bank account (for payouts)
-- **Listing Information**: Titles, descriptions, photos, pricing, availability
-- **Transaction Data**: Booking confirmations, payment received, commission deducted
-- **Communication Data**: Messages with guests, support tickets
-- **Location Data**: Listing addresses and locations
-
-#### Data Usage
-- To manage bookings and guest interactions
-- To process payments and commission deductions
-- To send booking notifications and confirmations
-- To display listings on platform
-- To prevent fraud and ensure compliance
-
-#### Data Security
-- Banking information encrypted and stored securely
-- Payment processing through PayPal (PCI-DSS compliant)
-- Access restricted to authorized staff and the host
-- Data backups encrypted at rest
-
----
-
-### 2. Listing & Commission Policy for Hosts
-
-#### Creating Listings
-- Hosts can create unlimited listings (stays, experiences, services)
-- **NO charges for creating listings**
-- **NO monthly subscription fees**
-- Listings start as drafts and can be published when ready
-
-#### Commission Structure
-- **5% service fee per confirmed booking** (deducted from booking amount)
-- Commission is paid by guest, not deducted from host earnings
-- Example:
-  - Guest books: ₱1,000
-  - Service fee: ₱50 (5% to admin)
-  - Host receives: ₱1,000 (full amount)
-  - Guest pays: ₱1,050 total
-
-#### Listing Management
-- Hosts can edit, deactivate, or delete listings anytime
-- Hosts can set custom availability windows
-- Hosts can set custom pricing per season
-- Hosts can add/remove photos and descriptions
-
----
-
-### 3. Booking Management for Hosts
-
-#### Incoming Bookings
-- Hosts receive real-time notifications for new booking requests
-- Booking includes:
-  - Guest information and contact details
-  - Check-in/check-out dates
-  - Number of guests
-  - Total booking amount
-
-#### Confirmation Process
-1. **Review**: Host reviews guest profile and booking details
-2. **Accept/Reject**:
-   - **Accept**: Booking status = CONFIRMED
-     - Payment is immediately deducted from guest wallet
-     - Host receives full booking amount (5% already deducted by guest)
-   - **Reject**: Booking status = REJECTED
-     - Host must provide rejection reason
-     - No payment is charged to guest
-
-#### Host Responsibilities
-- Respond to booking requests within 24 hours
-- Verify guest is legitimate before confirming
-- Ensure listing availability matches booking dates
-- Communicate any changes to confirmed guests
-
----
-
-### 4. Cancellation & Refund Policy for Hosts
-
-#### Host Authority
-- **Hosts control all cancellation decisions**
-- Guests cannot cancel without host approval
-- Hosts receive cancellation requests with guest reason
-
-#### Handling Cancellation Requests
-1. Guest submits cancellation request
-2. Host is notified and can:
-   - **Approve**: Refund full amount (including 5% service fee) to guest
-   - **Deny**: Booking remains confirmed, no refund issued
-
-#### Refund from Host Perspective
-- Host is **NOT** charged for refunds
-- Refund amount includes the 5% service fee already deducted from guest
-- Platform covers the service fee from admin account
-- Host loses potential revenue from cancelled booking
-
-#### Cancellation Timeline
-- Host should respond to cancellation requests within 24 hours
-- Refunds processed within 24-48 hours of approval
-- Refund returned to guest wallet
-
----
-
-### 5. Payment & Payouts for Hosts
-
-#### Earning Money
-- Host earns ₱X per booking (where X = full booking amount)
-- 5% service fee is NOT deducted from host earnings
-- Service fee is paid by guest, host receives 100%
-
-#### Payout Process
-- Host can view earnings in dashboard
-- Payouts transferred to host bank account (via PayPal)
-- **Frequency**: Weekly or monthly (configurable)
-- **Processing time**: 3-5 business days after withdrawal request
-
-#### Withdrawal Requirements
-- Minimum balance: ₱500 (configurable)
-- Valid bank account linked to account
-- No pending disputes or chargebacks
-
-#### Transaction History
-- Hosts can view all transactions in e-wallet section
-- Full breakdown of bookings and commissions
-- Filters by date range, status, amount
-
----
-
-### 6. Host Rights & Responsibilities
-
-#### Host Rights
-- Right to reject any booking without reason
-- Right to set custom cancellation policies
-- Right to control listing availability
-- Right to receive full booking amount (no commission deduction)
-- Right to block problematic guests
-
-#### Host Responsibilities
-- Maintain clean, accurate listing descriptions
-- Respond to booking requests promptly
-- Honor confirmed bookings (unless guest cancels)
-- Treat guests fairly and respectfully
-- Comply with local laws and regulations
-- Maintain property/service quality standards
-
----
-
-## PAYMENT & FINANCIAL TERMS
+BookingNest is committed to protecting user privacy and ensuring transparent, fair business practices.
 
 ### Service Fee Structure
 | Transaction Type | Fee | Payer | When Charged |
 |---|---|---|---|
-| Guest Booking | 5% | Guest | Upon booking confirmation by host |
+| Guest Booking | 5% | Guest | Upon booking confirmation |
 | Host Listing | ₱0 | None | Free unlimited listings |
-| Host Withdrawal | 0% | None | No withdrawal fees |
-| Wallet Refund | 0% | None | No refund processing fee |
+| Host Withdrawal | 0% | None | No fees |
+| Wallet Refund | 0% | None | No processing fee |
 
-### Payment Methods
-- **Guest Funding**: PayPal (via PayPal integration)
-- **Payment Processing**: Automated via PayPal API
-- **Host Payouts**: Direct bank transfer (PayPal)
-- **Wallet Currency**: Philippine Peso (₱)
+### GUEST POLICY HIGHLIGHTS
 
-### Financial Security
-- PCI-DSS compliant payment processing
-- No sensitive data stored on BookingNest servers
-- All transactions encrypted in transit
-- Monthly reconciliation of accounts
+#### Booking Process
+1. Guest creates booking with status: PENDING
+2. Host receives notification
+3. Payment NOT deducted until host confirms
+4. Host confirms → payment deducted + 5% service fee charged
 
----
+#### Refund Rights
+- **Can Request**: Before check-in date
+- **Host Approval**: Full refund (including 5% fee) to wallet
+- **Host Denial**: No refund, booking continues
+- **Timeline**: 24-48 hours processing
 
-## DISPUTE RESOLUTION
+#### E-Wallet Features
+- Fund using PayPal
+- No additional fees for funding (PayPal rates apply)
+- Used for all booking payments
+- Full transaction history available
 
-### Guest vs Host Disputes
-1. **Mediation**: Platform team attempts to resolve amicably
-2. **Evidence Review**: Both parties provide booking details, messages, evidence
-3. **Decision**: Platform makes binding decision based on ToS
-4. **Enforcement**: Refunds issued or bookings confirmed based on decision
+### HOST POLICY HIGHLIGHTS
 
-### Chargeback Policy
-- Guests disputing PayPal charges will result in investigation
-- If found fraudulent, guest account will be banned
-- Host receives full protection against chargebacks
-- All transaction evidence preserved for disputes
+#### Listing Management
+- Unlimited listings (stays, experiences, services)
+- NO creation fees
+- NO subscription fees
+- Can edit, deactivate, or delete anytime
 
----
+#### Commission Structure
+- **5% service fee per confirmed booking**
+- Fee PAID BY GUEST, not deducted from host
+- Example: ₱1,000 booking = Host receives ₱1,000, Guest pays ₱1,050
 
-## DATA RETENTION & DELETION
+#### Booking Management
+- Respond to requests within 24 hours
+- Accept: Confirms booking, processes payment
+- Reject: Provides rejection reason, no payment charged
 
-### Data Retention
-- Active booking data: Retained indefinitely
-- Cancelled booking data: Retained for 7 years (compliance)
-- User messages: Retained for 2 years after account closure
-- Financial records: Retained for 7 years (tax/legal)
+#### Refund Handling
+- **Full Control**: Can approve or deny refund requests
+- **No Charge**: Host not charged for refunds
+- **Timeline**: Respond within 24 hours
 
-### Right to Deletion
-- Users can request data deletion
-- Non-financial data deleted within 30 days
-- Financial records retained per legal requirements
-- Account deletion is permanent and irreversible
+### PAYMENT & FINANCIAL TERMS
+- **Currency**: Philippine Peso (₱)
+- **Payment Methods**: PayPal integration only
+- **Host Payouts**: Bank transfer (via PayPal)
+- **Frequency**: Weekly or monthly (configurable)
+- **Processing**: 3-5 business days
 
----
+### DATA RETENTION
+- Active bookings: Indefinitely
+- Cancelled bookings: 7 years (legal requirement)
+- Messages: 2 years after account closure
+- Financial records: 7 years (tax/legal)
 
-## POLICY UPDATES
-
-- Last Updated: **October 29, 2025**
-- Policies may be updated at any time
-- Users are notified of major changes via email
-- Continued use of platform = acceptance of updated policies
-- Effective date: Updates take effect 7 days after notice
-
----
-
-## Contact for Privacy Concerns
-
-For privacy inquiries, disputes, or concerns:
-- **Email**: support@bookingnest.com
-- **Support Portal**: Access via account settings
-- **Response Time**: Within 5 business days
+### Last Updated
+October 29, 2025
 
 ---
 
-## Authentication Modal System
+## Development Commands
 
-### Overview
-Modal-based authentication system with policy acceptance and progress tracking for both guest and host signups.
+```bash
+# Frontend
+npm run dev      # Start development server (port 5173)
+npm run build    # Build for production
+npm run preview  # Preview production build
+npm run lint     # Run ESLint
 
-### New Components Created
-
-#### 1. **PolicyAcceptanceModal.jsx**
-- Location: `src/components/auth/PolicyAcceptanceModal.jsx`
-- Features:
-  - Displays guest or host-specific privacy policies
-  - Scroll tracking - accept button only enabled after user reads all content
-  - Shows role-specific terms and conditions
-  - "Decline" and "I Accept & Continue" buttons
-  - Loading state support
-  - Beautiful gradient design with animations
-
-#### 2. **ProgressBar.jsx**
-- Location: `src/components/auth/ProgressBar.jsx`
-- Features:
-  - Shows 4-step signup progress (Choose Role → Enter Details → Accept Policies → Verify Email)
-  - Visual progress bar with percentage
-  - Completed steps show checkmarks
-  - Current step highlighted in indigo
-  - Responsive design (hides labels on mobile)
-  - Step counter at bottom
-
-#### 3. **RoleSelectionModal.jsx**
-- Location: `src/components/auth/RoleSelectionModal.jsx`
-- Features:
-  - Guest vs Host role selection cards
-  - Includes integrated progress bar (Step 1 of 4)
-  - Shows role-specific benefits and features
-  - Hover effects and smooth transitions
-  - Cancel button to close without selecting
-  - Beautiful gradient backgrounds
-
-#### 4. **AuthModalContext.jsx**
-- Location: `src/context/AuthModalContext.jsx`
-- Purpose: Global state management for authentication modals
-- State:
-  - `showSignUpModal`: Signup modal visibility
-  - `showSignInModal`: Signin modal visibility
-  - `signUpRole`: Selected role ("guest" or "host")
-  - `signUpStep`: Current signup step (1-4)
-- Functions:
-  - `openSignUp()`: Opens signup flow
-  - `closeSignUp()`: Closes signup flow
-  - `openSignIn()`: Opens signin flow
-  - `closeSignIn()`: Closes signin flow
-  - `selectSignUpRole(role)`: Sets role and moves to step 2
-  - `moveToSignUpStep(step)`: Navigate to specific step
-
-### Signup Flow (4 Steps)
-
-1. **Step 1: Choose Role**
-   - Display RoleSelectionModal
-   - Show progress bar (1/4)
-   - Guest vs Host selection
-   - Cancel option available
-
-2. **Step 2: Enter Details**
-   - Full name, email, password, confirm password
-   - Form validation
-   - Show progress bar (2/4)
-   - Next and Cancel buttons
-
-3. **Step 3: Accept Policies**
-   - Display PolicyAcceptanceModal
-   - Show progress bar (3/4)
-   - Role-specific policies
-   - Scroll required to enable accept
-   - Cannot proceed without acceptance
-
-4. **Step 4: Verify Email**
-   - OTP verification (integrates with existing flow)
-   - Show progress bar (4/4)
-   - Email confirmation code
-   - Account creation completes
-
-### Signin Flow (2 Steps)
-
-1. **Step 1: Sign In Form**
-   - Email and password input
-   - Google OAuth option
-   - Forgot password link
-   - Cancel option
-
-2. **Step 2: Accept Policies**
-   - PolicyAcceptanceModal appears after successful signin
-   - User must accept before full login
-   - Scroll required to enable accept
-   - Cannot proceed without acceptance
-
-### Implementation Guide
-See `AUTH_MODAL_IMPLEMENTATION_GUIDE.md` for detailed implementation instructions including:
-- How to integrate with existing auth pages
-- Creating SignUpModal and SignInModal wrappers
-- Updating NavigationBar to use modals
-- Adding AuthModalProvider to App
-- Integration checklist
-- Testing guide
-
-### Key Features
-✅ Modal-based authentication (no page redirects)
-✅ Progress bar with visual feedback
-✅ Policy acceptance with mandatory scroll
-✅ Guest vs Host role-specific policies
-✅ Accept button disabled until policies read
-✅ Responsive mobile design
-✅ Loading states and error handling
-✅ Smooth animations and transitions
-✅ Context-based state management
-✅ Email OTP verification integration ready
+# Backend Server (PayPal)
+cd server
+npm install      # Install dependencies
+node index.js    # Start PayPal server on port 5000
+```
 
 ---
 
-## Recent Development Activity
+## Recent Updates & Implementation
 
-Based on git history:
+### Points & Rewards System (Oct 2025)
+- ✅ **Fixed**: `rewardsUtils.js` - All functions now properly use DocumentReference
+- ✅ **initializeUserRewards()**: Now uses `addDoc` for new documents
+- ✅ **addPointsToUser()**: Simplified logic, uses `doc(db, "rewards", userRewards.id)`
+- ✅ **redeemPointsForListingUpgrade()**: Already correct with proper DocumentReference usage
+
+**Key Fix**: All functions now correctly handle the `userId` as a field (not document ID) in rewards collection
+
+### Refund System (Oct 2025)
+- ✅ Guest refund request workflow
+- ✅ Host approval/denial with optional reasons
+- ✅ Automatic point deduction on approval
+- ✅ Wallet management for refunds
+- ✅ Notification system integration
+
+### Authentication Modal System
+- ✅ Modal-based auth (no page redirects)
+- ✅ 4-step signup flow with progress bar
+- ✅ Policy acceptance with mandatory scroll
+- ✅ Guest/Host role-specific policies
+- ✅ Responsive mobile design
+- ✅ Smooth animations with Framer Motion
+
+### Recent Features
 - Messaging system completed
 - Profile functionality completed
-- Search functionality enhanced with filters
-- Admin logout functionality added
-- Sample data seeding tool created
-- Field naming standardization (host_id → hostId in listings)
-- Notification system refactored to use single userId field
-- Privacy policy and terms of service documented
-- Notification badges implemented for guests and hosts
-- Modal-based authentication system with policy acceptance
-- Progress bar for signup steps implemented
-- Active development on main branch
+- Search with advanced filters
+- Real-time notifications
+- Mobile sidebar with animations
+- Email confirmation (EmailJS integration)
+- Receipt printing
+- Booking management dashboard
+
+---
+
+## Important Notes
+
+1. **No TypeScript**: JavaScript exclusively
+2. **Firebase First**: All database, auth, storage through Firebase
+3. **Separate PayPal Server**: Independent Node.js server for payments
+4. **Offline Persistence**: Firestore offline cache enabled
+5. **ES Modules**: Both frontend and server use `"type": "module"`
+6. **React 19**: Latest features and patterns
+7. **Path Alias**: `@/` → `./src/`
+
+---
+
+## Field Naming Standards
+
+- **Listing Host Reference**: `hostId` (camelCase)
+- **Rewards User Reference**: `userId` (camelCase, as field in rewards document)
+- **Booking References**: `listing_id`, `guest_id`, `hostId` (mixed for consistency)
+- **Wallet User Reference**: `user_id` (snake_case)
+
+---
+
+## Security Considerations
+
+### Frontend
+- Environment variables for sensitive data
+- Input validation on all forms
+- XSS protection via React escaping
+- CSRF protection for submissions
+
+### Backend
+- Firebase Auth for secure authentication
+- Firestore security rules enforcement
+- CORS headers configuration
+- Rate limiting on APIs
+
+### Data Protection
+- HTTPS only communication
+- Firebase Storage security rules
+- Encrypted payment processing
+- PII handling compliance
+
+---
+
+## Performance Metrics
+
+### Build Performance
+- Build time: ~8-9 seconds
+- CSS size: 113KB (gzipped: 22KB)
+- JS size: 1.9MB (gzipped: 461KB)
+- Modules transformed: 2864
+
+### Runtime Targets
+- Largest Contentful Paint (LCP): < 2.5s
+- First Input Delay (FID): < 100ms
+- Cumulative Layout Shift (CLS): < 0.1
+
+---
+
+## Deployment Checklist
+
+- [ ] Build succeeds without errors
+- [ ] No console warnings in production
+- [ ] Environment variables configured
+- [ ] Firebase security rules updated
+- [ ] PayPal keys configured
+- [ ] EmailJS credentials set
+- [ ] Analytics enabled
+- [ ] Backup strategy in place
+
+---
+
+## Contact & Support
+
+For issues, questions, or documentation:
+- **GitHub Issues**: Report bugs and feature requests
+- **Email**: support@bookingnest.com
+- **Documentation**: See CLAUDE.md (this file)
+
+**For UI Component Reference**: See Shadcn UI docs at https://ui.shadcn.com/
+**For Animations**: See Framer Motion docs at https://www.framer.com/motion/
+
+---
+
+**Document Version**: 2.0
+**Last Updated**: October 31, 2025
+**Maintained By**: Development Team

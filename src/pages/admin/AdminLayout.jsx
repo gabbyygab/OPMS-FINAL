@@ -29,7 +29,6 @@ export default function AdminLayout({ user, userData }) {
       // Navigate immediately to prevent showing protected route
       navigate(ROUTES.HOME, { replace: true });
       await signOut(auth);
-      toast.success("Logged out successfully");
       navigate("/");
     } catch (error) {
       toast.error("Error logging out: " + error.message);

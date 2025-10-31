@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import AddFundsPaypal from "../paypal/AddFundsPaypal";
 import ReceiptModal from "./ReceiptModal";
+import PointsRewardsSection from "./PointsRewardsSection";
 import {
   addDoc,
   collection,
@@ -14,6 +15,15 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import { getDocs, getDoc } from "firebase/firestore";
+import {
+  Wallet,
+  Plus,
+  Send,
+  TrendingDown,
+  TrendingUp,
+  CreditCard,
+  File,
+} from "lucide-react";
 
 export default function WalletPage({ user, userData }) {
   const [balance, setBalance] = useState(0);
@@ -38,6 +48,9 @@ export default function WalletPage({ user, userData }) {
   // Receipt Modal
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+
+  // Tab management
+  const [activeTab, setActiveTab] = useState("wallet"); // "wallet" or "points"
 
   //get wallet from user
   const getWalletDataFromCurrentUser = async (user_id) => {
@@ -300,6 +313,41 @@ export default function WalletPage({ user, userData }) {
           </button>
         </div>
 
+        {/* Tab Navigation */}
+        <div className="flex gap-4 mb-8 border-b border-slate-700">
+          <button
+            onClick={() => setActiveTab("wallet")}
+            className={`flex items-center gap-2 px-4 py-3 font-semibold transition-colors relative ${
+              activeTab === "wallet"
+                ? "text-indigo-400"
+                : "text-slate-400 hover:text-slate-300"
+            }`}
+          >
+            <CreditCard className="w-5 h-5" />
+            My Wallet
+            {activeTab === "wallet" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-400" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("points")}
+            className={`flex items-center gap-2 px-4 py-3 font-semibold transition-colors relative ${
+              activeTab === "points"
+                ? "text-indigo-400"
+                : "text-slate-400 hover:text-slate-300"
+            }`}
+          >
+            <Wallet className="w-5 h-5" />
+            Points & Rewards
+            {activeTab === "points" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-400" />
+            )}
+          </button>
+        </div>
+
+        {/* Wallet Tab Content */}
+        {activeTab === "wallet" && (
+          <>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Balance Card */}
           <div className="lg:col-span-2 bg-slate-800 rounded-2xl shadow-lg p-8 border border-slate-700">
@@ -334,38 +382,14 @@ export default function WalletPage({ user, userData }) {
                 onClick={() => setShowAddFunds(true)}
                 className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
+                <Plus className="w-5 h-5" />
                 Add Funds
               </button>
               <button
                 onClick={() => setShowWithdraw(true)}
                 className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 border border-slate-600"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+                <Send className="w-5 h-5" />
                 Withdraw
               </button>
             </div>
@@ -377,19 +401,7 @@ export default function WalletPage({ user, userData }) {
               <div className="flex items-center justify-between mb-3">
                 <p className="text-slate-400 text-sm font-medium">Total Spent</p>
                 <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-4 h-4 text-red-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                    />
-                  </svg>
+                  <TrendingDown className="w-4 h-4 text-red-400" />
                 </div>
               </div>
               <p className="text-2xl font-bold text-white">
@@ -401,19 +413,7 @@ export default function WalletPage({ user, userData }) {
               <div className="flex items-center justify-between mb-3">
                 <p className="text-slate-400 text-sm font-medium">Total Added</p>
                 <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-4 h-4 text-green-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 10l7-7m0 0l7 7m-7-7v18"
-                    />
-                  </svg>
+                  <TrendingUp className="w-4 h-4 text-green-400" />
                 </div>
               </div>
               <p className="text-2xl font-bold text-white">
@@ -490,19 +490,7 @@ export default function WalletPage({ user, userData }) {
                         onClick={() => handleViewReceipt(transaction)}
                         className="w-full px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 hover:text-indigo-200 text-xs font-semibold rounded transition-colors flex items-center justify-center gap-1"
                       >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
+                        <File className="w-4 h-4" />
                         Receipt
                       </button>
                     </div>
@@ -553,6 +541,13 @@ export default function WalletPage({ user, userData }) {
             </div>
           )}
         </div>
+        </>
+        )}
+
+        {/* Points Tab Content */}
+        {activeTab === "points" && (
+          <PointsRewardsSection userData={userData} userRole={userData?.role || "guest"} />
+        )}
       </div>
 
       {/* Add Funds Modal */}
