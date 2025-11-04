@@ -7,6 +7,7 @@ import LoadingSpinner from "../../loading/Loading";
 import { signOut } from "firebase/auth";
 import { toast } from "react-toastify";
 import NavigationBar from "../../components/NavigationBar";
+import AnimatedPageWrapper from "../../components/AnimatedPageWrapper";
 
 export default function HostPage() {
   const { user, userData, isVerified, loading } = useAuth();
@@ -29,12 +30,12 @@ export default function HostPage() {
     return <LoadingSpinner />;
   }
   return (
-    <>
+    <AnimatedPageWrapper>
       <NavigationBar user={user} userData={userData} handleLogout={handleLogout} />
       <section className="">
         <HostDashboard isVerified={isVerified} user={user} />
       </section>
       <Footer />
-    </>
+    </AnimatedPageWrapper>
   );
 }

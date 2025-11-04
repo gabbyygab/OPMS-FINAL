@@ -6,6 +6,7 @@ import { sendOtpToUser } from "../../utils/sendOtpToUser";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import AnimatedPageWrapper from "../../components/AnimatedPageWrapper";
 
 export default function MyBookingPage({ userData, user }) {
   const { isVerified } = useAuth();
@@ -25,7 +26,7 @@ export default function MyBookingPage({ userData, user }) {
   };
 
   return (
-    <>
+    <AnimatedPageWrapper>
       <NavigationBar userData={userData} user={user} />
       <div className="">
         {!isVerified && (
@@ -36,6 +37,6 @@ export default function MyBookingPage({ userData, user }) {
         <MyBookingsSection userData={userData} />
       </div>
       <Footer />
-    </>
+    </AnimatedPageWrapper>
   );
 }

@@ -40,6 +40,7 @@ import VerificationBanner from "../../components/Verification";
 import { sendOtpToUser } from "../../utils/sendOtpToUser";
 import { toast } from "react-toastify";
 import ServiceLocationMap from "../../components/ServiceLocationMap";
+import { motion } from "framer-motion";
 
 const reviews = [
   {
@@ -352,7 +353,13 @@ export default function ServiceDetailPage() {
   console.log(serviceData);
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <motion.div
+      className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 bg-slate-800 border-b border-slate-700 w-full z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -447,39 +454,21 @@ export default function ServiceDetailPage() {
         <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Photos Section */}
           <div className="flex flex-col">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-2xl overflow-hidden flex-1">
-              <div
-                className="md:col-span-2 relative cursor-pointer group h-96"
+            <div className="relative h-[450px] rounded-xl overflow-hidden mb-4">
+              <img
+                src={
+                  serviceData?.photos?.[0] ||
+                  "https://via.placeholder.com/800"
+                }
+                alt="Main"
+                className="w-full h-full object-cover cursor-pointer"
                 onClick={() => setShowAllPhotos(true)}
-              >
-                <img
-                  src={
-                    serviceData?.photos?.[0] ||
-                    "https://via.placeholder.com/800"
-                  }
-                  alt="Main"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
-              </div>
-              {serviceData?.photos?.slice(1, 3)?.map((photo, idx) => (
-                <div
-                  key={idx}
-                  className="relative cursor-pointer group h-40 hidden md:block"
-                  onClick={() => setShowAllPhotos(true)}
-                >
-                  <img
-                    src={photo}
-                    alt={`Photo ${idx + 2}`}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
-                </div>
-              ))}
+              />
+              <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition cursor-pointer" onClick={() => setShowAllPhotos(true)} />
             </div>
             <button
               onClick={() => setShowAllPhotos(true)}
-              className="mt-4 px-4 py-2 border border-slate-400 text-slate-200 rounded-lg font-medium hover:bg-slate-700 transition"
+              className="w-full px-4 py-2 bg-slate-800/50 backdrop-blur-md border border-slate-700/50 text-slate-200 rounded-lg font-medium hover:bg-slate-700/50 transition"
             >
               Show all {serviceData?.photos?.length || 0} photos
             </button>
@@ -487,7 +476,7 @@ export default function ServiceDetailPage() {
 
           {/* Provider Info Card */}
           <div className="flex flex-col">
-            <div className="bg-slate-800 rounded-2xl shadow-lg p-6 border border-slate-700 flex-1">
+            <div className="bg-slate-800/50 backdrop-blur-md rounded-2xl shadow-lg p-6 border border-slate-700/50 h-[450px] mb-4 overflow-y-auto">
               <h3 className="text-xl font-semibold text-white mb-4">
                 Service Provider
               </h3>
@@ -533,7 +522,7 @@ export default function ServiceDetailPage() {
           <div className="lg:col-span-2 space-y-8">
             {/* Provider Info */}
             <div className="pb-8 border-b border-slate-700">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
                 <div>
                   <h2 className="text-2xl font-semibold text-white mb-2">
                     Service by{" "}
@@ -590,7 +579,7 @@ export default function ServiceDetailPage() {
               <h3 className="text-xl font-semibold text-white mb-4">
                 About this service
               </h3>
-              <p className="text-slate-300 leading-relaxed mb-6">
+              <p className="text-slate-300 leading-relaxed mb-6 bg-slate-800/50 backdrop-blur-md p-6 rounded-xl border border-slate-700/50">
                 {serviceData?.description || "No description available."}
               </p>
 
@@ -600,7 +589,7 @@ export default function ServiceDetailPage() {
                     {serviceData.highlights.map((highlight, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center gap-3 text-slate-300 bg-slate-800 px-4 py-3 rounded-lg"
+                        className="flex items-center gap-3 text-slate-300 bg-slate-700/50 backdrop-blur-md px-4 py-3 rounded-lg border border-slate-600/50 hover:bg-slate-700 hover:border-indigo-500/30 transition"
                       >
                         <Check className="w-5 h-5 text-indigo-400 flex-shrink-0" />
                         <span>{highlight}</span>
@@ -764,7 +753,7 @@ export default function ServiceDetailPage() {
 
           {/* Booking Card */}
           <div className="lg:col-span-1">
-            <div className="bg-slate-800 rounded-2xl shadow-lg p-6 border border-slate-700 sticky top-24">
+            <div className="bg-slate-800/50 backdrop-blur-md rounded-2xl shadow-lg p-6 border border-slate-700/50 sticky top-24">
               <div className="mb-6">
                 <div className="flex items-baseline gap-2 mb-2">
                   <span className="text-3xl font-bold text-white">
@@ -1194,6 +1183,6 @@ export default function ServiceDetailPage() {
             </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

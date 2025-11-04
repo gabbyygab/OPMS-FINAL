@@ -48,6 +48,7 @@ import {
 } from "firebase/firestore";
 import LoadingSpinner from "../../loading/Loading";
 import { useAuth } from "../../context/AuthContext";
+import { motion } from "framer-motion";
 import VerificationBanner from "../../components/Verification";
 import { sendOtpToUser } from "../../utils/sendOtpToUser";
 import { getCoordinatesFromLocation } from "../../utils/geocoding";
@@ -376,7 +377,10 @@ export default function ListingDetailPage() {
   let isValidPromo = couponValidationResult.valid;
 
   if (isValidPromo && couponValidationResult.coupon) {
-    discountAmount = calculateDiscount(basePrice, couponValidationResult.coupon);
+    discountAmount = calculateDiscount(
+      basePrice,
+      couponValidationResult.coupon
+    );
   }
 
   // Calculate points discount (1 point = ₱1)
@@ -565,7 +569,13 @@ export default function ListingDetailPage() {
 
   if (loading) return <LoadingSpinner />;
   return (
-    <div className="min-h-screen bg-slate-900">
+    <motion.div
+      className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 bg-slate-800 border-b border-slate-700 w-full z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -639,39 +649,21 @@ export default function ListingDetailPage() {
         <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Photos Section */}
           <div className="flex flex-col">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-2xl overflow-hidden flex-1">
-              <div
-                className="md:col-span-2 relative cursor-pointer group h-96"
+            <div className="relative h-[450px] rounded-xl overflow-hidden mb-4">
+              <img
+                src={
+                  listingData?.photos?.[0] ||
+                  "https://via.placeholder.com/800"
+                }
+                alt="Main"
+                className="w-full h-full object-cover cursor-pointer"
                 onClick={() => setShowAllPhotos(true)}
-              >
-                <img
-                  src={
-                    listingData?.photos?.[0] ||
-                    "https://via.placeholder.com/800"
-                  }
-                  alt="Main"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
-              </div>
-              {listingData?.photos?.slice(1, 3)?.map((photo, idx) => (
-                <div
-                  key={idx}
-                  className="relative cursor-pointer group h-40 hidden md:block"
-                  onClick={() => setShowAllPhotos(true)}
-                >
-                  <img
-                    src={photo}
-                    alt={`Photo ${idx + 2}`}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
-                </div>
-              ))}
+              />
+              <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition cursor-pointer" onClick={() => setShowAllPhotos(true)} />
             </div>
             <button
               onClick={() => setShowAllPhotos(true)}
-              className="mt-4 px-4 py-2 border border-slate-400 text-slate-200 rounded-lg font-medium hover:bg-slate-700 transition"
+              className="w-full px-4 py-2 bg-slate-800/50 backdrop-blur-md border border-slate-700/50 text-slate-200 rounded-lg font-medium hover:bg-slate-700/50 transition"
             >
               Show all {listingData?.photos?.length || 0} photos
             </button>
@@ -679,12 +671,7 @@ export default function ListingDetailPage() {
 
           {/* Map Section */}
           <div className="flex flex-col">
-            <h3 className="text-xl font-semibold text-white mb-2">Location</h3>
-            <div className="flex items-center gap-2 mb-4 text-slate-300">
-              <MapPin className="w-5 h-5 text-indigo-400" />
-              <span>{listingData?.location || "Location details"}</span>
-            </div>
-            <div className="rounded-xl overflow-hidden border border-slate-700 flex-1 min-h-96 relative z-0">
+            <div className="rounded-xl overflow-hidden border border-slate-700/50 h-[450px] relative z-0 mb-4">
               <MapContainer
                 center={mapCenter}
                 zoom={15}
@@ -722,6 +709,13 @@ export default function ListingDetailPage() {
                 )}
               </MapContainer>
             </div>
+            <div className="bg-slate-800/50 backdrop-blur-md rounded-lg p-4 border border-slate-700/50">
+              <h3 className="text-lg font-semibold text-white mb-2">Location</h3>
+              <div className="flex items-center gap-2 text-slate-300">
+                <MapPin className="w-4 h-4 text-indigo-400" />
+                <span>{listingData?.location || "Location details"}</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -730,7 +724,7 @@ export default function ListingDetailPage() {
           <div className="lg:col-span-2 space-y-8">
             {/* Host Info */}
             <div className="pb-8 border-b border-slate-700">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
                 <div>
                   <h2 className="text-2xl font-semibold text-white mb-2">
                     Hosted by {listingData?.host?.fullName || "Unknown"}
@@ -755,7 +749,7 @@ export default function ListingDetailPage() {
                 />
               </div>
               {listingData?.host?.isVerified && (
-                <div className="flex items-center gap-2 text-sm text-slate-300">
+                <div className="flex items-center gap-2 text-sm text-slate-300 mt-4">
                   <Award className="w-4 h-4 text-indigo-400" />
                   <span>
                     {listingData?.host?.isVerified
@@ -781,7 +775,7 @@ export default function ListingDetailPage() {
               <h3 className="text-xl font-semibold text-white mb-4">
                 About this place
               </h3>
-              <p className="text-slate-300 leading-relaxed">
+              <p className="text-slate-300 leading-relaxed bg-slate-800/50 backdrop-blur-md p-6 rounded-xl border border-slate-700/50">
                 {listingData?.description || "No description available."}
               </p>
             </div>
@@ -795,7 +789,7 @@ export default function ListingDetailPage() {
                 {listingData?.amenities?.map((amenity, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-3 text-slate-200 bg-slate-700/50 px-3 py-2 rounded-lg border border-slate-600/50 hover:bg-slate-700 hover:border-indigo-500/30 transition"
+                    className="flex items-center gap-3 text-slate-200 bg-slate-700/50 backdrop-blur-md px-4 py-3 rounded-lg border border-slate-600/50 hover:bg-slate-700 hover:border-indigo-500/30 transition"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -829,7 +823,10 @@ export default function ListingDetailPage() {
                 </div>
                 <div className="space-y-6">
                   {reviewsData.map((review) => (
-                    <div key={review.id} className="flex gap-4">
+                    <div
+                      key={review.id}
+                      className="flex gap-4 bg-slate-800/50 backdrop-blur-md p-6 rounded-xl border border-slate-700/50"
+                    >
                       <img
                         src={
                           review.user?.photoURL ||
@@ -882,7 +879,10 @@ export default function ListingDetailPage() {
               </h3>
               <div className="space-y-3">
                 {listingData?.houseRules?.map((rule, idx) => (
-                  <div key={idx} className="flex items-start gap-3">
+                  <div
+                    key={idx}
+                    className="flex items-start gap-3 bg-slate-800/50 backdrop-blur-md p-4 rounded-lg border border-slate-700/50"
+                  >
                     <Check className="w-5 h-5 text-indigo-400 flex-shrink-0 mt-0.5" />
                     <span className="text-slate-300">{rule}</span>
                   </div>
@@ -893,7 +893,7 @@ export default function ListingDetailPage() {
 
           {/* Booking Card */}
           <div className="lg:col-span-1">
-            <div className="bg-slate-800 rounded-2xl shadow-lg p-6 border border-slate-700 sticky top-24">
+            <div className="bg-slate-800/50 backdrop-blur-md rounded-2xl shadow-lg p-6 border border-slate-700/50 sticky top-24">
               <div className="flex items-baseline gap-2 mb-6">
                 <span className="text-3xl font-bold text-white">
                   ₱{listingData?.price?.toLocaleString() || 0}
@@ -982,7 +982,11 @@ export default function ListingDetailPage() {
                       Redeem Points (Optional)
                     </label>
                     <p className="text-xs text-slate-300 mb-3">
-                      Available: <span className="font-bold text-indigo-300">{guestRewards.availablePoints || 0}</span> points (₱{guestRewards.availablePoints || 0})
+                      Available:{" "}
+                      <span className="font-bold text-indigo-300">
+                        {guestRewards.availablePoints || 0}
+                      </span>{" "}
+                      points (₱{guestRewards.availablePoints || 0})
                     </p>
                     <div className="flex items-center gap-3">
                       <input
@@ -1010,7 +1014,8 @@ export default function ListingDetailPage() {
                       />
                     </div>
                     <p className="text-xs text-indigo-300 mt-2">
-                      Using <span className="font-bold">₱{pointsToUse}</span> in points
+                      Using <span className="font-bold">₱{pointsToUse}</span> in
+                      points
                     </p>
                   </div>
                 )}
@@ -1063,9 +1068,7 @@ export default function ListingDetailPage() {
                 {/* Points Redemption Row - Only show if points are being used */}
                 {pointsToUse > 0 && (
                   <div className="flex items-center justify-between pb-3 text-indigo-400">
-                    <span className="text-indigo-300/80">
-                      Points Redeemed
-                    </span>
+                    <span className="text-indigo-300/80">Points Redeemed</span>
                     <span className="font-semibold text-indigo-400">
                       -₱{pointsToUse?.toLocaleString() || 0}
                     </span>
@@ -1680,6 +1683,6 @@ export default function ListingDetailPage() {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

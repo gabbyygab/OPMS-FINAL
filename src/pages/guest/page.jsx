@@ -3,13 +3,10 @@ import { auth } from "../../firebase/firebase";
 import { signOut } from "firebase/auth";
 import BookingsSection from "../../components/BookingSection";
 import Footer from "../../components/Footer";
-import { useAuth } from "../../context/AuthContext";
-import VerificationBanner from "../../components/Verification";
-import { useState } from "react";
-import { sendOtpToUser } from "../../utils/sendOtpToUser";
-import LoadingSpinner from "../../loading/Loading";
 import { toast } from "react-toastify";
 import NavigationBar from "../../components/NavigationBar";
+import AnimatedPageWrapper from "../../components/AnimatedPageWrapper";
+
 export default function GuestPage({ userData, user }) {
   const navigate = useNavigate();
 
@@ -31,12 +28,12 @@ export default function GuestPage({ userData, user }) {
   // When scrolled: ~54px (only top row)
   // Using 104px to account for both rows
   return (
-    <>
+    <AnimatedPageWrapper>
       <NavigationBar user={user} userData={userData} handleLogout={handleLogout} />
       <section style={{ paddingTop: user && userData?.role === "guest" ? "104px" : "0px" }}>
         <BookingsSection userData={userData} isFavoritePage={false} />
       </section>
       <Footer />
-    </>
+    </AnimatedPageWrapper>
   );
 }

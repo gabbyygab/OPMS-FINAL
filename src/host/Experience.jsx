@@ -149,6 +149,7 @@ const defaultCenter = [14.5995, 120.9842];
 export default function HostMyExperiences() {
   const { isVerified } = useAuth();
   const { user, userData } = useAuth();
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   const handleActionWithVerification = (action) => {
     if (!isVerified) {
@@ -262,6 +263,19 @@ export default function HostMyExperiences() {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Track mouse position for interactive gradient background
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      setMousePosition({
+        x: (e.clientX / window.innerWidth) * 100,
+        y: (e.clientY / window.innerHeight) * 100,
+      });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
 
   // Fetch experiences from Firebase
   useEffect(() => {
@@ -526,6 +540,75 @@ export default function HostMyExperiences() {
       if (!formData.title || !formData.location) {
         toast.error("Please fill in Title and Location first.");
         return;
+      }
+
+      // Comprehensive validation for non-draft listings
+      if (!isDraft) {
+        const missingFields = [];
+
+        // Price validation
+        if (!formData.price || parseFloat(formData.price) <= 0) {
+          missingFields.push("Price (must be greater than 0)");
+        }
+
+        // Duration validation
+        if (!formData.duration || parseFloat(formData.duration) <= 0) {
+          missingFields.push("Duration (must be greater than 0 hours)");
+        }
+
+        // Max guests validation
+        if (!formData.maxGuests || parseInt(formData.maxGuests) <= 0) {
+          missingFields.push("Maximum Guests (must be at least 1)");
+        }
+
+        // Category validation
+        if (!formData.category) {
+          missingFields.push("Category");
+        }
+
+        // Description validation
+        if (!formData.description || formData.description.trim().length < 20) {
+          missingFields.push("Description (must be at least 20 characters)");
+        }
+
+        // Language validation
+        if (!formData.language || formData.language.trim().length === 0) {
+          missingFields.push("Language");
+        }
+
+        // Age minimum validation
+        if (!formData.ageMin || parseInt(formData.ageMin) < 0) {
+          missingFields.push("Minimum Age (must be 0 or greater)");
+        }
+
+        // Available dates validation
+        if (!formData.availableDates || formData.availableDates.length === 0) {
+          missingFields.push("Available Dates (add at least one date range)");
+        }
+
+        // Available times validation
+        if (!formData.availableTimes || formData.availableTimes.length === 0) {
+          missingFields.push("Available Times (add at least one time slot)");
+        }
+
+        // Activities validation
+        if (!formData.activities || formData.activities.length === 0) {
+          missingFields.push("Activities (add at least one activity)");
+        }
+
+        // Photos validation
+        if (!formData.photos || formData.photos.length === 0) {
+          missingFields.push("Photos (upload at least one photo)");
+        }
+
+        // If there are missing fields, show error
+        if (missingFields.length > 0) {
+          toast.error(
+            `Please complete the following required fields:\n${missingFields.join(", ")}`,
+            { autoClose: 8000 }
+          );
+          return;
+        }
       }
 
       const loadingToast = toast.loading(
@@ -830,15 +913,33 @@ export default function HostMyExperiences() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 pb-12">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-32 lg:pt-40">
+    <div className="relative min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 pb-12 overflow-hidden">
+      {/* Interactive Mouse-Following Gradient Background */}
+      <div
+        className="absolute inset-0 transition-all duration-100 ease-out"
+        style={{
+          background: `radial-gradient(
+            circle at ${mousePosition.x}% ${mousePosition.y}%,
+            rgba(99, 102, 241, 0.15) 0%,
+            rgba(168, 85, 247, 0.10) 25%,
+            rgba(59, 130, 246, 0.05) 50%,
+            rgba(15, 23, 42, 0) 100%
+          ),
+          linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)`,
+        }}
+      ></div>
+
+      {/* Static gradient overlay for depth */}
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-transparent to-slate-900/30"></div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-32 lg:pt-40">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4 animate-fadeIn">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent flex items-center gap-3">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
               My Experiences
             </h1>
-            <p className="text-indigo-300/60 mt-1">
+            <p className="text-slate-400 mt-2 text-sm sm:text-base">
               Manage your unique activities and tours
             </p>
           </div>
@@ -846,77 +947,90 @@ export default function HostMyExperiences() {
             onClick={() =>
               handleActionWithVerification(() => setShowAddModal(true))
             }
-            className="mt-4 md:mt-0 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-6 py-3 rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition flex items-center gap-2 font-medium shadow-lg shadow-indigo-500/20"
+            className="w-full md:w-auto mt-4 md:mt-0 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-6 py-3 rounded-xl hover:from-indigo-700 hover:to-indigo-600 transition-all duration-500 transform hover:scale-105 flex items-center justify-center gap-2 font-bold shadow-lg shadow-indigo-500/30 border border-indigo-400/30"
           >
             <Plus className="w-5 h-5" />
-            Add New Experience
+            <span className="hidden sm:inline">Add New Experience</span>
+            <span className="sm:hidden">Add Experience</span>
           </button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 p-6 border border-indigo-500/20 backdrop-blur-sm hover:border-indigo-500/40 transition">
+        {/* Stats Cards - Enhanced with Glassmorphism and Animations */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+          <div
+            className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 p-5 sm:p-6 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 animate-fadeIn"
+            style={{ animationDelay: '0s' }}
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-indigo-300/70 text-sm">Total Experiences</p>
-                <h3 className="text-2xl font-bold text-indigo-100 mt-1">
+                <p className="text-slate-400 text-sm">Total Experiences</p>
+                <h3 className="text-2xl font-bold text-white mt-1">
                   {experiences.length}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-indigo-500/20 rounded-lg flex items-center justify-center border border-indigo-500/30">
-                <Compass className="w-6 h-6 text-indigo-400" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-indigo-500/20 rounded-xl flex items-center justify-center border border-indigo-500/40 backdrop-blur-sm">
+                <Compass className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-green-500/10 p-6 border border-green-500/20 backdrop-blur-sm hover:border-green-500/40 transition">
+          <div
+            className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 p-5 sm:p-6 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 animate-fadeIn"
+            style={{ animationDelay: '0.1s' }}
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-300/70 text-sm">Active Experiences</p>
-                <h3 className="text-2xl font-bold text-green-100 mt-1">
+                <p className="text-slate-400 text-sm">Active Experiences</p>
+                <h3 className="text-2xl font-bold text-white mt-1">
                   {experiences.filter((e) => e.status === "active").length}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center border border-green-500/30">
-                <Eye className="w-6 h-6 text-green-400" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-green-500/20 rounded-xl flex items-center justify-center border border-green-500/40 backdrop-blur-sm">
+                <Eye className="w-6 h-6 sm:w-7 sm:h-7 text-green-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-orange-500/10 p-6 border border-orange-500/20 backdrop-blur-sm hover:border-orange-500/40 transition">
+          <div
+            className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 p-5 sm:p-6 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 animate-fadeIn"
+            style={{ animationDelay: '0.2s' }}
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-orange-300/70 text-sm">Total Bookings</p>
-                <h3 className="text-2xl font-bold text-orange-100 mt-1">
+                <p className="text-slate-400 text-sm">Total Bookings</p>
+                <h3 className="text-2xl font-bold text-white mt-1">
                   {experiences.reduce((sum, exp) => sum + (exp.bookingCount || 0), 0)}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center border border-orange-500/30">
-                <Calendar className="w-6 h-6 text-orange-400" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-orange-500/20 rounded-xl flex items-center justify-center border border-orange-500/40 backdrop-blur-sm">
+                <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-orange-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-pink-500/10 p-6 border border-pink-500/20 backdrop-blur-sm hover:border-pink-500/40 transition">
+          <div
+            className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 p-5 sm:p-6 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 animate-fadeIn"
+            style={{ animationDelay: '0.3s' }}
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-pink-300/70 text-sm">Total Revenue</p>
-                <h3 className="text-2xl font-bold text-pink-100 mt-1">
+                <p className="text-slate-400 text-sm">Total Revenue</p>
+                <h3 className="text-2xl font-bold text-white mt-1">
                   ₱
                   {experiences
                     .reduce((sum, exp) => sum + (exp.revenue || 0), 0)
                     .toLocaleString()}
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-pink-500/20 rounded-lg flex items-center justify-center border border-pink-500/30">
-                <DollarSign className="w-6 h-6 text-pink-400" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-pink-500/20 rounded-xl flex items-center justify-center border border-pink-500/40 backdrop-blur-sm">
+                <DollarSign className="w-6 h-6 sm:w-7 sm:h-7 text-pink-400" />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Search and Filter */}
-        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl shadow-lg shadow-indigo-500/10 p-6 border border-indigo-500/20 backdrop-blur-sm mb-6">
+        {/* Search and Filter - Enhanced with Glassmorphism */}
+        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl rounded-2xl shadow-xl shadow-indigo-500/10 p-4 sm:p-6 border border-indigo-500/30 mb-6 animate-fadeIn" style={{ animationDelay: '0.4s' }}>
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-indigo-300/50" />
@@ -1622,29 +1736,33 @@ export default function HostMyExperiences() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 z-[999] bg-slate-900 border-t border-indigo-500/20 p-6 flex gap-3">
+            {/* Footer - Mobile Responsive */}
+            <div className="sticky bottom-0 z-[999] bg-gradient-to-r from-slate-800/95 to-slate-900/95 backdrop-blur-xl border-t border-indigo-500/30 p-3 sm:p-4 md:p-6 flex flex-col sm:flex-row gap-2 sm:gap-3 animate-slideUp">
               <button
                 onClick={() => {
                   setShowAddModal(false);
                   resetForm();
                 }}
-                className="flex-1 px-6 py-3 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 transition font-medium"
+                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border border-indigo-500/30 text-indigo-300 rounded-xl hover:bg-slate-700/50 hover:border-indigo-500/50 transition-all duration-300 font-bold text-sm sm:text-base transform hover:scale-105"
               >
                 Cancel
               </button>
+
               <button
                 onClick={() => handleAddExperience(true)}
-                className="flex-1 px-6 py-3 border border-indigo-500/50 text-indigo-300 rounded-lg hover:bg-indigo-500/20 transition font-medium flex items-center justify-center gap-2"
+                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border border-indigo-500/30 text-indigo-300 rounded-xl hover:bg-slate-700/50 hover:border-indigo-500/50 transition-all duration-300 font-bold text-sm sm:text-base transform hover:scale-105"
               >
-                <Save className="w-5 h-5" />
-                Save as Draft
+                <span className="hidden sm:inline">Save as Draft</span>
+                <span className="sm:hidden">Draft</span>
               </button>
+
               <button
                 onClick={() => handleAddExperience(false)}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 shadow-lg shadow-indigo-500/20 text-white rounded-lg transition font-medium flex items-center justify-center gap-2"
+                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-xl hover:from-indigo-700 hover:to-indigo-600 transition-all duration-300 flex items-center justify-center gap-2 font-bold shadow-lg shadow-indigo-500/30 border border-indigo-400/30 text-sm sm:text-base transform hover:scale-105"
               >
-                <Save className="w-5 h-5" />
-                Add Experience
+                <Save className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">Add Experience</span>
+                <span className="sm:hidden">Add</span>
               </button>
             </div>
           </div>
@@ -2132,22 +2250,24 @@ export default function HostMyExperiences() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 z-[999] bg-slate-900 border-t border-indigo-500/20 p-6 flex gap-3">
+            {/* Footer - Mobile Responsive */}
+            <div className="sticky bottom-0 z-[999] bg-gradient-to-r from-slate-800/95 to-slate-900/95 backdrop-blur-xl border-t border-indigo-500/30 p-3 sm:p-4 md:p-6 flex flex-col sm:flex-row gap-2 sm:gap-3 animate-slideUp">
               <button
                 onClick={() => {
                   setShowEditModal(false);
                   resetForm();
                 }}
-                className="flex-1 px-6 py-3 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 transition font-medium"
+                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border border-indigo-500/30 text-indigo-300 rounded-xl hover:bg-slate-700/50 hover:border-indigo-500/50 transition-all duration-300 font-bold text-sm sm:text-base transform hover:scale-105"
               >
                 Cancel
               </button>
               <button
                 onClick={handleEditExperience}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 shadow-lg shadow-indigo-500/20 text-white rounded-lg transition font-medium flex items-center justify-center gap-2"
+                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-xl hover:from-indigo-700 hover:to-indigo-600 transition-all duration-300 flex items-center justify-center gap-2 font-bold shadow-lg shadow-indigo-500/30 border border-indigo-400/30 text-sm sm:text-base transform hover:scale-105"
               >
-                <Save className="w-5 h-5" />
-                Save Changes
+                <Save className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">Save Changes</span>
+                <span className="sm:hidden">Save</span>
               </button>
             </div>
           </div>
@@ -2167,18 +2287,18 @@ export default function HostMyExperiences() {
               <span className="font-semibold">{selectedExperience.title}</span>?
               This action cannot be undone.
             </p>
-            <div className="flex gap-3 justify-center">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center animate-slideUp">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="px-6 py-3 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 transition font-medium"
+                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border border-indigo-500/30 text-indigo-300 rounded-xl hover:bg-slate-700/50 hover:border-indigo-500/50 transition-all duration-300 font-bold text-sm sm:text-base transform hover:scale-105"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteExperience}
-                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium flex items-center justify-center gap-2"
+                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-rose-600 to-rose-500 text-white rounded-xl hover:from-rose-700 hover:to-rose-600 transition-all duration-300 font-bold shadow-lg shadow-rose-500/30 border border-rose-400/30 text-sm sm:text-base transform hover:scale-105 flex items-center justify-center gap-2"
               >
-                <Trash2 className="w-5 h-5" />
+                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                 Delete
               </button>
             </div>

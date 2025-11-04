@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MapPin, Star, Heart, X, Calendar, Users, Briefcase } from "lucide-react";
+import { MapPin, Star, Heart, X, Calendar, Users, Briefcase, Home, Sparkles, Wrench } from "lucide-react";
 import {
   collection,
   addDoc,
@@ -19,6 +19,7 @@ import VerificationBanner from "./Verification";
 import { sendOtpToUser } from "../utils/sendOtpToUser";
 import { getRecommendedListings, getRecommendationsByType } from "../utils/recommendationUtils";
 import RecommendationCard from "./RecommendationCard";
+import { motion, AnimatePresence } from "framer-motion";
 // Extract city or province from location string
 function extractCity(location) {
   if (!location) return "Other";
@@ -593,7 +594,7 @@ export default function BookingsSection({ userData, isFavoritePage }) {
   const currentListings = activeList.slice(indexOfFirst, indexOfLast);
 
   return (
-    <div className="relative w-screen min-h-screen bg-slate-900 overflow-x-hidden -ml-[calc((100vw-100%)/2)] -mt-32 pt-32 lg:pt-0">
+    <div className="relative w-screen min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 overflow-x-hidden -ml-[calc((100vw-100%)/2)] -mt-32 pt-32 lg:pt-0">
       {/* Interactive Mouse-Following Gradient Background */}
       <div
         className="absolute inset-0 transition-all duration-100 ease-out"
@@ -704,12 +705,39 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                 </div>
               </div>
             ) : currentListings.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
+              <motion.div
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 md:gap-5"
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  visible: {
+                    transition: {
+                      staggerChildren: 0.05,
+                    },
+                  },
+                }}
+              >
                 {currentListings.map((listing) => {
                   return (
-                    <div
+                    <motion.div
                       key={listing.id}
                       className="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-lg border border-slate-700 overflow-hidden hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 flex flex-col h-full group"
+                      variants={{
+                        hidden: { opacity: 0, y: 20, scale: 0.95 },
+                        visible: {
+                          opacity: 1,
+                          y: 0,
+                          scale: 1,
+                          transition: {
+                            duration: 0.4,
+                            ease: [0.25, 0.1, 0.25, 1],
+                          },
+                        },
+                      }}
+                      whileHover={{
+                        y: -8,
+                        transition: { duration: 0.2 },
+                      }}
                     >
                       {/* Image Container - Compact */}
                       <div className="relative overflow-hidden h-32 sm:h-40 md:h-48">
@@ -727,7 +755,7 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                         {/* Favorite Button */}
-                        <button
+                        <motion.button
                           onClick={() =>
                             toggleFavorite(
                               listing.id,
@@ -736,16 +764,27 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                               isFavoritePage
                             )
                           }
-                          className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur-sm p-1.5 sm:p-2 rounded-full hover:bg-slate-900 transition-all hover:scale-110"
+                          className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur-sm p-1.5 sm:p-2 rounded-full hover:bg-slate-900 transition-all"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
                         >
-                          <Heart
-                            className={`w-3 h-3 sm:w-4 sm:h-4 transition-all ${
-                              listing.isFavorite
-                                ? "fill-red-500 text-red-500"
-                                : "text-slate-300 hover:text-red-400"
-                            }`}
-                          />
-                        </button>
+                          <motion.div
+                            animate={{
+                              scale: listing.isFavorite ? [1, 1.2, 1] : 1,
+                            }}
+                            transition={{
+                              duration: 0.3,
+                            }}
+                          >
+                            <Heart
+                              className={`w-3 h-3 sm:w-4 sm:h-4 transition-all ${
+                                listing.isFavorite
+                                  ? "fill-red-500 text-red-500"
+                                  : "text-slate-300 hover:text-red-400"
+                              }`}
+                            />
+                          </motion.div>
+                        </motion.button>
 
                         {/* Rating Badge */}
                         <div className="absolute bottom-2 left-2 flex items-center bg-amber-500/90 px-2 py-1 rounded-lg border border-amber-500/50">
@@ -774,7 +813,7 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                         </div>
 
                         {/* Book Now Button */}
-                        <button
+                        <motion.button
                           onClick={() => {
                             if (!isVerified) {
                               return toast.warning(
@@ -787,14 +826,16 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                             );
                           }}
                           className="w-full bg-indigo-600 text-white py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                         >
                           Book Now
-                        </button>
+                        </motion.button>
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
-              </div>
+              </motion.div>
             ) : (
               <div className="flex items-center justify-center py-24">
                 <div className="text-center">
@@ -859,7 +900,7 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                   <div className="mb-16">
                     <div className="mb-8">
                       <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2">
-                        <span className="text-indigo-400">⭐</span>
+                        <Home className="w-7 h-7 text-indigo-400" />
                         Recommended Homes for You
                       </h2>
                       <p className="text-slate-400">
@@ -874,9 +915,17 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                           recommendationReason={rec.recommendationReason}
                           recommendationScore={rec.recommendationScore}
                           isFavorite={rec.isFavorite}
-                          onToggleFavorite={(listingId) =>
-                            toggleFavorite(listingId, userData.id, setListings, false)
-                          }
+                          onToggleFavorite={(listingId) => {
+                            toggleFavorite(listingId, userData.id, setListings, false);
+                            // Update recommendations state to reflect favorite change
+                            setRecommendations((prev) =>
+                              prev.map((item) =>
+                                item.id === listingId
+                                  ? { ...item, isFavorite: !item.isFavorite }
+                                  : item
+                              )
+                            );
+                          }}
                         />
                       ))}
                     </div>
@@ -888,7 +937,7 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                   <div className="mb-16">
                     <div className="mb-8">
                       <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2">
-                        <span className="text-indigo-400">✨</span>
+                        <Sparkles className="w-7 h-7 text-indigo-400" />
                         Recommended Experiences for You
                       </h2>
                       <p className="text-slate-400">
@@ -903,9 +952,17 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                           recommendationReason={rec.recommendationReason}
                           recommendationScore={rec.recommendationScore}
                           isFavorite={rec.isFavorite}
-                          onToggleFavorite={(listingId) =>
-                            toggleFavorite(listingId, userData.id, setListings, false)
-                          }
+                          onToggleFavorite={(listingId) => {
+                            toggleFavorite(listingId, userData.id, setListings, false);
+                            // Update recommendations state to reflect favorite change
+                            setRecommendations((prev) =>
+                              prev.map((item) =>
+                                item.id === listingId
+                                  ? { ...item, isFavorite: !item.isFavorite }
+                                  : item
+                              )
+                            );
+                          }}
                         />
                       ))}
                     </div>
@@ -917,7 +974,7 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                   <div className="mb-16">
                     <div className="mb-8">
                       <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2">
-                        <span className="text-indigo-400">🔧</span>
+                        <Wrench className="w-7 h-7 text-indigo-400" />
                         Recommended Services for You
                       </h2>
                       <p className="text-slate-400">
@@ -932,9 +989,17 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                           recommendationReason={rec.recommendationReason}
                           recommendationScore={rec.recommendationScore}
                           isFavorite={rec.isFavorite}
-                          onToggleFavorite={(listingId) =>
-                            toggleFavorite(listingId, userData.id, setListings, false)
-                          }
+                          onToggleFavorite={(listingId) => {
+                            toggleFavorite(listingId, userData.id, setListings, false);
+                            // Update recommendations state to reflect favorite change
+                            setRecommendations((prev) =>
+                              prev.map((item) =>
+                                item.id === listingId
+                                  ? { ...item, isFavorite: !item.isFavorite }
+                                  : item
+                              )
+                            );
+                          }}
                         />
                       ))}
                     </div>

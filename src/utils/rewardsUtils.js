@@ -151,7 +151,7 @@ export const redeemPointsForListingUpgrade = async (
       throw new Error("Insufficient points to redeem");
     }
 
-    // Update listing limits
+    // Update listing limit
     const updatedLimits = {
       ...userRewards.listingLimits,
       [listingType]:

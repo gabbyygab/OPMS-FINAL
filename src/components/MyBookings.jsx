@@ -371,8 +371,12 @@ export default function MyBookingsSection() {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="absolute inset-0 bg-[url('/guestBg.png')] bg-cover bg-center opacity-5"></div>
+    <div className="relative min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-60 -left-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-700"></div>
+      </div>
 
       <div className="relative z-10 mt-16 sm:mt-20">
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
