@@ -1,6 +1,5 @@
 import HostMyServices from "../../host/Services";
 import { useNavigate } from "react-router-dom";
-import Footer from "../../components/Footer";
 import NavigationBar from "../../components/NavigationBar";
 import VerificationBanner from "../../components/Verification";
 import { sendOtpToUser } from "../../utils/sendOtpToUser";
@@ -35,7 +34,6 @@ export default function ServicesPage({ user, userData }) {
         )}
         <HostMyServices />
       </section>
-      <Footer />
     </>
   );
 }

@@ -51,7 +51,6 @@ import {
   AdminLayout,
   Dashboard,
   ServiceFees,
-  PolicyCompliance,
   Reports,
   PaymentMethods,
 } from "./pages/admin";
@@ -274,7 +273,6 @@ function App() {
           >
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="service-fees" element={<ServiceFees />} />
-            <Route path="policy" element={<PolicyCompliance />} />
             <Route path="reports" element={<Reports />} />
             <Route path="payments" element={<PaymentMethods />} />
             <Route path="seed-data" element={<SeedData />} />

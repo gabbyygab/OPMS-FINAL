@@ -1,5 +1,4 @@
 import NavigationBar from "../../components/NavigationBar";
-import Footer from "../../components/Footer";
 import BookingsSection from "../../components/BookingSection";
 import AnimatedPageWrapper from "../../components/AnimatedPageWrapper";
 
@@ -13,9 +12,6 @@ export default function FavoritesPage({ user, userData }) {
       <main>
         <BookingsSection userData={userData} isFavoritePage={true} />
       </main>
-
-      {/* Footer pinned at bottom */}
-      <Footer />
     </AnimatedPageWrapper>
   );
 }

@@ -1644,20 +1644,20 @@ export default function HostMyStays({ user, userData }) {
             </div>
 
             {/* Footer - Mobile Responsive */}
-            <div className="sticky bottom-0 z-[999] bg-white border-t border-gray-200 p-3 sm:p-4 md:p-6 flex flex-col sm:flex-row gap-2 sm:gap-3 animate-slideUp">
+            <div className="sticky bottom-0 z-[999] bg-slate-800/90 backdrop-blur-lg border-t border-slate-700 p-3 sm:p-4 md:p-6 flex flex-col sm:flex-row gap-2 sm:gap-3 animate-slideUp">
               <button
                 onClick={() => {
                   setShowAddModal(false);
                   resetForm();
                 }}
-                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 font-semibold text-sm sm:text-base"
+                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border border-slate-600 text-slate-300 rounded-xl hover:bg-slate-700 transition-all duration-300 font-semibold text-sm sm:text-base"
               >
                 Cancel
               </button>
 
               <button
                 onClick={() => handleAddStay(true)}
-                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 font-semibold text-sm sm:text-base"
+                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border border-slate-600 text-slate-300 rounded-xl hover:bg-slate-700 transition-all duration-300 font-semibold text-sm sm:text-base"
               >
                 <span className="hidden sm:inline">Save Draft</span>
                 <span className="sm:hidden">Draft</span>
@@ -1665,7 +1665,7 @@ export default function HostMyStays({ user, userData }) {
 
               <button
                 onClick={() => handleAddStay(false)}
-                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2 font-semibold shadow-md text-sm sm:text-base"
+                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg shadow-indigo-500/30 text-sm sm:text-base"
               >
                 <Save className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">Add Stay</span>
@@ -2129,19 +2129,19 @@ export default function HostMyStays({ user, userData }) {
             </div>
 
             {/* Footer - Mobile Responsive */}
-            <div className="sticky bottom-0 z-[999] bg-white border-t border-gray-200 p-3 sm:p-4 md:p-6 flex flex-col sm:flex-row gap-2 sm:gap-3 animate-slideUp">
+            <div className="sticky bottom-0 z-[999] bg-slate-800/90 backdrop-blur-lg border-t border-slate-700 p-3 sm:p-4 md:p-6 flex flex-col sm:flex-row gap-2 sm:gap-3 animate-slideUp">
               <button
                 onClick={() => {
                   setShowEditModal(false);
                   resetForm();
                 }}
-                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 font-semibold text-sm sm:text-base"
+                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border border-slate-600 text-slate-300 rounded-xl hover:bg-slate-700 transition-all duration-300 font-semibold text-sm sm:text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={handleEditStay}
-                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2 font-semibold shadow-md text-sm sm:text-base"
+                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg shadow-indigo-500/30 text-sm sm:text-base"
               >
                 <Save className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">Save Changes</span>
@@ -2155,11 +2155,11 @@ export default function HostMyStays({ user, userData }) {
       {/* Date Range Picker Modal */}
       {showDateRangeModal && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xl p-5 border border-gray-200 shadow-2xl">
+          <div className="bg-slate-800/90 backdrop-blur-lg rounded-2xl w-full max-w-xl p-5 border border-slate-700 shadow-2xl">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-blue-600" />
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-indigo-400" />
                 Select Date Range
               </h3>
               <button
@@ -2344,13 +2344,13 @@ export default function HostMyStays({ user, userData }) {
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 animate-slideUp">
               <button
                 onClick={() => setShowDateRangeModal(false)}
-                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 font-semibold text-sm sm:text-base"
+                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border border-slate-600 text-slate-300 rounded-xl hover:bg-slate-700 transition-all duration-300 font-semibold text-sm sm:text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={addDateRangeFromModal}
-                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2 font-semibold shadow-md text-sm sm:text-base"
+                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg shadow-indigo-500/30 text-sm sm:text-base"
               >
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">Add Date Range</span>
@@ -2364,14 +2364,14 @@ export default function HostMyStays({ user, userData }) {
       {/* Delete Confirmation Modal */}
       {showDeleteModal && selectedListing && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 border border-gray-200 shadow-2xl">
-            <div className="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-300">
-              <Trash2 className="w-6 h-6 text-rose-600" />
+          <div className="bg-slate-800/90 backdrop-blur-lg rounded-2xl max-w-md w-full p-6 border border-slate-700 shadow-2xl">
+            <div className="w-12 h-12 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-500/50">
+              <Trash2 className="w-6 h-6 text-rose-400" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
+            <h3 className="text-xl font-bold text-white text-center mb-2">
               Delete Stay
             </h3>
-            <p className="text-gray-600 text-center mb-6">
+            <p className="text-slate-300 text-center mb-6">
               Are you sure you want to delete "{selectedListing.title}"? This
               action cannot be undone.
             </p>
@@ -2381,7 +2381,7 @@ export default function HostMyStays({ user, userData }) {
                   setShowDeleteModal(false);
                   setSelectedListing(null);
                 }}
-                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 font-semibold text-sm sm:text-base"
+                className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border border-slate-600 text-slate-300 rounded-xl hover:bg-slate-700 transition-all duration-300 font-semibold text-sm sm:text-base"
               >
                 Cancel
               </button>

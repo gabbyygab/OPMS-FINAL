@@ -8,14 +8,12 @@ import {
   LayoutDashboard,
   DollarSign,
   FileText,
-  ShieldCheck,
   CreditCard,
   Menu,
   X,
   LogOut,
   ChevronLeft,
   User,
-  Bell,
 } from "lucide-react";
 
 export default function AdminLayout({ user, userData }) {
@@ -47,12 +45,6 @@ export default function AdminLayout({ user, userData }) {
       icon: DollarSign,
       path: "/admin/service-fees",
       description: "Host Fees Management",
-    },
-    {
-      name: "Policy & Compliance",
-      icon: ShieldCheck,
-      path: "/admin/policy",
-      description: "Rules & Regulations",
     },
     {
       name: "Reports",
@@ -114,12 +106,7 @@ export default function AdminLayout({ user, userData }) {
 
           {/* Right Side - User Profile */}
           <div className="flex items-center gap-4">
-            <button className="relative text-slate-400 hover:text-white transition-colors">
-              <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-indigo-500 rounded-full"></span>
-            </button>
-
-            <div className="flex items-center gap-3 pl-4 border-l border-slate-700">
+            <div className="flex items-center gap-3">
               {userData?.photoURL ? (
                 <img
                   src={userData.photoURL}

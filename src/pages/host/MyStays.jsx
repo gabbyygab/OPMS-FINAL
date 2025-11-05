@@ -1,6 +1,5 @@
 import HostMyStays from "../../host/Stays";
 import { useNavigate } from "react-router-dom";
-import Footer from "../../components/Footer";
 import NavigationBar from "../../components/NavigationBar";
 import VerificationBanner from "../../components/Verification";
 import { sendOtpToUser } from "../../utils/sendOtpToUser";
@@ -35,7 +34,6 @@ export default function StaysPage({ user, userData }) {
         )}
         <HostMyStays user={user} userData={userData} />
       </section>
-      <Footer />
     </>
   );
 }

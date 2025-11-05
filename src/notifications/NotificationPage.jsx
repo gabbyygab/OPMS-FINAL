@@ -123,7 +123,7 @@ export default function NotificationsPage() {
             const notificationPayload = {
               id: docSnapshot.id,
               ...data,
-              avatar: guestAvatar || relatedUserData?.photoURL || null,
+              avatar: guestAvatar || relatedUserData?.photoURL || "/profile-placeholder.png",
               timestamp: data.createdAt && typeof data.createdAt.toDate === 'function'
                 ? new Date(data.createdAt.toDate()).toLocaleDateString("en-US", {
                     month: "short",

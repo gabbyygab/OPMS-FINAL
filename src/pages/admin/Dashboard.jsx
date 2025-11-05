@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -9,198 +10,239 @@ import {
   AlertCircle,
   ArrowUpRight,
   ArrowDownRight,
+  RefreshCw,
+  Award,
+  TrendingUpIcon,
 } from "lucide-react";
+import {
+  getDashboardData,
+  formatCurrency,
+  formatPercentage,
+  formatNumber,
+} from "../../utils/adminAnalytics";
 
 export default function Dashboard() {
-  // Mock data - replace with real data from Firebase
-  const stats = [
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [error, setError] = useState(null);
+
+  // Fetch dashboard data on mount
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getDashboardData();
+      setDashboardData(data);
+    } catch (err) {
+      console.error("Error loading dashboard:", err);
+      setError("Failed to load dashboard data. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <RefreshCw className="w-12 h-12 text-indigo-500 animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">Loading analytics...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error || !dashboardData) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-slate-400 mb-4">{error || "No data available"}</p>
+          <button
+            onClick={fetchDashboardData}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const { stats, topRatedListings, lowRatedListings, recentBookings } = dashboardData;
+
+  // Prepare stats for display
+  const displayStats = [
     {
       title: "Total Bookings",
-      value: "1,284",
-      change: "+12.5%",
-      trend: "up",
+      value: formatNumber(stats.bookings.total),
+      change: formatPercentage(stats.bookings.change),
+      trend: stats.bookings.trend,
       icon: Calendar,
       color: "indigo",
     },
     {
       title: "Active Hosts",
-      value: "342",
-      change: "+8.2%",
-      trend: "up",
+      value: formatNumber(stats.users.totalHosts),
+      change: formatPercentage(stats.users.hostChange),
+      trend: stats.users.hostTrend,
       icon: Users,
       color: "emerald",
     },
     {
-      title: "Total Revenue",
-      value: "$48,592",
-      change: "+18.7%",
-      trend: "up",
+      title: "Total Revenue (Service Fees)",
+      value: formatCurrency(stats.revenue.total),
+      change: stats.revenue.trends.length > 1
+        ? formatPercentage(
+            ((stats.revenue.trends[stats.revenue.trends.length - 1].revenue -
+              stats.revenue.trends[stats.revenue.trends.length - 2].revenue) /
+              (stats.revenue.trends[stats.revenue.trends.length - 2].revenue || 1)) * 100
+          )
+        : "+0.0%",
+      trend: stats.revenue.trends.length > 1 &&
+        stats.revenue.trends[stats.revenue.trends.length - 1].revenue >=
+        stats.revenue.trends[stats.revenue.trends.length - 2].revenue
+        ? "up"
+        : "down",
       icon: DollarSign,
       color: "violet",
     },
     {
       title: "Active Listings",
-      value: "892",
-      change: "-3.1%",
-      trend: "down",
+      value: formatNumber(stats.listings.active),
+      change: formatPercentage(stats.listings.change),
+      trend: stats.listings.trend,
       icon: Home,
       color: "amber",
     },
   ];
 
-  const topRatedListings = [
-    {
-      id: 1,
-      name: "Luxury Beach Villa",
-      host: "John Doe",
-      rating: 4.9,
-      reviews: 128,
-      bookings: 45,
-      type: "Stay",
-    },
-    {
-      id: 2,
-      name: "Mountain Hiking Experience",
-      host: "Jane Smith",
-      rating: 4.8,
-      reviews: 96,
-      bookings: 38,
-      type: "Experience",
-    },
-    {
-      id: 3,
-      name: "City Center Apartment",
-      host: "Mike Johnson",
-      rating: 4.7,
-      reviews: 84,
-      bookings: 52,
-      type: "Stay",
-    },
-    {
-      id: 4,
-      name: "Photography Tour",
-      host: "Sarah Lee",
-      rating: 4.9,
-      reviews: 72,
-      bookings: 31,
-      type: "Experience",
-    },
-  ];
-
-  const lowRatedListings = [
-    {
-      id: 1,
-      name: "Budget Hostel Room",
-      host: "Tom Brown",
-      rating: 3.2,
-      reviews: 28,
-      bookings: 12,
-      type: "Stay",
-    },
-    {
-      id: 2,
-      name: "Basic City Tour",
-      host: "Emma Wilson",
-      rating: 3.4,
-      reviews: 18,
-      bookings: 8,
-      type: "Service",
-    },
-    {
-      id: 3,
-      name: "Shared Workspace",
-      host: "Chris Davis",
-      rating: 3.5,
-      reviews: 22,
-      bookings: 15,
-      type: "Service",
-    },
-  ];
-
-  const recentBookings = [
-    {
-      id: "BK-2024-001",
-      guest: "Alice Cooper",
-      listing: "Luxury Beach Villa",
-      date: "2024-02-15",
-      amount: "$450",
-      status: "confirmed",
-    },
-    {
-      id: "BK-2024-002",
-      guest: "Bob Martin",
-      listing: "Mountain Hiking",
-      date: "2024-02-14",
-      amount: "$120",
-      status: "pending",
-    },
-    {
-      id: "BK-2024-003",
-      guest: "Carol White",
-      listing: "City Apartment",
-      date: "2024-02-14",
-      amount: "$280",
-      status: "confirmed",
-    },
-    {
-      id: "BK-2024-004",
-      guest: "David Lee",
-      listing: "Photography Tour",
-      date: "2024-02-13",
-      amount: "$95",
-      status: "completed",
-    },
-    {
-      id: "BK-2024-005",
-      guest: "Eva Green",
-      listing: "Beach Villa",
-      date: "2024-02-13",
-      amount: "$520",
-      status: "confirmed",
-    },
-  ];
 
   const getStatusColor = (status) => {
-    switch (status) {
+    if (!status) return "bg-slate-500/10 text-slate-400 border-slate-500/20";
+
+    switch (status.toLowerCase()) {
       case "confirmed":
         return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
       case "pending":
         return "bg-amber-500/10 text-amber-400 border-amber-500/20";
       case "completed":
         return "bg-indigo-500/10 text-indigo-400 border-indigo-500/20";
+      case "rejected":
+        return "bg-red-500/10 text-red-400 border-red-500/20";
+      case "refund_requested":
+        return "bg-orange-500/10 text-orange-400 border-orange-500/20";
+      case "refunded":
+        return "bg-purple-500/10 text-purple-400 border-purple-500/20";
       default:
         return "bg-slate-500/10 text-slate-400 border-slate-500/20";
     }
   };
 
   const getTypeColor = (type) => {
-    switch (type) {
-      case "Stay":
+    const normalizedType = type?.toLowerCase();
+    switch (normalizedType) {
+      case "stays":
         return "bg-blue-500/10 text-blue-400";
-      case "Experience":
+      case "experiences":
         return "bg-purple-500/10 text-purple-400";
-      case "Service":
+      case "services":
         return "bg-emerald-500/10 text-emerald-400";
       default:
         return "bg-slate-500/10 text-slate-400";
     }
   };
 
+  const formatListingType = (type) => {
+    if (!type) return "Unknown";
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
+  const formatDate = (date) => {
+    if (!date) return "N/A";
+    if (date.toDate) {
+      return date.toDate().toLocaleDateString();
+    }
+    return new Date(date).toLocaleDateString();
+  };
+
+  const formatStatus = (status) => {
+    if (!status) return "Unknown";
+    return status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ");
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-white mb-2">
-          Dashboard Analytics
-        </h1>
-        <p className="text-slate-400">
-          Overview of your platform performance and metrics
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Dashboard Analytics
+          </h1>
+          <p className="text-slate-400">
+            Real-time platform performance and metrics
+          </p>
+        </div>
+        <button
+          onClick={fetchDashboardData}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors border border-slate-700"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Refresh
+        </button>
+      </div>
+
+      {/* Additional Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-gradient-to-br from-indigo-900/40 to-indigo-800/20 border border-indigo-700/30 rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <Award className="w-5 h-5 text-indigo-400" />
+            <h3 className="text-sm font-medium text-indigo-300">Total Points Distributed</h3>
+          </div>
+          <p className="text-2xl font-bold text-white">
+            {formatNumber(stats.points.totalPoints)}
+          </p>
+          <p className="text-xs text-indigo-300 mt-1">
+            {formatNumber(stats.points.redeemedPoints)} redeemed ({stats.points.redemptionRate.toFixed(1)}%)
+          </p>
+        </div>
+
+        <div className="bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 border border-emerald-700/30 rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <Users className="w-5 h-5 text-emerald-400" />
+            <h3 className="text-sm font-medium text-emerald-300">Total Users</h3>
+          </div>
+          <p className="text-2xl font-bold text-white">
+            {formatNumber(stats.users.totalUsers)}
+          </p>
+          <p className="text-xs text-emerald-300 mt-1">
+            {formatNumber(stats.users.totalGuests)} guests, {formatNumber(stats.users.totalHosts)} hosts
+          </p>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-900/40 to-amber-800/20 border border-amber-700/30 rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <TrendingUpIcon className="w-5 h-5 text-amber-400" />
+            <h3 className="text-sm font-medium text-amber-300">Refund Requests</h3>
+          </div>
+          <p className="text-2xl font-bold text-white">
+            {stats.refunds.requested}
+          </p>
+          <p className="text-xs text-amber-300 mt-1">
+            {stats.refunds.approved} approved - {formatCurrency(stats.refunds.totalAmount)}
+          </p>
+        </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => {
+        {displayStats.map((stat, index) => {
           const Icon = stat.icon;
           const TrendIcon = stat.trend === "up" ? ArrowUpRight : ArrowDownRight;
           return (
@@ -248,47 +290,55 @@ export default function Dashboard() {
             </button>
           </div>
           <div className="space-y-4">
-            {topRatedListings.map((listing) => (
-              <div
-                key={listing.id}
-                className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl hover:bg-slate-800 transition-colors"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-sm font-semibold text-white">
-                      {listing.name}
-                    </h3>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTypeColor(
-                        listing.type
-                      )}`}
-                    >
-                      {listing.type}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400">by {listing.host}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="flex items-center gap-1 text-amber-400">
-                      <Star className="w-4 h-4 fill-amber-400" />
-                      <span className="text-sm font-semibold">
-                        {listing.rating}
+            {topRatedListings && topRatedListings.length > 0 ? (
+              topRatedListings.map((listing) => (
+                <div
+                  key={listing.id}
+                  className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl hover:bg-slate-800 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-semibold text-white">
+                        {listing.title || "Untitled"}
+                      </h3>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTypeColor(
+                          listing.type
+                        )}`}
+                      >
+                        {formatListingType(listing.type)}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500">
-                      {listing.reviews} reviews
+                    <p className="text-xs text-slate-400">
+                      {listing.location || "No location"}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-indigo-400">
-                      {listing.bookings}
-                    </p>
-                    <p className="text-xs text-slate-500">bookings</p>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="flex items-center gap-1 text-amber-400">
+                        <Star className="w-4 h-4 fill-amber-400" />
+                        <span className="text-sm font-semibold">
+                          {listing.rating.toFixed(1)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        {listing.reviewCount} reviews
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-indigo-400">
+                        {listing.bookingCount}
+                      </p>
+                      <p className="text-xs text-slate-500">bookings</p>
+                    </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-slate-500">
+                No rated listings yet
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -306,47 +356,55 @@ export default function Dashboard() {
             </button>
           </div>
           <div className="space-y-4">
-            {lowRatedListings.map((listing) => (
-              <div
-                key={listing.id}
-                className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl hover:bg-slate-800 transition-colors border border-red-500/10"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-sm font-semibold text-white">
-                      {listing.name}
-                    </h3>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTypeColor(
-                        listing.type
-                      )}`}
-                    >
-                      {listing.type}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400">by {listing.host}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="flex items-center gap-1 text-red-400">
-                      <Star className="w-4 h-4 fill-red-400" />
-                      <span className="text-sm font-semibold">
-                        {listing.rating}
+            {lowRatedListings && lowRatedListings.length > 0 ? (
+              lowRatedListings.map((listing) => (
+                <div
+                  key={listing.id}
+                  className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl hover:bg-slate-800 transition-colors border border-red-500/10"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-semibold text-white">
+                        {listing.title || "Untitled"}
+                      </h3>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTypeColor(
+                          listing.type
+                        )}`}
+                      >
+                        {formatListingType(listing.type)}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500">
-                      {listing.reviews} reviews
+                    <p className="text-xs text-slate-400">
+                      {listing.location || "No location"}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-slate-400">
-                      {listing.bookings}
-                    </p>
-                    <p className="text-xs text-slate-500">bookings</p>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="flex items-center gap-1 text-red-400">
+                        <Star className="w-4 h-4 fill-red-400" />
+                        <span className="text-sm font-semibold">
+                          {listing.rating.toFixed(1)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        {listing.reviewCount} reviews
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-slate-400">
+                        {listing.bookingCount}
+                      </p>
+                      <p className="text-xs text-slate-500">bookings</p>
+                    </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-slate-500">
+                No low-rated listings
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
@@ -387,38 +445,45 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {recentBookings.map((booking) => (
-                <tr
-                  key={booking.id}
-                  className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors"
-                >
-                  <td className="py-4 px-4 text-sm font-medium text-indigo-400">
-                    {booking.id}
-                  </td>
-                  <td className="py-4 px-4 text-sm text-white">
-                    {booking.guest}
-                  </td>
-                  <td className="py-4 px-4 text-sm text-slate-300">
-                    {booking.listing}
-                  </td>
-                  <td className="py-4 px-4 text-sm text-slate-400">
-                    {booking.date}
-                  </td>
-                  <td className="py-4 px-4 text-sm font-semibold text-emerald-400">
-                    {booking.amount}
-                  </td>
-                  <td className="py-4 px-4">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-                        booking.status
-                      )}`}
-                    >
-                      {booking.status.charAt(0).toUpperCase() +
-                        booking.status.slice(1)}
-                    </span>
+              {recentBookings && recentBookings.length > 0 ? (
+                recentBookings.map((booking) => (
+                  <tr
+                    key={booking.id}
+                    className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors"
+                  >
+                    <td className="py-4 px-4 text-sm font-medium text-indigo-400">
+                      {booking.id.substring(0, 12)}...
+                    </td>
+                    <td className="py-4 px-4 text-sm text-white">
+                      {booking.guestName || "Unknown Guest"}
+                    </td>
+                    <td className="py-4 px-4 text-sm text-slate-300">
+                      {booking.listing?.title || "Deleted Listing"}
+                    </td>
+                    <td className="py-4 px-4 text-sm text-slate-400">
+                      {formatDate(booking.createdAt)}
+                    </td>
+                    <td className="py-4 px-4 text-sm font-semibold text-emerald-400">
+                      {formatCurrency(booking.totalAmount || 0)}
+                    </td>
+                    <td className="py-4 px-4">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                          booking.status
+                        )}`}
+                      >
+                        {formatStatus(booking.status)}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="py-8 text-center text-slate-500">
+                    No bookings yet
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

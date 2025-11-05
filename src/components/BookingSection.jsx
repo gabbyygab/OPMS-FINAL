@@ -594,7 +594,7 @@ export default function BookingsSection({ userData, isFavoritePage }) {
   const currentListings = activeList.slice(indexOfFirst, indexOfLast);
 
   return (
-    <div className="relative w-screen min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 overflow-x-hidden -ml-[calc((100vw-100%)/2)] -mt-32 pt-32 lg:pt-0">
+    <div className="relative w-full min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950">
       {/* Interactive Mouse-Following Gradient Background */}
       <div
         className="absolute inset-0 transition-all duration-100 ease-out"
@@ -612,7 +612,7 @@ export default function BookingsSection({ userData, isFavoritePage }) {
 
       {/* Static gradient overlay for depth */}
       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-transparent to-slate-900/30"></div>
-      <div className="lg:mt-28 sm:mt-32">
+      <div className="">
         <main className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
           <div className="pt-12 sm:pt-20 md:pt-28 lg:pt-36 pb-8 sm:pb-12">
             {!isVerified && (

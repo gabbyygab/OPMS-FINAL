@@ -34,6 +34,7 @@ import { useAuth } from "../../context/AuthContext";
 import { toast } from "react-toastify";
 import { addPointsToUser } from "../../utils/rewardsUtils";
 import { approveRefund, denyRefund } from "../../utils/refundUtils";
+import { calculateServiceFee } from "../../utils/platformSettingsUtils";
 
 export default function HostMyBookings() {
   const [bookings, setBookings] = useState([]);
@@ -457,18 +458,23 @@ export default function HostMyBookings() {
         createdAt: serverTimestamp(),
       });
 
-      // Update host wallet (add)
+      // Calculate service fee for this booking
+      const listingType = bookingToAction.listing?.type || bookingToAction.type || "stays";
+      const serviceFeeAmount = await calculateServiceFee(bookingToAction.totalAmount, listingType);
+
+      // Update host wallet (add booking amount minus service fee)
       if (!hostWalletSnap.empty) {
         const hostWalletDoc = hostWalletSnap.docs[0];
         const hostWalletData = hostWalletDoc.data();
+        const hostNetAmount = bookingToAction.totalAmount - serviceFeeAmount;
 
         await updateDoc(doc(db, "wallets", hostWalletDoc.id), {
-          balance: hostWalletData.balance + bookingToAction.totalAmount,
+          balance: hostWalletData.balance + hostNetAmount,
           total_cash_in:
             (hostWalletData.total_cash_in || 0) + bookingToAction.totalAmount,
         });
 
-        // Create host transaction
+        // Create host transaction for booking payment
         await addDoc(collection(db, "transactions"), {
           amount: bookingToAction.totalAmount,
           created_at: serverTimestamp(),
@@ -476,6 +482,30 @@ export default function HostMyBookings() {
           status: "completed",
           user_id: userData.id,
           wallet_id: hostWalletDoc.id,
+          description: `Booking payment from ${bookingToAction.guest?.fullName || 'guest'}`,
+        });
+
+        // Create host transaction for service fee deduction
+        await addDoc(collection(db, "transactions"), {
+          amount: -serviceFeeAmount,
+          created_at: serverTimestamp(),
+          type: "service_fee",
+          status: "completed",
+          user_id: userData.id,
+          wallet_id: hostWalletDoc.id,
+          description: `Service fee (${listingType}) for booking ${bookingToAction.id}`,
+          bookingId: bookingToAction.id,
+        });
+
+        // Create platform revenue transaction (for admin tracking)
+        await addDoc(collection(db, "platformRevenue"), {
+          amount: serviceFeeAmount,
+          created_at: serverTimestamp(),
+          type: "service_fee",
+          listingType: listingType,
+          bookingId: bookingToAction.id,
+          hostId: userData.id,
+          guestId: bookingToAction.guest_id,
         });
       }
 

@@ -2,7 +2,6 @@ import { useNavigate } from "react-router-dom";
 import { auth } from "../../firebase/firebase";
 import { signOut } from "firebase/auth";
 import BookingsSection from "../../components/BookingSection";
-import Footer from "../../components/Footer";
 import { toast } from "react-toastify";
 import NavigationBar from "../../components/NavigationBar";
 import AnimatedPageWrapper from "../../components/AnimatedPageWrapper";
@@ -33,7 +32,6 @@ export default function GuestPage({ userData, user }) {
       <section style={{ paddingTop: user && userData?.role === "guest" ? "104px" : "0px" }}>
         <BookingsSection userData={userData} isFavoritePage={false} />
       </section>
-      <Footer />
     </AnimatedPageWrapper>
   );
 }

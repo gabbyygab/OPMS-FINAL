@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import Footer from "../../components/Footer";
 import HostMyExperiences from "../../host/Experience";
 import NavigationBar from "../../components/NavigationBar";
 import VerificationBanner from "../../components/Verification";
@@ -35,7 +34,6 @@ export default function ExperiencePage({ user, userData }) {
         )}
         <HostMyExperiences />
       </section>
-      <Footer />
     </>
   );
 }

@@ -2,7 +2,6 @@ import { useNavigate } from "react-router-dom";
 import { auth } from "../../firebase/firebase";
 import { useAuth } from "../../context/AuthContext";
 import HostDashboard from "../../host/Dashboard";
-import Footer from "../../components/Footer";
 import LoadingSpinner from "../../loading/Loading";
 import { signOut } from "firebase/auth";
 import { toast } from "react-toastify";
@@ -35,7 +34,6 @@ export default function HostPage() {
       <section className="">
         <HostDashboard isVerified={isVerified} user={user} />
       </section>
-      <Footer />
     </AnimatedPageWrapper>
   );
 }

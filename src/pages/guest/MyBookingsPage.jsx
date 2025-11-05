@@ -1,4 +1,3 @@
-import Footer from "../../components/Footer";
 import MyBookingsSection from "../../components/MyBookings";
 import NavigationBar from "../../components/NavigationBar";
 import VerificationBanner from "../../components/Verification";
@@ -28,7 +27,7 @@ export default function MyBookingPage({ userData, user }) {
   return (
     <AnimatedPageWrapper>
       <NavigationBar userData={userData} user={user} />
-      <div className="">
+      <div className="top-0 w-full">
         {!isVerified && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
             <VerificationBanner handleVerification={handleVerification} />
@@ -36,7 +35,6 @@ export default function MyBookingPage({ userData, user }) {
         )}
         <MyBookingsSection userData={userData} />
       </div>
-      <Footer />
     </AnimatedPageWrapper>
   );
 }

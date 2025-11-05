@@ -1988,120 +1988,175 @@ const GuestTabNavigation = ({
         </div>
       </nav>
 
-      {/* Expanded Search View - Full Navbar with Search Form */}
+      {/* Expanded Search View - Redesigned Compact Modal */}
       {isSearchExpanded && (
         <div
-          className={`fixed top-14 sm:top-16 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-sm border-t border-white/10 transition-all duration-300 ease-in-out transform ${
+          className={`fixed top-14 sm:top-16 left-0 right-0 z-40 bg-gradient-to-br from-slate-900/98 via-slate-900/96 to-indigo-950/95 backdrop-blur-xl border-t border-indigo-500/20 transition-all duration-300 ease-in-out transform shadow-2xl ${
             isSearchExpanded
               ? "opacity-100 translate-y-0"
               : "opacity-0 -translate-y-full"
           }`}
         >
-          <div className="max-w-full mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             {/* Close Button */}
             <button
               onClick={handleSearchClose}
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 sm:p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700 text-slate-300 hover:text-white transition-all duration-200 hover:scale-110"
+              className="absolute top-4 right-4 p-2 rounded-xl bg-slate-800/60 hover:bg-slate-700 text-slate-400 hover:text-white transition-all duration-200 hover:scale-110 hover:rotate-90 backdrop-blur-sm border border-slate-700/50"
               title="Close search"
             >
-              <X className="w-5 h-5 sm:w-6 sm:h-6" />
+              <X className="w-5 h-5" />
             </button>
 
             {/* Expanded Content */}
             <form
               onSubmit={handleSearchSubmit}
-              className="space-y-4 sm:space-y-6 w-full"
+              className="space-y-5"
             >
-              {/* Where */}
-              <div>
-                <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-2">
-                  Where?
-                </label>
-                <input
-                  type="text"
-                  placeholder="Search destinations..."
-                  value={searchData.location}
-                  onChange={(e) =>
-                    setSearchData({ ...searchData, location: e.target.value })
-                  }
-                  autoFocus
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm sm:text-base"
-                />
+              {/* Compact Grid Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Where */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+                    <MapPin className="w-4 h-4 text-indigo-400" />
+                    Where to?
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Search destinations..."
+                    value={searchData.location}
+                    onChange={(e) =>
+                      setSearchData({ ...searchData, location: e.target.value })
+                    }
+                    autoFocus
+                    className="w-full px-4 py-2.5 bg-slate-800/70 border border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 text-sm backdrop-blur-sm transition-all"
+                  />
+                </div>
+
+                {/* Guests or Service Type */}
+                {activeFilter === "services" ? (
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+                      <Briefcase className="w-4 h-4 text-purple-400" />
+                      Service Type
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Cleaning, Repair"
+                      value={searchData.serviceType || ""}
+                      onChange={(e) =>
+                        setSearchData({
+                          ...searchData,
+                          serviceType: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2.5 bg-slate-800/70 border border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 text-sm backdrop-blur-sm transition-all"
+                    />
+                    {serviceTypeSuggestions.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {serviceTypeSuggestions.slice(0, 4).map((type) => (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() =>
+                              setSearchData({
+                                ...searchData,
+                                serviceType: type,
+                              })
+                            }
+                            className="px-3 py-1 bg-slate-700/60 text-slate-300 rounded-lg text-xs hover:bg-purple-600 hover:text-white transition-all backdrop-blur-sm border border-slate-600/50"
+                          >
+                            {type}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+                      <Users className="w-4 h-4 text-cyan-400" />
+                      Guests
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={searchData.guests}
+                      onChange={(e) =>
+                        setSearchData({ ...searchData, guests: e.target.value })
+                      }
+                      className="w-full px-4 py-2.5 bg-slate-800/70 border border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30 text-sm backdrop-blur-sm transition-all"
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Date Range & Guests */}
-              <div className="space-y-4 sm:space-y-6">
-                {/* Date Range Picker */}
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-3">
-                    <Calendar className="w-4 h-4 inline mr-2" />
-                    Select Dates
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowDateRangePicker(!showDateRangePicker)}
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white hover:border-indigo-500 transition-colors text-sm sm:text-base text-left"
-                  >
+              {/* Date Range Section */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+                  <Calendar className="w-4 h-4 text-pink-400" />
+                  Select Dates
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowDateRangePicker(!showDateRangePicker)}
+                  className="w-full px-4 py-2.5 bg-slate-800/70 border border-slate-700/50 rounded-xl text-left text-white hover:border-pink-500/50 transition-all text-sm backdrop-blur-sm flex items-center justify-between group"
+                >
+                  <span>
                     {searchData.checkIn && searchData.checkOut
                       ? `${new Date(searchData.checkIn).toLocaleDateString(
                           "en-US",
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          }
+                          { month: "short", day: "numeric", year: "numeric" }
                         )} - ${new Date(searchData.checkOut).toLocaleDateString(
                           "en-US",
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          }
+                          { month: "short", day: "numeric", year: "numeric" }
                         )}`
                       : "Click to select dates"}
-                  </button>
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showDateRangePicker ? 'rotate-180' : ''}`} />
+                </button>
 
-                  {/* Styled Date Range Picker - Mobile Responsive */}
-                  {showDateRangePicker && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                      className="mt-3 p-4 sm:p-6 bg-slate-800 border border-slate-700 rounded-xl overflow-visible"
-                    >
+                {/* Modern Inline Date Picker */}
+                {showDateRangePicker && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-3 p-4 bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-700/50 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl"
+                  >
                       <style>{`
-  /* Compact Calendar Wrapper - Light Mode */
+  /* Modern Compact Calendar - Lighter Dark Theme */
                           .rdrCalendarWrapper {
-                            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%) !important;
-                            border: 1px solid #e2e8f0 !important;
+                            background: linear-gradient(135deg, rgba(51, 65, 85, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%) !important;
+                            border: 1px solid rgba(99, 102, 241, 0.4) !important;
                             font-family: inherit !important;
                             width: 100% !important;
                             max-width: 100% !important;
                             border-radius: 0.75rem !important;
-                            padding: 1rem !important;
-                            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+                            padding: 0.75rem !important;
+                            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
                           }
 
                           /* Month Container - Compact */
                           .rdrMonth {
                             width: auto !important;
-                            padding: 0 0.5rem !important;
+                            padding: 0 0.25rem !important;
                             margin: 0 !important;
                             flex: 1 !important;
                             min-width: auto !important;
                           }
 
-                          /* Month and Year Selectors - Compact */
+                          /* Month and Year Selectors - Modern Dark */
                           .rdrMonthAndYearPickers {
-                            background: linear-gradient(90deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%) !important;
-                            padding: 0.5rem 0 !important;
+                            background: linear-gradient(90deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%) !important;
+                            padding: 0.5rem 0.75rem !important;
                             justify-content: center !important;
-                            gap: 0.75rem !important;
+                            gap: 0.5rem !important;
                             display: flex !important;
                             width: 100% !important;
                             border-radius: 0.5rem !important;
-                            margin-bottom: 0.5rem !important;
+                            margin-bottom: 0.75rem !important;
+                            border: 1px solid rgba(99, 102, 241, 0.2) !important;
                           }
 
                           .rdrMonthPicker,
@@ -2114,37 +2169,37 @@ const GuestTabNavigation = ({
 
                           .rdrMonthPicker select,
                           .rdrYearPicker select {
-                            background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
-                            border: 1px solid #cbd5e1 !important;
-                            color: #1e293b !important;
+                            background: rgba(30, 41, 59, 0.8) !important;
+                            border: 1px solid rgba(148, 163, 184, 0.3) !important;
+                            color: #e2e8f0 !important;
                             padding: 0.375rem 0.5rem !important;
-                            border-radius: 0.375rem !important;
+                            border-radius: 0.5rem !important;
                             font-size: 0.75rem !important;
                             cursor: pointer !important;
-                            font-weight: 500 !important;
+                            font-weight: 600 !important;
                             transition: all 0.2s !important;
-                            min-width: 90px !important;
+                            min-width: 80px !important;
                           }
 
                           .rdrMonthPicker select:hover,
                           .rdrYearPicker select:hover {
                             border-color: #6366f1 !important;
-                            background: linear-gradient(135deg, #eef2ff 0%, #f3e8ff 100%) !important;
+                            background: rgba(99, 102, 241, 0.2) !important;
                           }
 
                           .rdrMonthPicker select:focus,
                           .rdrYearPicker select:focus {
                             outline: none !important;
-                            border-color: #6366f1 !important;
-                            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+                            border-color: #8b5cf6 !important;
+                            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
                           }
 
-                          /* Navigation Buttons - Compact */
+                          /* Navigation Buttons - Modern Dark */
                           .rdrNextPrevButton {
-                            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
-                            border: 1px solid #cbd5e1 !important;
-                            color: #1e293b !important;
-                            border-radius: 0.375rem !important;
+                            background: rgba(30, 41, 59, 0.8) !important;
+                            border: 1px solid rgba(148, 163, 184, 0.3) !important;
+                            color: #e2e8f0 !important;
+                            border-radius: 0.5rem !important;
                             padding: 0.375rem !important;
                             height: 1.75rem !important;
                             width: 1.75rem !important;
@@ -2158,87 +2213,65 @@ const GuestTabNavigation = ({
 
                           .rdrNextPrevButton:hover {
                             background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
-                            border-color: #6366f1 !important;
+                            border-color: #8b5cf6 !important;
                             color: #ffffff !important;
-                            transform: scale(1.05) !important;
+                            transform: scale(1.1) !important;
                           }
 
-                          /* Date Display Section - Compact */
+                          /* Date Display Section - Hidden for cleaner look */
                           .rdrDateDisplayWrapper {
-                            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
-                            border: 1px solid #cbd5e1 !important;
-                            border-radius: 0.5rem !important;
-                            padding: 0.625rem !important;
-                            margin-bottom: 0.75rem !important;
-                            display: flex !important;
-                            justify-content: center !important;
-                            flex-wrap: wrap !important;
-                            gap: 0.5rem !important;
+                            display: none !important;
                           }
 
                           .rdrDateDisplay {
-                            display: flex !important;
-                            gap: 0.5rem !important;
-                            justify-content: center !important;
-                            flex-wrap: wrap !important;
-                            width: 100% !important;
+                            display: none !important;
                           }
 
                           .rdrDateDisplayItem {
-                            background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
-                            border: 1px solid #cbd5e1 !important;
-                            border-radius: 0.375rem !important;
-                            padding: 0.375rem 0.625rem !important;
-                            font-size: 0.7rem !important;
-                            display: flex !important;
-                            align-items: center !important;
+                            display: none !important;
                           }
 
                           .rdrDateDisplayItem input {
-                            background-color: transparent !important;
-                            color: #1e293b !important;
-                            border: none !important;
-                            padding: 0 !important;
-                            font-size: 0.7rem !important;
-                            width: auto !important;
-                            min-width: 100px !important;
+                            display: none !important;
                           }
 
                           .rdrDateDisplayItem input:focus {
                             outline: none !important;
                           }
 
-                          /* Caption - Compact */
+                          /* Caption - Modern Dark */
                           .rdrCaption {
-                            color: #1e293b !important;
+                            color: #e2e8f0 !important;
                             font-size: 0.8rem !important;
-                            font-weight: 600 !important;
-                            padding: 0.4rem 0 !important;
+                            font-weight: 700 !important;
+                            padding: 0.5rem 0 !important;
                             text-align: center !important;
                           }
 
-                          /* Week Days - Compact */
+                          /* Week Days - Modern with Better Visibility */
                           .rdrWeekDays {
                             display: flex !important;
                             justify-content: center !important;
                             gap: 0 !important;
-                            padding: 0.4rem 0 !important;
-                            margin-bottom: 0.4rem !important;
-                            border-bottom: 1px solid #cbd5e1 !important;
+                            padding: 0.5rem 0 !important;
+                            margin-bottom: 0.5rem !important;
+                            border-bottom: 1px solid rgba(99, 102, 241, 0.3) !important;
                             visibility: visible !important;
                           }
 
                           .rdrWeekDay {
-                            color: #64748b !important;
-                            font-size: 0.65rem !important;
+                            color: #cbd5e1 !important;
+                            font-size: 0.7rem !important;
                             font-weight: 700 !important;
                             width: 2.5rem !important;
-                            height: 1.5rem !important;
+                            height: 1.75rem !important;
                             display: flex !important;
                             align-items: center !important;
                             justify-content: center !important;
                             visibility: visible !important;
                             opacity: 1 !important;
+                            text-transform: uppercase !important;
+                            letter-spacing: 0.5px !important;
                           }
 
                           /* Days Container */
@@ -2250,64 +2283,89 @@ const GuestTabNavigation = ({
                             visibility: visible !important;
                           }
 
-                          /* Individual Day - Compact */
+                          /* Individual Day - Modern Dark with Better Visibility */
                           .rdrDay {
                             width: 2.5rem !important;
-                            height: 2rem !important;
+                            height: 2.25rem !important;
                             display: flex !important;
                             align-items: center !important;
                             justify-content: center !important;
-                            border-radius: 0.375rem !important;
+                            border-radius: 0.5rem !important;
                             cursor: pointer !important;
-                            transition: all 0.2s !important;
-                            font-size: 0.75rem !important;
+                            transition: all 0.2s ease !important;
+                            font-size: 0.8rem !important;
                             font-weight: 600 !important;
                             visibility: visible !important;
-                            background-color: transparent !important;
+                            background-color: rgba(51, 65, 85, 0.3) !important;
+                            margin: 1px !important;
+                            color: #ffffff !important;
                           }
 
                           .rdrDay:hover:not(.rdrDayPassive) {
-                            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%) !important;
+                            background: linear-gradient(135deg, rgba(99, 102, 241, 0.4) 0%, rgba(139, 92, 246, 0.4) 100%) !important;
+                            transform: scale(1.05) !important;
                           }
 
+                          /* Force white color on ALL day numbers by default */
                           .rdrDayNumber {
-                            color: #1e293b !important;
-                            font-size: 0.75rem !important;
-                            font-weight: 600 !important;
+                            color: #ffffff !important;
+                            font-size: 0.85rem !important;
+                            font-weight: 700 !important;
+                            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+                          }
+
+                          /* Target span elements inside day cells */
+                          .rdrDay span {
+                            color: #ffffff !important;
+                          }
+
+                          /* Ensure regular selectable days have white text */
+                          .rdrDay:not(.rdrDayPassive):not(.rdrInRange):not(.rdrStartEdge):not(.rdrEndEdge) .rdrDayNumber,
+                          .rdrDay:not(.rdrDayPassive):not(.rdrInRange):not(.rdrStartEdge):not(.rdrEndEdge) span {
+                            color: #ffffff !important;
                           }
 
                           .rdrDay.rdrDayPassive {
                             background-color: transparent !important;
+                            cursor: not-allowed !important;
                           }
 
-                          .rdrDay.rdrDayPassive .rdrDayNumber {
-                            color: #cbd5e1 !important;
+                          .rdrDay.rdrDayPassive .rdrDayNumber,
+                          .rdrDay.rdrDayPassive span {
+                            color: #475569 !important;
                             font-size: 0.75rem !important;
-                            font-weight: 500 !important;
+                            font-weight: 400 !important;
+                            opacity: 0.5 !important;
                           }
 
-                          /* In Range - Gradient Background */
+                          /* In Range - Modern Gradient */
                           .rdrDay.rdrInRange {
-                            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+                            background: linear-gradient(135deg, rgba(99, 102, 241, 0.5) 0%, rgba(139, 92, 246, 0.5) 100%) !important;
                             color: #ffffff !important;
+                            border: 1px solid rgba(99, 102, 241, 0.3) !important;
                           }
 
-                          .rdrDay.rdrInRange .rdrDayNumber {
+                          .rdrDay.rdrInRange .rdrDayNumber,
+                          .rdrDay.rdrInRange span {
                             color: #ffffff !important;
-                            font-weight: 600 !important;
+                            font-weight: 700 !important;
                           }
 
-                          /* Start and End Edges - Enhanced Gradient */
+                          /* Start and End Edges - Bold Gradient */
                           .rdrDay.rdrStartEdge,
                           .rdrDay.rdrEndEdge {
-                            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%) !important;
-                            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25) !important;
+                            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+                            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4) !important;
+                            border: 1px solid rgba(139, 92, 246, 0.5) !important;
+                            transform: scale(1.05) !important;
                           }
 
                           .rdrDay.rdrStartEdge .rdrDayNumber,
-                          .rdrDay.rdrEndEdge .rdrDayNumber {
+                          .rdrDay.rdrStartEdge span,
+                          .rdrDay.rdrEndEdge .rdrDayNumber,
+                          .rdrDay.rdrEndEdge span {
                             color: #ffffff !important;
-                            font-weight: 700 !important;
+                            font-weight: 800 !important;
                           }
 
                           /* Previews */
@@ -2329,8 +2387,11 @@ const GuestTabNavigation = ({
                           }
 
                           .rdrDay.rdrInRange .rdrDayNumber,
+                          .rdrDay.rdrInRange span,
                           .rdrDay.rdrStartEdge .rdrDayNumber,
-                          .rdrDay.rdrEndEdge .rdrDayNumber {
+                          .rdrDay.rdrStartEdge span,
+                          .rdrDay.rdrEndEdge .rdrDayNumber,
+                          .rdrDay.rdrEndEdge span {
                             color: #ffffff !important;
                             font-weight: 700 !important;
                             position: relative !important;
@@ -2338,16 +2399,13 @@ const GuestTabNavigation = ({
                           }
 
                           /* Today's Date Special Styling */
-                          .rdrDay.rdrDayToday:not(.rdrInRange) .rdrDayNumber::after {
-                            content: '' !important;
-                            position: absolute !important;
-                            bottom: 2px !important;
-                            left: 50% !important;
-                            transform: translateX(-50%) !important;
-                            width: 4px !important;
-                            height: 4px !important;
-                            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
-                            border-radius: 50% !important;
+                          .rdrDay.rdrDayToday:not(.rdrInRange) {
+                            border: 2px solid rgba(99, 102, 241, 0.5) !important;
+                          }
+
+                          .rdrDay.rdrDayToday:not(.rdrInRange) .rdrDayNumber {
+                            color: #818cf8 !important;
+                            font-weight: 700 !important;
                           }
 
                           /* Hover feedback for selected days */
@@ -2355,15 +2413,16 @@ const GuestTabNavigation = ({
                           .rdrDay.rdrStartEdge:hover,
                           .rdrDay.rdrEndEdge:hover {
                             background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%) !important;
-                            transform: scale(1.05) !important;
+                            transform: scale(1.1) !important;
+                            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.5) !important;
                           }
 
                           .rdrStartEdge {
-                            border-radius: 0.375rem 0 0 0.375rem !important;
+                            border-radius: 0.5rem !important;
                           }
 
                           .rdrEndEdge {
-                            border-radius: 0 0.375rem 0.375rem 0 !important;
+                            border-radius: 0.5rem !important;
                           }
 
                           /* Hide unnecessary elements */
@@ -2470,72 +2529,12 @@ const GuestTabNavigation = ({
                   )}
                 </div>
 
-                {/* Guests or Service Type */}
-                {activeFilter === "services" ? (
-                  <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-2">
-                      <Briefcase className="w-4 h-4 inline mr-2" />
-                      Type of Service
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g., Deep Cleaning, Repair, etc."
-                      value={searchData.serviceType || ""}
-                      onChange={(e) =>
-                        setSearchData({
-                          ...searchData,
-                          serviceType: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm sm:text-base"
-                    />
-                    {serviceTypeSuggestions.length > 0 && (
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-slate-400 font-medium">
-                          Suggestions:
-                        </span>
-                        {serviceTypeSuggestions.slice(0, 7).map((type) => (
-                          <button
-                            key={type}
-                            type="button"
-                            onClick={() =>
-                              setSearchData({
-                                ...searchData,
-                                serviceType: type,
-                              })
-                            }
-                            className="px-3 py-1 bg-slate-700 text-slate-200 rounded-full text-xs hover:bg-indigo-600 hover:text-white transition-colors"
-                          >
-                            {type}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-2">
-                      <Users className="w-4 h-4 inline mr-2" />
-                      Number of Guests
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={searchData.guests}
-                      onChange={(e) =>
-                        setSearchData({ ...searchData, guests: e.target.value })
-                      }
-                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm sm:text-base"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Search Button */}
+              {/* Modern Search Button */}
               <button
                 type="submit"
-                className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-all duration-200 text-sm sm:text-base min-h-[44px] sm:min-h-[48px]"
+                className="w-full mt-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 text-sm shadow-lg hover:shadow-xl hover:scale-[1.02] flex items-center justify-center gap-2"
               >
+                <Search className="w-4 h-4" />
                 Search
               </button>
             </form>
@@ -2930,7 +2929,7 @@ const GuestSimpleNavBar = ({
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 text-white bg-slate-900/70 backdrop-blur-[20px] shadow-lg border-b border-white/20">
+    <nav className="fixed top-0 left-0 right-0 z-50 text-white shadow-lg border-b border-slate-700 bg-slate-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex items-center justify-between h-14">
           {/* Left - Back Button and Logo */}
@@ -2946,16 +2945,11 @@ const GuestSimpleNavBar = ({
               to={ROUTES.GUEST.HOME}
               className="flex items-center cursor-pointer"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="white"
-                className="w-6 h-6 hidden sm:block"
-              >
-                <path d="M7 2v2H5a2 2 0 0 0-2 2v2h18V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zm13 8H4v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10zm-4 4h-4v4h4v-4z" />
-              </svg>
+              <img
+                src="/bookingNestLogoFInal.png"
+                alt="BookingNest"
+                className="w-10 h-10 sm:w-12 sm:h-12 hover:scale-105 transition-transform"
+              />
             </Link>
           </div>
 

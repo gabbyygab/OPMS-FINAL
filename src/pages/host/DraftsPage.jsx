@@ -28,7 +28,6 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../../firebase/firebase";
-import Footer from "../../components/Footer";
 import { useAuth } from "../../context/AuthContext";
 import NavigationBar from "../../components/NavigationBar";
 import { toast } from "react-toastify";
@@ -287,10 +286,16 @@ export default function DraftsPage() {
         responseTime: draft.responseTime || "",
         experienceYears: draft.experienceYears || "",
         completedJobs: draft.completedJobs || "",
-        serviceTypes: Array.isArray(draft.serviceTypes) ? draft.serviceTypes : [],
+        serviceTypes: Array.isArray(draft.serviceTypes)
+          ? draft.serviceTypes
+          : [],
         highlights: Array.isArray(draft.highlights) ? draft.highlights : [],
-        serviceAreas: Array.isArray(draft.serviceAreas) ? draft.serviceAreas : [],
-        certifications: Array.isArray(draft.certifications) ? draft.certifications : [],
+        serviceAreas: Array.isArray(draft.serviceAreas)
+          ? draft.serviceAreas
+          : [],
+        certifications: Array.isArray(draft.certifications)
+          ? draft.certifications
+          : [],
         terms: Array.isArray(draft.terms) ? draft.terms : [],
       });
     }
@@ -376,7 +381,10 @@ export default function DraftsPage() {
     if (newEditActivity.trim()) {
       setEditFormData({
         ...editFormData,
-        activities: [...(editFormData.activities || []), newEditActivity.trim()],
+        activities: [
+          ...(editFormData.activities || []),
+          newEditActivity.trim(),
+        ],
       });
       setNewEditActivity("");
     }
@@ -395,7 +403,10 @@ export default function DraftsPage() {
     if (newEditThing.trim()) {
       setEditFormData({
         ...editFormData,
-        thingsToKnow: [...(editFormData.thingsToKnow || []), newEditThing.trim()],
+        thingsToKnow: [
+          ...(editFormData.thingsToKnow || []),
+          newEditThing.trim(),
+        ],
       });
       setNewEditThing("");
     }
@@ -414,7 +425,10 @@ export default function DraftsPage() {
     if (newEditTime.trim()) {
       setEditFormData({
         ...editFormData,
-        availableTimes: [...(editFormData.availableTimes || []), newEditTime.trim()],
+        availableTimes: [
+          ...(editFormData.availableTimes || []),
+          newEditTime.trim(),
+        ],
       });
       setNewEditTime("");
     }
@@ -433,7 +447,10 @@ export default function DraftsPage() {
     if (newEditServiceType.trim()) {
       setEditFormData({
         ...editFormData,
-        serviceTypes: [...(editFormData.serviceTypes || []), newEditServiceType.trim()],
+        serviceTypes: [
+          ...(editFormData.serviceTypes || []),
+          newEditServiceType.trim(),
+        ],
       });
       setNewEditServiceType("");
     }
@@ -452,7 +469,10 @@ export default function DraftsPage() {
     if (newEditHighlight.trim()) {
       setEditFormData({
         ...editFormData,
-        highlights: [...(editFormData.highlights || []), newEditHighlight.trim()],
+        highlights: [
+          ...(editFormData.highlights || []),
+          newEditHighlight.trim(),
+        ],
       });
       setNewEditHighlight("");
     }
@@ -471,7 +491,10 @@ export default function DraftsPage() {
     if (newEditServiceArea.trim()) {
       setEditFormData({
         ...editFormData,
-        serviceAreas: [...(editFormData.serviceAreas || []), newEditServiceArea.trim()],
+        serviceAreas: [
+          ...(editFormData.serviceAreas || []),
+          newEditServiceArea.trim(),
+        ],
       });
       setNewEditServiceArea("");
     }
@@ -490,7 +513,10 @@ export default function DraftsPage() {
     if (newEditCertification.trim()) {
       setEditFormData({
         ...editFormData,
-        certifications: [...(editFormData.certifications || []), newEditCertification.trim()],
+        certifications: [
+          ...(editFormData.certifications || []),
+          newEditCertification.trim(),
+        ],
       });
       setNewEditCertification("");
     }
@@ -554,7 +580,9 @@ export default function DraftsPage() {
   const handleSaveEditedDraft = async (publish = false) => {
     if (!selectedDraft) return;
 
-    const loadingToast = toast.loading(publish ? "Publishing draft..." : "Saving draft...");
+    const loadingToast = toast.loading(
+      publish ? "Publishing draft..." : "Saving draft..."
+    );
     try {
       const draftRef = doc(db, "listings", selectedDraft.id);
 
@@ -682,7 +710,9 @@ export default function DraftsPage() {
       }
 
       toast.dismiss(loadingToast);
-      toast.success(publish ? "Draft published successfully!" : "Draft saved successfully!");
+      toast.success(
+        publish ? "Draft published successfully!" : "Draft saved successfully!"
+      );
       setShowEditModal(false);
       setSelectedDraft(null);
       setNewEditRule("");
@@ -1358,7 +1388,12 @@ export default function DraftsPage() {
             {/* Header */}
             <div className="sticky top-0 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-indigo-500/30 p-6 flex items-center justify-between z-[1000]">
               <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent">
-                Edit {selectedDraft.type === "stays" ? "Stay" : selectedDraft.type === "experiences" ? "Experience" : "Service"}
+                Edit{" "}
+                {selectedDraft.type === "stays"
+                  ? "Stay"
+                  : selectedDraft.type === "experiences"
+                  ? "Experience"
+                  : "Service"}
               </h2>
               <button
                 onClick={() => {
@@ -1585,7 +1620,8 @@ export default function DraftsPage() {
                     </button>
 
                     {/* Display Date Ranges List */}
-                    {editFormData.availableDates && editFormData.availableDates.length > 0 ? (
+                    {editFormData.availableDates &&
+                    editFormData.availableDates.length > 0 ? (
                       <div className="space-y-2">
                         {editFormData.availableDates.map((range, index) => (
                           <div
@@ -1593,17 +1629,23 @@ export default function DraftsPage() {
                             className="flex items-center justify-between bg-slate-700/50 border border-indigo-500/20 rounded-lg px-4 py-2"
                           >
                             <span className="text-indigo-200 text-sm">
-                              {new Date(range.startDate).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })}{" "}
+                              {new Date(range.startDate).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                }
+                              )}{" "}
                               -{" "}
-                              {new Date(range.endDate).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })}
+                              {new Date(range.endDate).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                }
+                              )}
                             </span>
                             <button
                               type="button"
@@ -1616,7 +1658,9 @@ export default function DraftsPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-indigo-300/50">No date ranges added yet</p>
+                      <p className="text-sm text-indigo-300/50">
+                        No date ranges added yet
+                      </p>
                     )}
                   </div>
 
@@ -1696,8 +1740,18 @@ export default function DraftsPage() {
                         }
                         className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 transition"
                       >
-                        <option value="percentage" className="bg-slate-800 text-indigo-100">Percentage</option>
-                        <option value="fixed" className="bg-slate-800 text-indigo-100">Fixed</option>
+                        <option
+                          value="percentage"
+                          className="bg-slate-800 text-indigo-100"
+                        >
+                          Percentage
+                        </option>
+                        <option
+                          value="fixed"
+                          className="bg-slate-800 text-indigo-100"
+                        >
+                          Fixed
+                        </option>
                       </select>
                     </div>
 
@@ -2070,10 +2124,16 @@ export default function DraftsPage() {
                         }
                         className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 transition"
                       >
-                        <option value="percentage" className="bg-slate-800 text-indigo-100">
+                        <option
+                          value="percentage"
+                          className="bg-slate-800 text-indigo-100"
+                        >
                           Percentage
                         </option>
-                        <option value="fixed" className="bg-slate-800 text-indigo-100">
+                        <option
+                          value="fixed"
+                          className="bg-slate-800 text-indigo-100"
+                        >
                           Fixed
                         </option>
                       </select>
@@ -2130,7 +2190,9 @@ export default function DraftsPage() {
                         type="text"
                         value={newEditThing}
                         onChange={(e) => setNewEditThing(e.target.value)}
-                        onKeyPress={(e) => e.key === "Enter" && addThingToKnow()}
+                        onKeyPress={(e) =>
+                          e.key === "Enter" && addThingToKnow()
+                        }
                         placeholder="e.g., Bring sunscreen, Wear comfortable shoes"
                         className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
                       />
@@ -2196,10 +2258,14 @@ export default function DraftsPage() {
                         <option value="Automotive">Automotive</option>
                         <option value="Tech Support">Tech Support</option>
                         <option value="Beauty & Spa">Beauty & Spa</option>
-                        <option value="Health & Wellness">Health & Wellness</option>
+                        <option value="Health & Wellness">
+                          Health & Wellness
+                        </option>
                         <option value="Photography">Photography</option>
                         <option value="Tutoring">Tutoring</option>
-                        <option value="Repair & Maintenance">Repair & Maintenance</option>
+                        <option value="Repair & Maintenance">
+                          Repair & Maintenance
+                        </option>
                       </select>
                     </div>
                     <div>
@@ -2318,7 +2384,8 @@ export default function DraftsPage() {
                       Add Date Range
                     </button>
 
-                    {editFormData.availableDates && editFormData.availableDates.length > 0 ? (
+                    {editFormData.availableDates &&
+                    editFormData.availableDates.length > 0 ? (
                       <div className="space-y-2">
                         {editFormData.availableDates.map((range, index) => (
                           <div
@@ -2326,17 +2393,23 @@ export default function DraftsPage() {
                             className="flex items-center justify-between bg-slate-700/50 border border-indigo-500/20 rounded-lg px-4 py-2"
                           >
                             <span className="text-indigo-200 text-sm">
-                              {new Date(range.startDate).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })}{" "}
+                              {new Date(range.startDate).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                }
+                              )}{" "}
                               -{" "}
-                              {new Date(range.endDate).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })}
+                              {new Date(range.endDate).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                }
+                              )}
                             </span>
                             <button
                               type="button"
@@ -2349,7 +2422,9 @@ export default function DraftsPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-indigo-300/50">No date ranges added yet</p>
+                      <p className="text-sm text-indigo-300/50">
+                        No date ranges added yet
+                      </p>
                     )}
                   </div>
 
@@ -2382,7 +2457,9 @@ export default function DraftsPage() {
                         type="text"
                         value={newEditServiceType}
                         onChange={(e) => setNewEditServiceType(e.target.value)}
-                        onKeyPress={(e) => e.key === "Enter" && addServiceType()}
+                        onKeyPress={(e) =>
+                          e.key === "Enter" && addServiceType()
+                        }
                         placeholder="e.g., Installation, Repair"
                         className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
                       />
@@ -2394,7 +2471,8 @@ export default function DraftsPage() {
                         Add
                       </button>
                     </div>
-                    {editFormData.serviceTypes && editFormData.serviceTypes.length > 0 ? (
+                    {editFormData.serviceTypes &&
+                    editFormData.serviceTypes.length > 0 ? (
                       <div className="flex flex-wrap gap-2 mb-3">
                         {editFormData.serviceTypes.map((type, index) => (
                           <div
@@ -2441,7 +2519,8 @@ export default function DraftsPage() {
                         Add
                       </button>
                     </div>
-                    {editFormData.highlights && editFormData.highlights.length > 0 ? (
+                    {editFormData.highlights &&
+                    editFormData.highlights.length > 0 ? (
                       <div className="flex flex-wrap gap-2 mb-3">
                         {editFormData.highlights.map((highlight, index) => (
                           <div
@@ -2476,7 +2555,9 @@ export default function DraftsPage() {
                         type="text"
                         value={newEditServiceArea}
                         onChange={(e) => setNewEditServiceArea(e.target.value)}
-                        onKeyPress={(e) => e.key === "Enter" && addServiceArea()}
+                        onKeyPress={(e) =>
+                          e.key === "Enter" && addServiceArea()
+                        }
                         placeholder="e.g., Manila, Quezon City"
                         className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
                       />
@@ -2488,7 +2569,8 @@ export default function DraftsPage() {
                         Add
                       </button>
                     </div>
-                    {editFormData.serviceAreas && editFormData.serviceAreas.length > 0 ? (
+                    {editFormData.serviceAreas &&
+                    editFormData.serviceAreas.length > 0 ? (
                       <div className="flex flex-wrap gap-2 mb-3">
                         {editFormData.serviceAreas.map((area, index) => (
                           <div
@@ -2522,8 +2604,12 @@ export default function DraftsPage() {
                       <input
                         type="text"
                         value={newEditCertification}
-                        onChange={(e) => setNewEditCertification(e.target.value)}
-                        onKeyPress={(e) => e.key === "Enter" && addCertification()}
+                        onChange={(e) =>
+                          setNewEditCertification(e.target.value)
+                        }
+                        onKeyPress={(e) =>
+                          e.key === "Enter" && addCertification()
+                        }
                         placeholder="e.g., Licensed Electrician, Certified Technician"
                         className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
                       />
@@ -2535,7 +2621,8 @@ export default function DraftsPage() {
                         Add
                       </button>
                     </div>
-                    {editFormData.certifications && editFormData.certifications.length > 0 ? (
+                    {editFormData.certifications &&
+                    editFormData.certifications.length > 0 ? (
                       <div className="flex flex-wrap gap-2 mb-3">
                         {editFormData.certifications.map((cert, index) => (
                           <div
@@ -2589,7 +2676,9 @@ export default function DraftsPage() {
                             key={index}
                             className="flex items-center justify-between bg-slate-700/50 border border-indigo-500/20 rounded-lg px-4 py-2 hover:border-indigo-500/40 transition"
                           >
-                            <span className="text-indigo-200 text-sm">{term}</span>
+                            <span className="text-indigo-200 text-sm">
+                              {term}
+                            </span>
                             <button
                               type="button"
                               onClick={() => removeTerm(index)}
@@ -2626,10 +2715,16 @@ export default function DraftsPage() {
                         }
                         className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 transition"
                       >
-                        <option value="percentage" className="bg-slate-800 text-indigo-100">
+                        <option
+                          value="percentage"
+                          className="bg-slate-800 text-indigo-100"
+                        >
                           Percentage
                         </option>
-                        <option value="fixed" className="bg-slate-800 text-indigo-100">
+                        <option
+                          value="fixed"
+                          className="bg-slate-800 text-indigo-100"
+                        >
                           Fixed
                         </option>
                       </select>
@@ -2852,8 +2947,6 @@ export default function DraftsPage() {
           </div>
         </div>
       )}
-
-      <Footer />
     </>
   );
 }
