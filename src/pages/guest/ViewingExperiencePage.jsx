@@ -732,44 +732,50 @@ export default function ExperienceDetailPage() {
                 </h3>
               </div>
               <div className="space-y-6">
-                {reviewsData.map((review) => (
-                  <div key={review.id} className="flex gap-4">
-                    <img
-                      src={review.user?.photoURL || "https://via.placeholder.com/100"}
-                      alt={review.user?.fullName || "User"}
-                      className="w-12 h-12 rounded-full flex-shrink-0"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-white">
-                          {review.user?.fullName || "Anonymous"}
-                        </span>
-                        <span className="text-slate-500 text-sm">·</span>
-                        <span className="text-slate-500 text-sm">
-                          {review.createdAt
-                            ? new Date(
-                                review.createdAt.toDate()
-                              ).toLocaleDateString("en-US", {
-                                month: "long",
-                                year: "numeric",
-                              })
-                            : "Recently"}
-                        </span>
+                {reviewsData && reviewsData.length > 0 ? (
+                  reviewsData.map((review) => (
+                    <div key={review.id} className="flex gap-4">
+                      <img
+                        src={review.user?.photoURL || "https://via.placeholder.com/100"}
+                        alt={review.user?.fullName || "User"}
+                        className="w-12 h-12 rounded-full flex-shrink-0"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-white">
+                            {review.user?.fullName || "Anonymous"}
+                          </span>
+                          <span className="text-slate-500 text-sm">·</span>
+                          <span className="text-slate-500 text-sm">
+                            {review.createdAt
+                              ? new Date(
+                                  review.createdAt.toDate()
+                                ).toLocaleDateString("en-US", {
+                                  month: "long",
+                                  year: "numeric",
+                                })
+                              : "Recently"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 mb-2">
+                          {Array.from({ length: review.rating || 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className="w-3 h-3 fill-yellow-400 text-yellow-400"
+                            />
+                          ))}
+                        </div>
+                        <p className="text-slate-300 text-sm leading-relaxed">
+                          {review.comment || review.review || "Great experience!"}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-1 mb-2">
-                        {Array.from({ length: review.rating || 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className="w-3 h-3 fill-yellow-400 text-yellow-400"
-                          />
-                        ))}
-                      </div>
-                      <p className="text-slate-300 text-sm leading-relaxed">
-                        {review.comment || review.review || "Great stay!"}
-                      </p>
                     </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-slate-400">No reviews yet. Be the first to review this experience!</p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
@@ -818,9 +824,9 @@ export default function ExperienceDetailPage() {
                     <option value="" disabled>
                       Select a date and time
                     </option>
-                    {experienceData?.availableTimes &&
-                    experienceData.availableTimes.length > 0 ? (
-                      experienceData.availableTimes.map((dateTime, idx) => {
+                    {experienceData?.availableDates &&
+                    experienceData.availableDates.length > 0 ? (
+                      experienceData.availableDates.map((dateTime, idx) => {
                         const dateStr = dateTime.date || "";
                         const timeStr = dateTime.time || "";
                         const displayDate = dateStr

@@ -581,14 +581,9 @@ export default function HostMyExperiences() {
           missingFields.push("Minimum Age (must be 0 or greater)");
         }
 
-        // Available dates validation
+        // Available dates & times validation (stored together in availableDates)
         if (!formData.availableDates || formData.availableDates.length === 0) {
-          missingFields.push("Available Dates (add at least one date range)");
-        }
-
-        // Available times validation
-        if (!formData.availableTimes || formData.availableTimes.length === 0) {
-          missingFields.push("Available Times (add at least one time slot)");
+          missingFields.push("Available Dates & Times (add at least one date with time)");
         }
 
         // Activities validation

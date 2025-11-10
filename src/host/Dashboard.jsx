@@ -50,7 +50,8 @@ export default function HostDashboard({ isVerified, user }) {
   const [upcomingBookings, setUpcomingBookings] = useState([]);
   const [todayBookings, setTodayBookings] = useState([]);
   const [recentMessages, setRecentMessages] = useState([]);
-  const [listingPerformance, setListingPerformance] = useState([]);
+  const [bestListings, setBestListings] = useState([]);
+  const [needsAttentionListings, setNeedsAttentionListings] = useState([]);
   const { userData } = useAuth();
   const navigate = useNavigate();
   console.log(isVerified);
@@ -261,8 +262,43 @@ export default function HostDashboard({ isVerified, user }) {
           upcomingConfirmed.slice(0, 5).map(mapBookingDisplay)
         );
 
-        // Get listing performance
-        const listingPerformanceData = listings.slice(0, 5).map((listing) => {
+        // Get all reviews for this host's listings
+        const reviewsRef = collection(db, "reviews");
+        const reviewsQuery = query(reviewsRef, where("hostId", "==", userData.id));
+        const reviewsSnap = await getDocs(reviewsQuery);
+        const reviews = reviewsSnap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        // Calculate average rating per listing from reviews
+        const listingRatings = {};
+        const listingReviewCounts = {};
+
+        reviews.forEach((review) => {
+          const listingId = review.listingId;
+          if (!listingRatings[listingId]) {
+            listingRatings[listingId] = 0;
+            listingReviewCounts[listingId] = 0;
+          }
+          listingRatings[listingId] += review.rating || 0;
+          listingReviewCounts[listingId] += 1;
+        });
+
+        // Calculate average ratings
+        Object.keys(listingRatings).forEach((listingId) => {
+          listingRatings[listingId] = listingRatings[listingId] / listingReviewCounts[listingId];
+        });
+
+        // Prepare listing data with calculated ratings
+        const getTypeLabel = (type) => {
+          if (type === "stays") return "Stay";
+          if (type === "experiences") return "Experience";
+          if (type === "services") return "Service";
+          return "Listing";
+        };
+
+        const listingsWithRatings = listings.map((listing) => {
           const listingBookings = allBookings.filter(
             (b) => b.listing_id === listing.id && b.status === "confirmed"
           );
@@ -270,23 +306,32 @@ export default function HostDashboard({ isVerified, user }) {
             (sum, b) => sum + (b.totalAmount || 0),
             0
           );
-
-          const getTypeLabel = (type) => {
-            if (type === "stays") return "Stay";
-            if (type === "experiences") return "Experience";
-            if (type === "services") return "Service";
-            return "Listing";
-          };
+          const avgRating = listingRatings[listing.id] || 0;
+          const reviewCount = listingReviewCounts[listing.id] || 0;
 
           return {
+            id: listing.id,
             name: listing.title,
             type: getTypeLabel(listing.type),
             views: listing.views || 0,
             bookings: listingBookings.length,
             revenue: revenue,
-            rating: listing.rating || 0,
+            rating: avgRating,
+            reviewCount: reviewCount,
           };
         });
+
+        // Filter Best Listings (rating >= 4) and sort by rating
+        const bestListingsData = listingsWithRatings
+          .filter((listing) => listing.rating >= 4 && listing.reviewCount > 0)
+          .sort((a, b) => b.rating - a.rating)
+          .slice(0, 5);
+
+        // Filter Listings That Need Attention (rating <= 2) and sort by rating ascending
+        const needsAttentionData = listingsWithRatings
+          .filter((listing) => listing.rating > 0 && listing.rating <= 2 && listing.reviewCount > 0)
+          .sort((a, b) => a.rating - b.rating)
+          .slice(0, 5);
 
         setStats({
           totalEarnings: Number(totalEarnings) || 0,
@@ -302,7 +347,8 @@ export default function HostDashboard({ isVerified, user }) {
         setTodayBookings(todayBookingsData);
         setUpcomingBookings(upcomingBookingsData);
         setRecentMessages(messagesWithDetails);
-        setListingPerformance(listingPerformanceData);
+        setBestListings(bestListingsData);
+        setNeedsAttentionListings(needsAttentionData);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -680,134 +726,286 @@ export default function HostDashboard({ isVerified, user }) {
           </div>
         </div>
 
-        {/* Listing Performance */}
-        <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-slate-700 p-3 sm:p-4 lg:p-6 mt-6 sm:mt-8 lg:mt-10 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 animate-fadeIn" style={{animationDelay: '300ms'}}>
-          <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white mb-4 sm:mb-6 tracking-tight">
-            Listing Performance
-          </h2>
-
-          {/* Mobile: Card Layout */}
-          <div className="block md:hidden space-y-3">
-            {listingPerformance.map((listing, index) => (
-              <div
-                key={index}
-                className="p-3 bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600 rounded-lg transition"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-sm text-white truncate">
-                      {listing.name}
-                    </h3>
-                    <span className="inline-flex items-center gap-1 text-xs text-slate-300 mt-1">
-                      {getTypeIcon(listing.type)}
-                      {listing.type}
-                    </span>
-                  </div>
-                  <span className="flex items-center gap-1 text-xs text-white ml-2">
-                    <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                    {Number.isFinite(Number(listing.rating))
-                      ? Number(listing.rating).toFixed(1)
-                      : "0.0"}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-600">
-                  <div>
-                    <p className="text-[10px] text-slate-400 mb-1">Views</p>
-                    <span className="flex items-center gap-1 text-xs text-white">
-                      <Eye className="w-3 h-3 text-slate-300" />
-                      {listing.views}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 mb-1">Bookings</p>
-                    <span className="text-xs font-medium text-white">
-                      {listing.bookings}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 mb-1">Revenue</p>
-                    <span className="text-xs font-semibold text-green-400">
-                      ₱{Number(listing.revenue || 0).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
+        {/* Best Listings */}
+        <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-slate-700 p-3 sm:p-4 lg:p-6 mt-6 sm:mt-8 lg:mt-10 hover:shadow-xl hover:shadow-green-500/10 hover:border-slate-600 transition-all duration-300 animate-fadeIn" style={{animationDelay: '300ms'}}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-2">
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight">
+              Best Listings
+            </h2>
+            <span className="text-[10px] sm:text-xs font-semibold px-2 sm:px-3 py-1 rounded-full bg-green-500/20 text-green-300 border border-green-500/50 w-fit">
+              Rating 4.0+
+            </span>
           </div>
 
-          {/* Desktop: Table Layout */}
-          <div className="hidden md:block overflow-x-auto -mx-4 sm:-mx-6 lg:mx-0">
-            <div className="inline-block min-w-full align-middle px-4 sm:px-6 lg:px-0">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b border-slate-600">
-                    <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
-                      Listing
-                    </th>
-                    <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
-                      Type
-                    </th>
-                    <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
-                      Views
-                    </th>
-                    <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
-                      Bookings
-                    </th>
-                    <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
-                      Revenue
-                    </th>
-                    <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
-                      Rating
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {listingPerformance.map((listing, index) => (
-                    <tr
-                      key={index}
-                      className="border-b border-slate-600 hover:bg-slate-700/30 transition"
-                    >
-                      <td className="py-3 lg:py-4 px-3 lg:px-4">
-                        <div className="font-medium text-xs sm:text-sm text-white">
+          {bestListings.length === 0 ? (
+            <div className="text-center py-8">
+              <Star className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+              <p className="text-sm text-slate-400">No listings with 4+ ratings yet</p>
+              <p className="text-xs text-slate-500 mt-1">Keep providing great experiences to earn high ratings!</p>
+            </div>
+          ) : (
+            <>
+              {/* Mobile: Card Layout */}
+              <div className="block md:hidden space-y-3">
+                {bestListings.map((listing, index) => (
+                  <div
+                    key={index}
+                    className="p-3 bg-slate-700/30 hover:bg-slate-700/50 border border-green-500/30 rounded-lg transition"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-sm text-white truncate">
                           {listing.name}
-                        </div>
-                      </td>
-                      <td className="py-3 lg:py-4 px-3 lg:px-4">
-                        <span className="inline-flex items-center gap-1 text-xs sm:text-sm text-slate-300">
+                        </h3>
+                        <span className="inline-flex items-center gap-1 text-xs text-slate-300 mt-1">
                           {getTypeIcon(listing.type)}
                           {listing.type}
                         </span>
-                      </td>
-                      <td className="py-3 lg:py-4 px-3 lg:px-4">
-                        <span className="flex items-center gap-1 text-xs sm:text-sm text-white">
-                          <Eye className="w-3 sm:w-4 h-3 sm:h-4 text-slate-300" />
+                      </div>
+                      <span className="flex items-center gap-1 text-xs text-white ml-2">
+                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                        {Number(listing.rating).toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-600">
+                      <div>
+                        <p className="text-[10px] text-slate-400 mb-1">Views</p>
+                        <span className="flex items-center gap-1 text-xs text-white">
+                          <Eye className="w-3 h-3 text-slate-300" />
                           {listing.views}
                         </span>
-                      </td>
-                      <td className="py-3 lg:py-4 px-3 lg:px-4">
-                        <span className="text-xs sm:text-sm font-medium text-white">
-                          {listing.bookings}
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 mb-1">Reviews</p>
+                        <span className="text-xs font-medium text-white">
+                          {listing.reviewCount}
                         </span>
-                      </td>
-                      <td className="py-3 lg:py-4 px-3 lg:px-4">
-                        <span className="text-xs sm:text-sm font-semibold text-green-400">
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 mb-1">Revenue</p>
+                        <span className="text-xs font-semibold text-green-400">
                           ₱{Number(listing.revenue || 0).toLocaleString()}
                         </span>
-                      </td>
-                      <td className="py-3 lg:py-4 px-3 lg:px-4">
-                        <span className="flex items-center gap-1 text-xs sm:text-sm text-white">
-                          <Star className="w-3 sm:w-4 h-3 sm:h-4 text-yellow-400 fill-yellow-400" />
-                          {Number.isFinite(Number(listing.rating))
-                            ? Number(listing.rating).toFixed(1)
-                            : "0.0"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Table Layout */}
+              <div className="hidden md:block overflow-x-auto -mx-4 sm:-mx-6 lg:mx-0">
+                <div className="inline-block min-w-full align-middle px-4 sm:px-6 lg:px-0">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr className="border-b border-slate-600">
+                        <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
+                          Listing
+                        </th>
+                        <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
+                          Type
+                        </th>
+                        <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
+                          Views
+                        </th>
+                        <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
+                          Reviews
+                        </th>
+                        <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
+                          Revenue
+                        </th>
+                        <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
+                          Rating
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bestListings.map((listing, index) => (
+                        <tr
+                          key={index}
+                          className="border-b border-slate-600 hover:bg-slate-700/30 transition"
+                        >
+                          <td className="py-3 lg:py-4 px-3 lg:px-4">
+                            <div className="font-medium text-xs sm:text-sm text-white">
+                              {listing.name}
+                            </div>
+                          </td>
+                          <td className="py-3 lg:py-4 px-3 lg:px-4">
+                            <span className="inline-flex items-center gap-1 text-xs sm:text-sm text-slate-300">
+                              {getTypeIcon(listing.type)}
+                              {listing.type}
+                            </span>
+                          </td>
+                          <td className="py-3 lg:py-4 px-3 lg:px-4">
+                            <span className="flex items-center gap-1 text-xs sm:text-sm text-white">
+                              <Eye className="w-3 sm:w-4 h-3 sm:h-4 text-slate-300" />
+                              {listing.views}
+                            </span>
+                          </td>
+                          <td className="py-3 lg:py-4 px-3 lg:px-4">
+                            <span className="text-xs sm:text-sm font-medium text-white">
+                              {listing.reviewCount}
+                            </span>
+                          </td>
+                          <td className="py-3 lg:py-4 px-3 lg:px-4">
+                            <span className="text-xs sm:text-sm font-semibold text-green-400">
+                              ₱{Number(listing.revenue || 0).toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="py-3 lg:py-4 px-3 lg:px-4">
+                            <span className="flex items-center gap-1 text-xs sm:text-sm text-white">
+                              <Star className="w-3 sm:w-4 h-3 sm:h-4 text-yellow-400 fill-yellow-400" />
+                              {Number(listing.rating).toFixed(1)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Listings That Need Attention */}
+        <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-slate-700 p-3 sm:p-4 lg:p-6 mt-6 sm:mt-8 hover:shadow-xl hover:shadow-red-500/10 hover:border-slate-600 transition-all duration-300 animate-fadeIn" style={{animationDelay: '350ms'}}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-2">
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight">
+              Listings That Need Attention
+            </h2>
+            <span className="text-[10px] sm:text-xs font-semibold px-2 sm:px-3 py-1 rounded-full bg-red-500/20 text-red-300 border border-red-500/50 w-fit">
+              Rating 2.0 or below
+            </span>
           </div>
+
+          {needsAttentionListings.length === 0 ? (
+            <div className="text-center py-8">
+              <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+              <p className="text-sm text-slate-400">Great job! No listings need attention</p>
+              <p className="text-xs text-slate-500 mt-1">All your listings are performing well!</p>
+            </div>
+          ) : (
+            <>
+              {/* Mobile: Card Layout */}
+              <div className="block md:hidden space-y-3">
+                {needsAttentionListings.map((listing, index) => (
+                  <div
+                    key={index}
+                    className="p-3 bg-slate-700/30 hover:bg-slate-700/50 border border-red-500/30 rounded-lg transition"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-sm text-white truncate">
+                          {listing.name}
+                        </h3>
+                        <span className="inline-flex items-center gap-1 text-xs text-slate-300 mt-1">
+                          {getTypeIcon(listing.type)}
+                          {listing.type}
+                        </span>
+                      </div>
+                      <span className="flex items-center gap-1 text-xs text-red-300 ml-2">
+                        <AlertCircle className="w-3 h-3" />
+                        {Number(listing.rating).toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-600">
+                      <div>
+                        <p className="text-[10px] text-slate-400 mb-1">Views</p>
+                        <span className="flex items-center gap-1 text-xs text-white">
+                          <Eye className="w-3 h-3 text-slate-300" />
+                          {listing.views}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 mb-1">Reviews</p>
+                        <span className="text-xs font-medium text-white">
+                          {listing.reviewCount}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 mb-1">Revenue</p>
+                        <span className="text-xs font-semibold text-green-400">
+                          ₱{Number(listing.revenue || 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Table Layout */}
+              <div className="hidden md:block overflow-x-auto -mx-4 sm:-mx-6 lg:mx-0">
+                <div className="inline-block min-w-full align-middle px-4 sm:px-6 lg:px-0">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr className="border-b border-slate-600">
+                        <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
+                          Listing
+                        </th>
+                        <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
+                          Type
+                        </th>
+                        <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
+                          Views
+                        </th>
+                        <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
+                          Reviews
+                        </th>
+                        <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
+                          Revenue
+                        </th>
+                        <th className="text-left py-3 px-3 lg:px-4 text-xs sm:text-sm font-semibold text-slate-300">
+                          Rating
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {needsAttentionListings.map((listing, index) => (
+                        <tr
+                          key={index}
+                          className="border-b border-slate-600 hover:bg-slate-700/30 transition"
+                        >
+                          <td className="py-3 lg:py-4 px-3 lg:px-4">
+                            <div className="font-medium text-xs sm:text-sm text-white">
+                              {listing.name}
+                            </div>
+                          </td>
+                          <td className="py-3 lg:py-4 px-3 lg:px-4">
+                            <span className="inline-flex items-center gap-1 text-xs sm:text-sm text-slate-300">
+                              {getTypeIcon(listing.type)}
+                              {listing.type}
+                            </span>
+                          </td>
+                          <td className="py-3 lg:py-4 px-3 lg:px-4">
+                            <span className="flex items-center gap-1 text-xs sm:text-sm text-white">
+                              <Eye className="w-3 sm:w-4 h-3 sm:h-4 text-slate-300" />
+                              {listing.views}
+                            </span>
+                          </td>
+                          <td className="py-3 lg:py-4 px-3 lg:px-4">
+                            <span className="text-xs sm:text-sm font-medium text-white">
+                              {listing.reviewCount}
+                            </span>
+                          </td>
+                          <td className="py-3 lg:py-4 px-3 lg:px-4">
+                            <span className="text-xs sm:text-sm font-semibold text-green-400">
+                              ₱{Number(listing.revenue || 0).toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="py-3 lg:py-4 px-3 lg:px-4">
+                            <span className="flex items-center gap-1 text-xs sm:text-sm text-red-300">
+                              <AlertCircle className="w-3 sm:w-4 h-3 sm:h-4" />
+                              {Number(listing.rating).toFixed(1)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -472,7 +472,7 @@ export default function ListingDetailPage() {
         const reviewsRef = collection(db, "reviews");
         const reviewQuery = query(
           reviewsRef,
-          where("listing_id", "==", listing_id)
+          where("listingId", "==", listing_id)
         );
         const reviewSnap = await getDocs(reviewQuery);
         const reviewCount = reviewSnap.size;
@@ -482,8 +482,8 @@ export default function ListingDetailPage() {
             const reviewData = reviewDoc.data();
             let userData = null;
 
-            if (reviewData.user_id) {
-              const userRef = doc(db, "users", reviewData.user_id);
+            if (reviewData.guestId) {
+              const userRef = doc(db, "users", reviewData.guestId);
               const userSnap = await getDoc(userRef);
               if (userSnap.exists()) {
                 userData = userSnap.data();
@@ -500,6 +500,16 @@ export default function ListingDetailPage() {
 
         setReviewsData(reviewsWithUsers);
 
+        // Calculate average rating from reviews
+        let averageRating = 0;
+        if (reviewsWithUsers.length > 0) {
+          const totalRating = reviewsWithUsers.reduce(
+            (sum, review) => sum + (review.rating || 0),
+            0
+          );
+          averageRating = (totalRating / reviewsWithUsers.length).toFixed(1);
+        }
+
         // Fetch host data
         let hostData = null;
         if (data.hostId) {
@@ -510,7 +520,12 @@ export default function ListingDetailPage() {
           }
         }
 
-        setListingData({ ...data, reviewCount, host: hostData });
+        setListingData({
+          ...data,
+          reviewCount,
+          rating: averageRating || data.rating,
+          host: hostData,
+        });
 
         // Set map center based on listing coordinates
         if (data.coordinates?.lat && data.coordinates?.lng) {
@@ -1396,56 +1411,58 @@ export default function ListingDetailPage() {
       {/* Date Range Picker Modal */}
       {showDatePicker && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-xl max-h-[80vh] overflow-auto p-5 border border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-indigo-400" />
-                Select Dates
-              </h3>
-              <button
-                onClick={() => setShowDatePicker(false)}
-                className="text-indigo-400/60 hover:text-indigo-400 transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col border border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto flex-1 p-5">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-indigo-400" />
+                  Select Dates
+                </h3>
+                <button
+                  onClick={() => setShowDatePicker(false)}
+                  className="text-indigo-400/60 hover:text-indigo-400 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-            {/* Available Dates */}
-            {Array.isArray(listingData.availableDates) &&
-              listingData.availableDates.length > 0 && (
-                <div className="mb-4 p-3 bg-slate-900/50 rounded-lg border border-green-500/30">
-                  <div className="text-xs font-semibold text-green-400 mb-2 flex items-center gap-1">
-                    <Check className="w-4 h-4" />
-                    Available Dates
-                  </div>
-                  <div className="space-y-1">
-                    {listingData.availableDates.map((range, idx) => (
-                      <div key={idx} className="text-xs text-slate-300">
-                        <span className="text-green-400 font-medium">
-                          {new Date(range.startDate).toLocaleDateString(
-                            "en-US",
-                            {
+              {/* Available Dates */}
+              {Array.isArray(listingData.availableDates) &&
+                listingData.availableDates.length > 0 && (
+                  <div className="mb-4 p-3 bg-slate-900/50 rounded-lg border border-green-500/30">
+                    <div className="text-xs font-semibold text-green-400 mb-2 flex items-center gap-1">
+                      <Check className="w-4 h-4" />
+                      Available Dates
+                    </div>
+                    <div className="space-y-1">
+                      {listingData.availableDates.map((range, idx) => (
+                        <div key={idx} className="text-xs text-slate-300">
+                          <span className="text-green-400 font-medium">
+                            {new Date(range.startDate).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                              }
+                            )}
+                          </span>
+                          <span className="text-slate-500 mx-1">→</span>
+                          <span className="text-green-400 font-medium">
+                            {new Date(range.endDate).toLocaleDateString("en-US", {
                               month: "short",
                               day: "numeric",
-                            }
-                          )}
-                        </span>
-                        <span className="text-slate-500 mx-1">→</span>
-                        <span className="text-green-400 font-medium">
-                          {new Date(range.endDate).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </span>
-                      </div>
-                    ))}
+                            })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-            {/* Date Range Picker */}
-            <div className="mb-4 w-full flex justify-center">
+              {/* Date Range Picker */}
+              <div className="mb-4 w-full flex justify-center">
               <style>{`
                 .rdrCalendarWrapper {
                   background-color: rgba(15, 23, 42, 0.8);
@@ -1501,7 +1518,17 @@ export default function ListingDetailPage() {
                   gap: 3px;
                 }
                 .rdrDayDisabled {
-                  background-color: transparent;
+                  background-color: transparent !important;
+                  cursor: not-allowed !important;
+                  opacity: 0.3 !important;
+                }
+                .rdrDayDisabled .rdrDayNumber span {
+                  color: #475569 !important;
+                  text-decoration: line-through !important;
+                }
+                .rdrDayPassive {
+                  opacity: 0.3 !important;
+                  pointer-events: none !important;
                 }
                 .rdrDay {
                   height: 42px;
@@ -1627,58 +1654,106 @@ export default function ListingDetailPage() {
                 months={2}
                 direction="horizontal"
                 showMonthAndYearPickers={false}
-              />
-            </div>
+                minDate={new Date()}
+                disabledDay={(date) => {
+                  // Disable past dates
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  if (date < today) return true;
 
-            {/* Selected dates summary */}
-            <div className="mb-4 p-3 bg-slate-900/50 rounded-lg border border-indigo-500/20">
-              <div className="flex items-center justify-between text-sm">
-                <div>
-                  <div className="text-xs text-slate-400 mb-1">Check-in</div>
-                  <div className="text-sm font-semibold text-white">
-                    {dateRange[0].startDate.toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                  // Check if date is in booked dates
+                  const bookedDates = listingData.bookedDates || [];
+                  const isBooked = bookedDates.some((bookedDate) => {
+                    const bookedDateObj = bookedDate.toDate
+                      ? bookedDate.toDate()
+                      : new Date(bookedDate);
+                    bookedDateObj.setHours(0, 0, 0, 0);
+                    const checkDate = new Date(date);
+                    checkDate.setHours(0, 0, 0, 0);
+                    return checkDate.getTime() === bookedDateObj.getTime();
+                  });
+
+                  if (isBooked) return true;
+
+                  // If there are available dates, check if the date falls within any range
+                  const availableDates = Array.isArray(listingData.availableDates)
+                    ? listingData.availableDates
+                    : [];
+
+                  if (availableDates.length === 0) {
+                    // If no available dates are set, all future dates are available
+                    return false;
+                  }
+
+                  // Check if date is within any available range
+                  const isWithinAvailable = availableDates.some((range) => {
+                    const rangeStart = new Date(range.startDate);
+                    const rangeEnd = new Date(range.endDate);
+                    rangeStart.setHours(0, 0, 0, 0);
+                    rangeEnd.setHours(0, 0, 0, 0);
+                    const checkDate = new Date(date);
+                    checkDate.setHours(0, 0, 0, 0);
+                    return checkDate >= rangeStart && checkDate <= rangeEnd;
+                  });
+
+                  // Disable if NOT within available range
+                  return !isWithinAvailable;
+                }}
+                />
+              </div>
+
+              {/* Selected dates summary */}
+              <div className="mb-4 p-3 bg-slate-900/50 rounded-lg border border-indigo-500/20">
+                <div className="flex items-center justify-between text-sm">
+                  <div>
+                    <div className="text-xs text-slate-400 mb-1">Check-in</div>
+                    <div className="text-sm font-semibold text-white">
+                      {dateRange[0].startDate.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </div>
+                  </div>
+                  <div className="text-slate-500">→</div>
+                  <div className="text-right">
+                    <div className="text-xs text-slate-400 mb-1">Check-out</div>
+                    <div className="text-sm font-semibold text-white">
+                      {dateRange[0].endDate.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </div>
                   </div>
                 </div>
-                <div className="text-slate-500">→</div>
-                <div className="text-right">
-                  <div className="text-xs text-slate-400 mb-1">Check-out</div>
-                  <div className="text-sm font-semibold text-white">
-                    {dateRange[0].endDate.toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </div>
+                <div className="text-xs text-slate-400 text-center mt-2">
+                  {Math.ceil(
+                    (dateRange[0].endDate - dateRange[0].startDate) /
+                      (1000 * 60 * 60 * 24)
+                  )}{" "}
+                  nights
                 </div>
-              </div>
-              <div className="text-xs text-slate-400 text-center mt-2">
-                {Math.ceil(
-                  (dateRange[0].endDate - dateRange[0].startDate) /
-                    (1000 * 60 * 60 * 24)
-                )}{" "}
-                nights
               </div>
             </div>
 
-            {/* Buttons */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowDatePicker(false)}
-                className="flex-1 px-4 py-2 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 hover:border-indigo-500/50 transition font-medium text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleApplyDates}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition flex items-center justify-center gap-2 font-medium text-sm shadow-lg shadow-indigo-500/20"
-              >
-                <Calendar className="w-4 h-4" />
-                Apply Dates
-              </button>
+            {/* Sticky Footer with Buttons */}
+            <div className="sticky bottom-0 bg-gradient-to-br from-slate-800 to-slate-900 border-t border-slate-700/50 p-5 rounded-b-2xl">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowDatePicker(false)}
+                  className="flex-1 px-4 py-2 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 hover:border-indigo-500/50 transition font-medium text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleApplyDates}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition flex items-center justify-center gap-2 font-medium text-sm shadow-lg shadow-indigo-500/20"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Apply Dates
+                </button>
+              </div>
             </div>
           </div>
         </div>
