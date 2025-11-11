@@ -55,7 +55,7 @@ export default function MyBookingsSection() {
   const highlightedBookingRef = useRef(null);
 
   const [bookings, setBookings] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(null); // null means no date filter
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState(null);
@@ -229,13 +229,33 @@ export default function MyBookingsSection() {
 
   // Get bookings for selected date
   const getBookingsForDate = (date) => {
-    return bookings.filter((booking) => {
-      const checkIn = parseDate(booking.checkIn);
-      const checkOut = parseDate(booking.checkOut);
+    if (!date) return bookings; // If no date selected, return all bookings
 
+    return bookings.filter((booking) => {
       // Set time to midnight for accurate date comparison
       const compareDate = new Date(date);
       compareDate.setHours(0, 0, 0, 0);
+
+      // Handle experiences and services (use selectedDateTime.date)
+      if (booking.type === "experiences" || booking.type === "services") {
+        const bookingDate = parseDate(
+          booking.selectedDateTime?.date ||
+          booking.selectedDate ||
+          booking.checkIn
+        );
+        if (!bookingDate) return false;
+
+        const bookingDateOnly = new Date(bookingDate);
+        bookingDateOnly.setHours(0, 0, 0, 0);
+
+        return compareDate.getTime() === bookingDateOnly.getTime();
+      }
+
+      // Handle stays (check if date falls within checkIn - checkOut range)
+      const checkIn = parseDate(booking.checkIn);
+      const checkOut = parseDate(booking.checkOut);
+
+      if (!checkIn || !checkOut) return false;
 
       const checkInDate = new Date(checkIn);
       checkInDate.setHours(0, 0, 0, 0);
@@ -251,6 +271,26 @@ export default function MyBookingsSection() {
   const getDatesWithBookings = () => {
     const dates = new Set();
     bookings.forEach((booking) => {
+      // Handle experiences and services (single date)
+      if (booking.type === "experiences" || booking.type === "services") {
+        const bookingDate = parseDate(
+          booking.selectedDateTime?.date ||
+          booking.selectedDate ||
+          booking.checkIn
+        );
+
+        if (bookingDate) {
+          if (
+            bookingDate.getMonth() === currentMonth.getMonth() &&
+            bookingDate.getFullYear() === currentMonth.getFullYear()
+          ) {
+            dates.add(bookingDate.getDate());
+          }
+        }
+        return;
+      }
+
+      // Handle stays (date range)
       const checkIn = parseDate(booking.checkIn);
       const checkOut = parseDate(booking.checkOut);
 
@@ -313,6 +353,7 @@ export default function MyBookingsSection() {
   };
 
   const isSelected = (day) => {
+    if (!selectedDate) return false; // No date selected
     return (
       day === selectedDate.getDate() &&
       currentMonth.getMonth() === selectedDate.getMonth() &&
@@ -402,7 +443,7 @@ export default function MyBookingsSection() {
               </button>
             ))}
 
-            {hasBookingsOnSelectedDate && (
+            {hasBookingsOnSelectedDate && selectedDate && (
               <div className="flex items-center gap-2 ml-auto">
                 <span className="text-sm text-slate-400">
                   Showing bookings for{" "}
@@ -414,7 +455,7 @@ export default function MyBookingsSection() {
                 </span>
                 <button
                   onClick={() => {
-                    setSelectedDate(new Date());
+                    setSelectedDate(null); // Clear date filter
                     setCurrentPage(1);
                   }}
                   className="px-3 py-2 bg-slate-700/50 border border-slate-600 text-slate-300 rounded-lg hover:bg-slate-700 hover:text-white text-xs font-medium transition"
@@ -479,8 +520,30 @@ export default function MyBookingsSection() {
 
                             <div className="flex items-center text-slate-400 text-sm mb-2">
                               <Calendar className="w-4 h-4 mr-1.5 text-emerald-400" />
-                              {formatDate(booking.checkIn)} -{" "}
-                              {formatDate(booking.checkOut)}
+                              {booking.type === "experiences" ? (
+                                <>
+                                  {formatDate(
+                                    booking.selectedDateTime?.date ||
+                                      booking.selectedDate ||
+                                      booking.checkIn
+                                  )}{" "}
+                                  at{" "}
+                                  {booking.selectedDateTime?.time ||
+                                    booking.selectedTime ||
+                                    "N/A"}
+                                </>
+                              ) : booking.type === "services" ? (
+                                formatDate(
+                                  booking.selectedDateTime?.date ||
+                                    booking.selectedDate ||
+                                    booking.checkIn
+                                )
+                              ) : (
+                                <>
+                                  {formatDate(booking.checkIn)} -{" "}
+                                  {formatDate(booking.checkOut)}
+                                </>
+                              )}
                             </div>
 
                             <div className="flex items-center text-slate-400 text-sm">
@@ -493,11 +556,12 @@ export default function MyBookingsSection() {
                           <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-700">
                             <div>
                               <span className="text-xs text-slate-400 block">
-                                Total Amount
+                                Amount Paid
                               </span>
                               <span className="text-xl font-bold text-white">
                                 ₱
-                                {booking.totalAmount?.toFixed(2) ||
+                                {booking.grandTotal?.toFixed(2) ||
+                                  booking.totalAmount?.toFixed(2) ||
                                   booking.price?.toFixed(2) ||
                                   0}
                               </span>
@@ -633,14 +697,16 @@ export default function MyBookingsSection() {
 
                 <div className="mt-6 pt-6 border-t border-slate-700">
                   <h3 className="text-sm font-semibold text-white mb-3">
-                    {selectedDate.toLocaleDateString("en-US", {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                    {selectedDate
+                      ? selectedDate.toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "All Bookings"}
                   </h3>
 
-                  {selectedDateBookings.length > 0 ? (
+                  {selectedDate && selectedDateBookings.length > 0 ? (
                     <div className="space-y-2">
                       {selectedDateBookings.map((booking) => (
                         <div
@@ -657,9 +723,13 @@ export default function MyBookingsSection() {
                         </div>
                       ))}
                     </div>
-                  ) : (
+                  ) : selectedDate ? (
                     <p className="text-sm text-slate-400">
                       No bookings on this date
+                    </p>
+                  ) : (
+                    <p className="text-sm text-slate-400">
+                      Select a date to view bookings
                     </p>
                   )}
                 </div>
@@ -708,8 +778,30 @@ export default function MyBookingsSection() {
 
                 <div className="flex items-center text-slate-300 text-sm">
                   <Calendar className="w-4 h-4 mr-2 text-emerald-400" />
-                  {formatDate(selectedBooking.checkIn)} -{" "}
-                  {formatDate(selectedBooking.checkOut)}
+                  {selectedBooking.type === "experiences" ? (
+                    <>
+                      {formatDate(
+                        selectedBooking.selectedDateTime?.date ||
+                          selectedBooking.selectedDate ||
+                          selectedBooking.checkIn
+                      )}{" "}
+                      at{" "}
+                      {selectedBooking.selectedDateTime?.time ||
+                        selectedBooking.selectedTime ||
+                        "N/A"}
+                    </>
+                  ) : selectedBooking.type === "services" ? (
+                    formatDate(
+                      selectedBooking.selectedDateTime?.date ||
+                        selectedBooking.selectedDate ||
+                        selectedBooking.checkIn
+                    )
+                  ) : (
+                    <>
+                      {formatDate(selectedBooking.checkIn)} -{" "}
+                      {formatDate(selectedBooking.checkOut)}
+                    </>
+                  )}
                 </div>
 
                 <div className="flex items-center text-slate-300 text-sm">
@@ -720,15 +812,35 @@ export default function MyBookingsSection() {
               </div>
 
               <div className="border-t border-slate-700 pt-4 mb-5">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Total Amount</span>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-slate-400">Amount Paid (with service fee)</span>
                   <span className="text-2xl font-bold text-white">
                     ₱
-                    {selectedBooking.totalAmount?.toFixed(2) ||
+                    {selectedBooking.grandTotal?.toFixed(2) ||
+                      selectedBooking.totalAmount?.toFixed(2) ||
                       selectedBooking.price?.toFixed(2) ||
                       0}
                   </span>
                 </div>
+
+                {(selectedBooking.totalAmount || selectedBooking.serviceFee) && (
+                  <div className="bg-slate-900/50 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Booking Amount:</span>
+                      <span className="text-slate-300">
+                        ₱{selectedBooking.totalAmount?.toFixed(2) || selectedBooking.price?.toFixed(2) || 0}
+                      </span>
+                    </div>
+                    {selectedBooking.serviceFee && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500">Service Fee (5%):</span>
+                        <span className="text-slate-300">
+                          ₱{selectedBooking.serviceFee?.toFixed(2) || 0}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {selectedBooking.status === "pending" && (
@@ -847,17 +959,44 @@ export default function MyBookingsSection() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Check-in:</span>
+                    <span className="text-slate-400">
+                      {selectedBooking.type === "experiences"
+                        ? "Date & Time:"
+                        : selectedBooking.type === "services"
+                        ? "Service Date:"
+                        : "Check-in:"}
+                    </span>
                     <span className="font-semibold text-white">
-                      {formatDate(selectedBooking.checkIn)}
+                      {selectedBooking.type === "experiences" ? (
+                        <>
+                          {formatDate(
+                            selectedBooking.selectedDateTime?.date ||
+                              selectedBooking.selectedDate ||
+                              selectedBooking.checkIn
+                          )}{" "}
+                          at{" "}
+                          {selectedBooking.selectedDateTime?.time ||
+                            selectedBooking.selectedTime ||
+                            "N/A"}
+                        </>
+                      ) : selectedBooking.type === "services" ? (
+                        formatDate(
+                          selectedBooking.selectedDateTime?.date ||
+                            selectedBooking.selectedDate ||
+                            selectedBooking.checkIn
+                        )
+                      ) : (
+                        formatDate(selectedBooking.checkIn)
+                      )}
                     </span>
                   </div>
                   {selectedBooking.status === "confirmed" && (
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Refund Amount:</span>
+                      <span className="text-slate-400">Refund Amount (if approved):</span>
                       <span className="font-bold text-emerald-400 text-lg">
                         ₱
-                        {selectedBooking.totalAmount?.toFixed(2) ||
+                        {selectedBooking.grandTotal?.toFixed(2) ||
+                          selectedBooking.totalAmount?.toFixed(2) ||
                           selectedBooking.price?.toFixed(2) ||
                           0}
                       </span>
@@ -966,16 +1105,43 @@ export default function MyBookingsSection() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Check-in:</span>
+                    <span className="text-slate-400">
+                      {selectedBooking.type === "experiences"
+                        ? "Date & Time:"
+                        : selectedBooking.type === "services"
+                        ? "Service Date:"
+                        : "Check-in:"}
+                    </span>
                     <span className="font-semibold text-white">
-                      {formatDate(selectedBooking.checkIn)}
+                      {selectedBooking.type === "experiences" ? (
+                        <>
+                          {formatDate(
+                            selectedBooking.selectedDateTime?.date ||
+                              selectedBooking.selectedDate ||
+                              selectedBooking.checkIn
+                          )}{" "}
+                          at{" "}
+                          {selectedBooking.selectedDateTime?.time ||
+                            selectedBooking.selectedTime ||
+                            "N/A"}
+                        </>
+                      ) : selectedBooking.type === "services" ? (
+                        formatDate(
+                          selectedBooking.selectedDateTime?.date ||
+                            selectedBooking.selectedDate ||
+                            selectedBooking.checkIn
+                        )
+                      ) : (
+                        formatDate(selectedBooking.checkIn)
+                      )}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Refund Amount:</span>
+                    <span className="text-slate-400">Refund Amount (if approved):</span>
                     <span className="font-bold text-emerald-400 text-lg">
                       ₱
-                      {selectedBooking.totalAmount?.toFixed(2) ||
+                      {selectedBooking.grandTotal?.toFixed(2) ||
+                        selectedBooking.totalAmount?.toFixed(2) ||
                         selectedBooking.price?.toFixed(2) ||
                         0}
                     </span>

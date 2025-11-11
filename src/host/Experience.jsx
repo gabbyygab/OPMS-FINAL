@@ -296,20 +296,40 @@ export default function HostMyExperiences() {
           querySnapshot.docs.map(async (doc) => {
             const experienceData = { id: doc.id, ...doc.data() };
 
-            // Fetch booking count for this experience
+            // Fetch booking count for this experience (only completed)
             const bookingsRef = collection(db, "bookings");
             const bookingQuery = query(
               bookingsRef,
-              where("listing_id", "==", doc.id)
+              where("listing_id", "==", doc.id),
+              where("status", "==", "completed")
             );
             const bookingSnapshot = await getDocs(bookingQuery);
             const revenue = experienceData.price * bookingSnapshot.size;
+
+            // Fetch reviews for this experience to calculate average rating
+            const reviewsRef = collection(db, "reviews");
+            const reviewQuery = query(
+              reviewsRef,
+              where("listingId", "==", doc.id)
+            );
+            const reviewSnapshot = await getDocs(reviewQuery);
+
+            let averageRating = 0;
+            if (reviewSnapshot.size > 0) {
+              const totalRating = reviewSnapshot.docs.reduce(
+                (sum, reviewDoc) => sum + (reviewDoc.data().rating || 0),
+                0
+              );
+              averageRating = (totalRating / reviewSnapshot.size).toFixed(1);
+            }
 
             return {
               id: experienceData.id,
               ...experienceData,
               bookingCount: bookingSnapshot.size,
               revenue: revenue,
+              rating: parseFloat(averageRating),
+              reviewCount: reviewSnapshot.size,
             };
           })
         );
@@ -1042,7 +1062,7 @@ export default function HostMyExperiences() {
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100"
+                className="px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
               >
                 <option value="all">All Categories</option>
                 {categories.map((cat) => (
@@ -1054,7 +1074,7 @@ export default function HostMyExperiences() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100"
+                className="px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -1166,10 +1186,10 @@ export default function HostMyExperiences() {
                     <div className="flex items-center gap-1">
                       <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                       <span className="font-semibold text-indigo-100">
-                        {exp.rating}
+                        {exp.rating || 0}
                       </span>
                       <span className="text-indigo-300/60 text-sm">
-                        ({exp.reviews})
+                        ({exp.reviewCount || 0})
                       </span>
                     </div>
                     <div className="text-right">
@@ -1307,7 +1327,7 @@ export default function HostMyExperiences() {
                     setFormData({ ...formData, title: e.target.value })
                   }
                   placeholder="e.g., Sunset Yacht Sailing"
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                 />
               </div>
 
@@ -1321,7 +1341,7 @@ export default function HostMyExperiences() {
                     value={formData.location}
                     onChange={(e) => handleSearch(e.target.value)}
                     placeholder="Type a location or click on map"
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                   />
 
                   {showSuggestions && suggestions.length > 0 && (
@@ -1378,7 +1398,7 @@ export default function HostMyExperiences() {
                   onChange={(e) =>
                     setFormData({ ...formData, category: e.target.value })
                   }
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                 >
                   {categories.map((cat) => (
                     <option key={cat.name} value={cat.name}>
@@ -1419,7 +1439,7 @@ export default function HostMyExperiences() {
                       setFormData({ ...formData, duration: e.target.value })
                     }
                     placeholder="3"
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                   />
                 </div>
               </div>
@@ -1436,7 +1456,7 @@ export default function HostMyExperiences() {
                       setFormData({ ...formData, maxGuests: e.target.value })
                     }
                     placeholder="12"
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                   />
                 </div>
 
@@ -1451,7 +1471,7 @@ export default function HostMyExperiences() {
                       setFormData({ ...formData, ageMin: e.target.value })
                     }
                     placeholder="12"
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                   />
                 </div>
               </div>
@@ -1467,7 +1487,7 @@ export default function HostMyExperiences() {
                     setFormData({ ...formData, language: e.target.value })
                   }
                   placeholder="e.g., English, Spanish"
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                 />
               </div>
 
@@ -1636,12 +1656,12 @@ export default function HostMyExperiences() {
                         },
                       })
                     }
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 transition"
+                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                   >
-                    <option value="percentage" className="bg-slate-800 text-indigo-100">
+                    <option value="percentage" className="bg-slate-800 text-white">
                       Percentage
                     </option>
-                    <option value="fixed" className="bg-slate-800 text-indigo-100">
+                    <option value="fixed" className="bg-slate-800 text-white">
                       Fixed
                     </option>
                   </select>
@@ -1794,7 +1814,7 @@ export default function HostMyExperiences() {
                   onChange={(e) =>
                     setFormData({ ...formData, title: e.target.value })
                   }
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                 />
               </div>
 
@@ -1808,7 +1828,7 @@ export default function HostMyExperiences() {
                     value={formData.location}
                     onChange={(e) => handleSearch(e.target.value)}
                     placeholder="Type a location or click on map"
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                   />
 
                   {showSuggestions && suggestions.length > 0 && (
@@ -1865,7 +1885,7 @@ export default function HostMyExperiences() {
                   onChange={(e) =>
                     setFormData({ ...formData, category: e.target.value })
                   }
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                 >
                   {categories.map((cat) => (
                     <option key={cat.name} value={cat.name}>
@@ -1904,7 +1924,7 @@ export default function HostMyExperiences() {
                     onChange={(e) =>
                       setFormData({ ...formData, duration: e.target.value })
                     }
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                   />
                 </div>
               </div>
@@ -1920,7 +1940,7 @@ export default function HostMyExperiences() {
                     onChange={(e) =>
                       setFormData({ ...formData, maxGuests: e.target.value })
                     }
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                   />
                 </div>
 
@@ -1934,7 +1954,7 @@ export default function HostMyExperiences() {
                     onChange={(e) =>
                       setFormData({ ...formData, ageMin: e.target.value })
                     }
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                   />
                 </div>
               </div>
@@ -1950,7 +1970,7 @@ export default function HostMyExperiences() {
                     setFormData({ ...formData, language: e.target.value })
                   }
                   placeholder="e.g., English, Japanese"
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                 />
               </div>
 
@@ -2013,10 +2033,10 @@ export default function HostMyExperiences() {
                         },
                       })
                     }
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100"
+                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                   >
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="fixed">Fixed Amount</option>
+                    <option value="percentage" className="bg-slate-800 text-white">Percentage (%)</option>
+                    <option value="fixed" className="bg-slate-800 text-white">Fixed Amount</option>
                   </select>
                 </div>
                 <div>
@@ -2036,7 +2056,7 @@ export default function HostMyExperiences() {
                       })
                     }
                     placeholder="Enter discount value"
-                    className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                   />
                 </div>
               </div>
@@ -2056,7 +2076,7 @@ export default function HostMyExperiences() {
                     })
                   }
                   placeholder="e.g., SAVE10"
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40"
+                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                 />
               </div>
 

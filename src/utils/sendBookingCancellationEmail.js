@@ -1,4 +1,36 @@
 import emailjs from "@emailjs/browser";
+import { getServiceFeeForType } from "./platformSettingsUtils";
+import { db } from "../firebase/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
+
+/**
+ * Fetch average rating for a listing from reviews collection
+ * @param {string} listingId - The listing ID
+ * @returns {Promise<number>} Average rating (0 if no reviews)
+ */
+const getAverageListingRating = async (listingId) => {
+  try {
+    const reviewsRef = collection(db, "reviews");
+    const q = query(reviewsRef, where("listingId", "==", listingId));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return 0;
+    }
+
+    let totalRating = 0;
+    querySnapshot.forEach((doc) => {
+      const rating = doc.data().rating || 0;
+      totalRating += rating;
+    });
+
+    const averageRating = totalRating / querySnapshot.size;
+    return Math.round(averageRating * 10) / 10; // Round to 1 decimal place
+  } catch (error) {
+    console.error("Error fetching average rating:", error);
+    return 0;
+  }
+};
 
 /**
  * Send booking cancellation email to guest
@@ -43,10 +75,17 @@ export const sendBookingCancellationEmail = async (
       day: "numeric",
     });
 
+    // Get platform service fee percentage for this listing type
+    const listingType = booking.type || "stays";
+    const serviceFeePercentage = await getServiceFeeForType(listingType);
+
+    // Get average rating from reviews
+    const listingRating = await getAverageListingRating(booking.listing_id);
+
     // Calculate refund amounts
     const basePrice = options.basePrice || booking.totalAmount || 0;
     const serviceFee =
-      options.serviceFee || Math.round(basePrice * 0.05 * 100) / 100;
+      options.serviceFee || Math.round(basePrice * (serviceFeePercentage / 100) * 100) / 100;
     const refundAmount = options.refundAmount || basePrice;
 
     // Prepare email parameters
@@ -55,7 +94,7 @@ export const sendBookingCancellationEmail = async (
       guestName: guestData.fullName || guestData.displayName || "Guest",
       listingTitle: booking.listing?.title || booking.title || "Booking",
       listingLocation: booking.listing?.location || booking.location || "N/A",
-      listingRating: booking.listing?.rating || 0,
+      listingRating: listingRating,
       listingType: booking.type
         ? booking.type.charAt(0).toUpperCase() + booking.type.slice(1)
         : "Booking",
@@ -63,6 +102,7 @@ export const sendBookingCancellationEmail = async (
       numberOfGuests: booking.totalGuests || booking.numberOfGuests || 1,
       basePrice: basePrice.toFixed(2),
       serviceFee: serviceFee.toFixed(2),
+      serviceFeePercentage: serviceFeePercentage.toFixed(2),
       refundAmount: refundAmount.toFixed(2),
       cancellationDate: cancellationDate,
       dashboardLink: `${window.location.origin}/guest/my-bookings`,
@@ -71,6 +111,7 @@ export const sendBookingCancellationEmail = async (
     console.log("📧 Sending booking cancellation email...", {
       to: emailParams.to_email,
       bookingId: emailParams.bookingId,
+      serviceFeePercentage: serviceFeePercentage,
     });
 
     await emailjs.send(serviceId, templateId, emailParams);
@@ -94,10 +135,17 @@ export const sendBookingCancellationEmail = async (
           blockHeadless: false,
         });
 
+        // Get platform service fee percentage for this listing type
+        const listingType = booking.type || "stays";
+        const serviceFeePercentage = await getServiceFeeForType(listingType);
+
+        // Get average rating from reviews
+        const fallbackListingRating = await getAverageListingRating(booking.listing_id);
+
         // Rebuild emailParams for fallback
         const basePrice = options.basePrice || booking.totalAmount || 0;
         const serviceFee =
-          options.serviceFee || Math.round(basePrice * 0.05 * 100) / 100;
+          options.serviceFee || Math.round(basePrice * (serviceFeePercentage / 100) * 100) / 100;
         const refundAmount = options.refundAmount || basePrice;
         const now = new Date();
         const cancellationDate = now.toLocaleDateString("en-US", {
@@ -112,7 +160,7 @@ export const sendBookingCancellationEmail = async (
           listingTitle: booking.listing?.title || booking.title || "Booking",
           listingLocation:
             booking.listing?.location || booking.location || "N/A",
-          listingRating: booking.listing?.rating || 0,
+          listingRating: fallbackListingRating,
           listingType: booking.type
             ? booking.type.charAt(0).toUpperCase() + booking.type.slice(1)
             : "Booking",
@@ -120,6 +168,7 @@ export const sendBookingCancellationEmail = async (
           numberOfGuests: booking.totalGuests || booking.numberOfGuests || 1,
           basePrice: basePrice.toFixed(2),
           serviceFee: serviceFee.toFixed(2),
+          serviceFeePercentage: serviceFeePercentage.toFixed(2),
           refundAmount: refundAmount.toFixed(2),
           cancellationDate: cancellationDate,
           dashboardLink: `${window.location.origin}/guest/my-bookings`,

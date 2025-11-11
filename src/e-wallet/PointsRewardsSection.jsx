@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { db } from "../firebase/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
 import {
   POINTS_CONFIG,
   getUserRewards,
@@ -71,7 +71,7 @@ export default function PointsRewardsSection({ userData, userRole = "guest" }) {
       if (result.success) {
         // Deduct wallet balance for remaining cost
         if (upgradeCost.pesoNeeded > 0) {
-          await deductWalletBalance(upgradeCost.pesoNeeded);
+          await deductWalletBalance(upgradeCost.pesoNeeded, selectedCategory);
         }
 
         // Refresh rewards data
@@ -107,16 +107,49 @@ export default function PointsRewardsSection({ userData, userRole = "guest" }) {
     }
   };
 
-  const deductWalletBalance = async (amount) => {
+  const deductWalletBalance = async (amount, listingType) => {
     try {
       const walletRef = doc(db, "wallets", userData.id);
       const walletSnap = await getDoc(walletRef);
-      if (walletSnap.exists()) {
-        const currentBalance = walletSnap.data().balance || 0;
-        // Update wallet would go here
+
+      if (!walletSnap.exists()) {
+        throw new Error("Wallet not found");
       }
+
+      const currentBalance = walletSnap.data().balance || 0;
+      const newBalance = currentBalance - amount;
+
+      // Update wallet balance
+      await updateDoc(walletRef, {
+        balance: newBalance,
+        updated_at: serverTimestamp(),
+      });
+
+      // Create transaction for listing limit upgrade (deduction from user)
+      await addDoc(collection(db, "transactions"), {
+        amount: -amount,
+        created_at: serverTimestamp(),
+        type: "listing_limit_upgrade",
+        status: "completed",
+        user_id: userData.id,
+        wallet_id: walletSnap.id,
+        description: `Listing limit upgrade for ${listingType} (+${POINTS_CONFIG.LISTING_LIMIT_INCREASE} listings)`,
+        listingType: listingType,
+      });
+
+      // Create platform revenue transaction for admin tracking
+      await addDoc(collection(db, "platformRevenue"), {
+        amount: amount,
+        created_at: serverTimestamp(),
+        type: "listing_limit_upgrade",
+        listingType: listingType,
+        userId: userData.id,
+      });
+
+      console.log(`✓ Wallet deducted ₱${amount} for ${listingType} listing upgrade`);
     } catch (error) {
       console.error("Error deducting wallet balance:", error);
+      throw error;
     }
   };
 

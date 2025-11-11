@@ -56,14 +56,19 @@ export const requestRefund = async (bookingId, guestId, reason) => {
       refund_requested_by: guestId,
     });
 
+    // Get guest's name from users collection
+    const guestDocRef = doc(db, "users", guestId);
+    const guestDocSnap = await getDoc(guestDocRef);
+    const guestName = guestDocSnap.exists() ? guestDocSnap.data().fullName : "Guest";
+
     // Create notification for host
     await addDoc(collection(db, "notifications"), {
       userId: bookingData.host_id,
       guestId: guestId,
-      guestName: bookingData.guestName,
+      guestName: guestName,
       type: "refund_requested",
       title: "Refund Request Received",
-      message: `Guest requested a refund for "${
+      message: `${guestName} requested a refund for "${
         bookingData.listing?.title
       }". Reason: ${reason || "No reason provided"}`,
       listingId: bookingData.listing_id,
@@ -130,49 +135,84 @@ export const approveRefund = async (bookingId, hostId) => {
 
     const hostWalletData = hostWalletSnap.data();
 
-    // Calculate refund amount (full booking amount + service fee back to guest)
-    const refundAmount = bookingData.totalAmount;
-    const serviceFeeRefund = Math.round(refundAmount * 0.05 * 100) / 100; // Service fee returned to guest
+    // Calculate refund amounts
+    // Guest gets back: totalAmount + serviceFee (full amount paid)
+    // Host loses: only totalAmount (service fee was already deducted)
+    const baseRefundAmount = bookingData.totalAmount || 0;
+    const serviceFeeAmount = bookingData.serviceFee || (baseRefundAmount * 0.05);
+    const totalGuestRefund = baseRefundAmount + serviceFeeAmount;
 
-    // Update guest wallet (add refund)
+    // Update guest wallet (add full refund including service fee)
     await updateDoc(guestWalletRef, {
-      balance: guestWalletData.balance + refundAmount,
+      balance: guestWalletData.balance + totalGuestRefund,
       total_spent: Math.max(
         0,
-        (guestWalletData.total_spent || 0) - refundAmount
+        (guestWalletData.total_spent || 0) - totalGuestRefund
       ),
     });
 
-    // Update host wallet (deduct refund)
+    // Update host wallet (deduct only base amount, service fee already accounted for)
     await updateDoc(hostWalletRef, {
-      balance: hostWalletData.balance - refundAmount,
+      balance: hostWalletData.balance - baseRefundAmount,
       total_cash_in: Math.max(
         0,
-        (hostWalletData.total_cash_in || 0) - refundAmount
+        (hostWalletData.total_cash_in || 0) - baseRefundAmount
       ),
     });
 
-    // Create guest transaction (refund added)
+    // Get or create admin/platform wallet to deduct service fee
+    const platformWalletRef = doc(db, "wallets", "platform_admin");
+    const platformWalletSnap = await getDoc(platformWalletRef);
+
+    if (platformWalletSnap.exists()) {
+      const platformWalletData = platformWalletSnap.data();
+      // Deduct service fee from platform
+      await updateDoc(platformWalletRef, {
+        balance: platformWalletData.balance - serviceFeeAmount,
+        total_platform_fees: Math.max(
+          0,
+          (platformWalletData.total_platform_fees || 0) - serviceFeeAmount
+        ),
+      });
+    }
+
+    // Create guest transaction (full refund including service fee)
     await addDoc(collection(db, "transactions"), {
-      amount: refundAmount,
+      amount: totalGuestRefund,
       created_at: serverTimestamp(),
       type: "refund",
       status: "completed",
       user_id: bookingData.guest_id,
       wallet_id: guestWalletRef.id,
       bookingId: bookingId,
+      description: `Refund for booking (₱${baseRefundAmount.toFixed(2)} + ₱${serviceFeeAmount.toFixed(2)} service fee)`,
     });
 
-    // Create host transaction (refund deducted)
+    // Create host transaction (base amount refunded)
     await addDoc(collection(db, "transactions"), {
-      amount: -refundAmount,
+      amount: -baseRefundAmount,
       created_at: serverTimestamp(),
       type: "refund",
       status: "completed",
       user_id: hostId,
       wallet_id: hostWalletRef.id,
       bookingId: bookingId,
+      description: `Refund paid to guest for booking`,
     });
+
+    // Create platform transaction (service fee deducted)
+    if (platformWalletSnap.exists()) {
+      await addDoc(collection(db, "transactions"), {
+        amount: -serviceFeeAmount,
+        created_at: serverTimestamp(),
+        type: "service_fee_refund",
+        status: "completed",
+        user_id: "platform_admin",
+        wallet_id: platformWalletRef.id,
+        bookingId: bookingId,
+        description: `Service fee refunded to guest`,
+      });
+    }
 
     // DEDUCT POINTS from both guest and host
     // Deduct from guest
@@ -282,7 +322,7 @@ export const approveRefund = async (bookingId, hostId) => {
       guestId: bookingData.guest_id,
       type: "refund_approved",
       title: "Refund Approved",
-      message: `Your refund of ₱${refundAmount.toLocaleString()} has been approved and credited to your wallet.`,
+      message: `Your refund of ₱${totalGuestRefund.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been approved and credited to your wallet.`,
       listingId: bookingData.listing_id,
       bookingId: bookingId,
       isRead: false,
@@ -291,8 +331,10 @@ export const approveRefund = async (bookingId, hostId) => {
 
     return {
       success: true,
-      message: "Refund approved. Money returned to guest wallet.",
-      refundAmount,
+      message: "Refund approved. Full amount (including service fee) returned to guest wallet.",
+      guestRefundAmount: totalGuestRefund,
+      hostRefundAmount: baseRefundAmount,
+      serviceFeeRefunded: serviceFeeAmount,
       pointsDeducted: POINTS_CONFIG.POINTS_PER_BOOKING,
     };
   } catch (error) {

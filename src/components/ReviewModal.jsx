@@ -25,7 +25,7 @@ export default function ReviewModal({ showModal, onClose, booking, user }) {
         bookingId: booking.id,
         listingId: booking.listing_id,
         guestId: user.uid,
-        hostId: booking.host_id,
+        hostId: booking.hostId,
         rating: rating,
         comment: comment,
         createdAt: serverTimestamp(),

@@ -108,12 +108,44 @@ export const getAllReviews = async () => {
 // ============================================
 
 /**
+ * Calculate total revenue from listing limit upgrades
+ * Reads from transactions collection
+ */
+export const calculateListingUpgradeRevenue = async () => {
+  try {
+    const transactionsRef = collection(db, "transactions");
+    const querySnapshot = await getDocs(transactionsRef);
+
+    let totalRevenue = 0;
+
+    for (const docSnap of querySnapshot.docs) {
+      const transaction = docSnap.data();
+
+      // Only count listing_limit_upgrade transactions
+      if (transaction.type !== "listing_limit_upgrade") continue;
+
+      // Listing upgrade transactions are stored as negative (user deduction)
+      // Convert to positive for revenue calculation
+      const upgradeRevenue = Math.abs(transaction.amount || 0);
+      totalRevenue += upgradeRevenue;
+    }
+
+    return totalRevenue;
+  } catch (error) {
+    console.error("Error calculating listing upgrade revenue:", error);
+    return 0;
+  }
+};
+
+/**
  * Calculate total revenue from service fee transactions
  * Reads actual service fees collected from transactions collection
  */
 export const calculateTotalRevenue = async () => {
   try {
-    const totalRevenue = await getTotalServiceFeeRevenue();
+    const serviceFeeRevenue = await getTotalServiceFeeRevenue();
+    const listingUpgradeRevenue = await calculateListingUpgradeRevenue();
+    const totalRevenue = serviceFeeRevenue + listingUpgradeRevenue;
     return totalRevenue;
   } catch (error) {
     console.error("Error calculating total revenue:", error);
@@ -123,6 +155,7 @@ export const calculateTotalRevenue = async () => {
 
 /**
  * Calculate revenue by listing type from transactions
+ * Includes both service fees and listing limit upgrades
  */
 export const calculateRevenueByType = async () => {
   try {
@@ -138,24 +171,34 @@ export const calculateRevenueByType = async () => {
     for (const docSnap of querySnapshot.docs) {
       const transaction = docSnap.data();
 
-      // Only count service_fee transactions
-      if (transaction.type !== "service_fee") continue;
+      // Handle service_fee transactions
+      if (transaction.type === "service_fee") {
+        // Extract listing type from description
+        const description = transaction.description || "";
+        let listingType = null;
 
-      // Extract listing type from description
-      const description = transaction.description || "";
-      let listingType = null;
+        if (description.includes("(stays)")) {
+          listingType = "stays";
+        } else if (description.includes("(experiences)")) {
+          listingType = "experiences";
+        } else if (description.includes("(services)")) {
+          listingType = "services";
+        }
 
-      if (description.includes("(stays)")) {
-        listingType = "stays";
-      } else if (description.includes("(experiences)")) {
-        listingType = "experiences";
-      } else if (description.includes("(services)")) {
-        listingType = "services";
+        if (listingType && listingType in revenueByType) {
+          const serviceFee = Math.abs(transaction.amount || 0);
+          revenueByType[listingType] += serviceFee;
+        }
       }
 
-      if (listingType && listingType in revenueByType) {
-        const serviceFee = Math.abs(transaction.amount || 0);
-        revenueByType[listingType] += serviceFee;
+      // Handle listing_limit_upgrade transactions
+      if (transaction.type === "listing_limit_upgrade") {
+        const listingType = transaction.listingType;
+
+        if (listingType && listingType in revenueByType) {
+          const upgradeRevenue = Math.abs(transaction.amount || 0);
+          revenueByType[listingType] += upgradeRevenue;
+        }
       }
     }
 
@@ -220,8 +263,10 @@ export const getUserStats = (users) => {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
-  const hosts = users.filter((user) => user.role === "host");
-  const guests = users.filter((user) => user.role === "guest");
+  // Exclude admin users from total count
+  const nonAdminUsers = users.filter((user) => user.role !== "admin");
+  const hosts = nonAdminUsers.filter((user) => user.role === "host");
+  const guests = nonAdminUsers.filter((user) => user.role === "guest");
 
   const recentHosts = hosts.filter((host) => {
     const createdDate = host.createdAt?.toDate
@@ -248,7 +293,7 @@ export const getUserStats = (users) => {
   return {
     totalHosts: hosts.length,
     totalGuests: guests.length,
-    totalUsers: users.length,
+    totalUsers: nonAdminUsers.length,
     hostChange,
     hostTrend: hostChange >= 0 ? "up" : "down",
   };
@@ -538,7 +583,12 @@ export const getHostPerformance = async (
     (b) => b.status === "confirmed" || b.status === "completed"
   );
 
-  const totalEarnings = confirmedBookings.reduce((sum, booking) => {
+  // Only count earnings from COMPLETED bookings
+  const completedBookings = hostBookings.filter(
+    (b) => b.status === "completed"
+  );
+
+  const totalEarnings = completedBookings.reduce((sum, booking) => {
     return sum + (booking.totalAmount || 0);
   }, 0);
 
@@ -565,6 +615,7 @@ export const getHostPerformance = async (
 
 /**
  * Get revenue trends over time (monthly) from transactions
+ * Includes both service fees and listing limit upgrades
  */
 export const getRevenueTrends = async (months = 6) => {
   try {
@@ -584,21 +635,31 @@ export const getRevenueTrends = async (months = 6) => {
 
       let revenue = 0;
       const bookingIds = new Set();
+      let listingUpgradeRevenue = 0;
+      let listingUpgradeCount = 0;
 
       querySnapshot.docs.forEach((docSnap) => {
         const transaction = docSnap.data();
-
-        // Only count service_fee transactions
-        if (transaction.type !== "service_fee") return;
 
         const transactionDate = transaction.created_at?.toDate
           ? transaction.created_at.toDate()
           : new Date(transaction.created_at);
 
         if (transactionDate >= monthDate && transactionDate < nextMonthDate) {
-          revenue += Math.abs(transaction.amount || 0);
-          if (transaction.bookingId) {
-            bookingIds.add(transaction.bookingId);
+          // Count service_fee transactions
+          if (transaction.type === "service_fee") {
+            revenue += Math.abs(transaction.amount || 0);
+            if (transaction.bookingId) {
+              bookingIds.add(transaction.bookingId);
+            }
+          }
+
+          // Count listing_limit_upgrade transactions
+          if (transaction.type === "listing_limit_upgrade") {
+            const upgradeAmount = Math.abs(transaction.amount || 0);
+            revenue += upgradeAmount;
+            listingUpgradeRevenue += upgradeAmount;
+            listingUpgradeCount++;
           }
         }
       });
@@ -610,6 +671,8 @@ export const getRevenueTrends = async (months = 6) => {
         }),
         revenue,
         bookingCount: bookingIds.size,
+        listingUpgradeRevenue,
+        listingUpgradeCount,
       });
     }
 
@@ -617,6 +680,56 @@ export const getRevenueTrends = async (months = 6) => {
   } catch (error) {
     console.error("Error getting revenue trends:", error);
     return [];
+  }
+};
+
+/**
+ * Get listing upgrade statistics
+ */
+export const getListingUpgradeStats = async () => {
+  try {
+    const transactionsRef = collection(db, "transactions");
+    const querySnapshot = await getDocs(transactionsRef);
+
+    const stats = {
+      totalRevenue: 0,
+      totalUpgrades: 0,
+      byType: {
+        stays: { count: 0, revenue: 0 },
+        experiences: { count: 0, revenue: 0 },
+        services: { count: 0, revenue: 0 },
+      },
+    };
+
+    for (const docSnap of querySnapshot.docs) {
+      const transaction = docSnap.data();
+
+      if (transaction.type === "listing_limit_upgrade") {
+        const amount = Math.abs(transaction.amount || 0);
+        const listingType = transaction.listingType;
+
+        stats.totalRevenue += amount;
+        stats.totalUpgrades++;
+
+        if (listingType && listingType in stats.byType) {
+          stats.byType[listingType].count++;
+          stats.byType[listingType].revenue += amount;
+        }
+      }
+    }
+
+    return stats;
+  } catch (error) {
+    console.error("Error getting listing upgrade stats:", error);
+    return {
+      totalRevenue: 0,
+      totalUpgrades: 0,
+      byType: {
+        stays: { count: 0, revenue: 0 },
+        experiences: { count: 0, revenue: 0 },
+        services: { count: 0, revenue: 0 },
+      },
+    };
   }
 };
 
@@ -665,6 +778,9 @@ export const getDashboardData = async () => {
     const pointsStats = getPointsStats(rewards);
     const refundStats = getRefundStats(bookings);
     const revenueTrends = await getRevenueTrends(6);
+    const listingUpgradeStats = await getListingUpgradeStats();
+    const serviceFeeRevenue = await getTotalServiceFeeRevenue();
+    const listingUpgradeRevenue = await calculateListingUpgradeRevenue();
 
     return {
       stats: {
@@ -673,8 +789,11 @@ export const getDashboardData = async () => {
         listings: listingStats,
         revenue: {
           total: totalRevenue,
+          serviceFeeRevenue,
+          listingUpgradeRevenue,
           byType: revenueByType,
           trends: revenueTrends,
+          listingUpgrades: listingUpgradeStats,
         },
         points: pointsStats,
         refunds: refundStats,

@@ -202,22 +202,56 @@ export default function HostDashboard({ isVerified, user }) {
           })
         );
 
+        // Fetch all completed bookings for this host to calculate earnings
+        // Only completed bookings should count towards earnings
+        const completedBookings = bookingsWithDates.filter(
+          (b) => b.status === "completed"
+        );
+
+        // Calculate total earnings from completed bookings only
+        const totalEarnings = completedBookings.reduce((sum, booking) => {
+          return sum + (Number(booking.totalAmount) || 0);
+        }, 0);
+
+        // Get all reviews for this host's listings
+        const reviewsRef = collection(db, "reviews");
+        const reviewsQuery = query(reviewsRef, where("hostId", "==", userData.id));
+        const reviewsSnap = await getDocs(reviewsQuery);
+        const reviews = reviewsSnap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        // Calculate average rating per listing from reviews
+        const listingRatings = {};
+        const listingReviewCounts = {};
+
+        reviews.forEach((review) => {
+          const listingId = review.listingId;
+          if (!listingRatings[listingId]) {
+            listingRatings[listingId] = 0;
+            listingReviewCounts[listingId] = 0;
+          }
+          listingRatings[listingId] += review.rating || 0;
+          listingReviewCounts[listingId] += 1;
+        });
+
+        // Calculate average ratings per listing
+        Object.keys(listingRatings).forEach((listingId) => {
+          listingRatings[listingId] = listingRatings[listingId] / listingReviewCounts[listingId];
+        });
+
+        // Calculate overall average rating from all reviews (for dashboard stat)
+        const avgRating = reviews.length > 0
+          ? Math.round(
+              (reviews.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) / reviews.length) * 10
+            ) / 10
+          : 0;
+
         // Calculate stats
         const confirmedBookings = bookingsWithDates.filter(
           (b) => b.status === "confirmed"
         );
-        const totalEarnings = confirmedBookings.reduce(
-          (sum, b) => sum + (b.totalAmount || 0),
-          0
-        );
-        const avgRating =
-          listings.length > 0
-            ? Math.round(
-                (listings.reduce((sum, l) => sum + (Number(l.rating) || 0), 0) /
-                  listings.length) *
-                  10
-              ) / 10
-            : 0;
 
         // Map helper for booking display row
         const mapBookingDisplay = async (booking) => {
@@ -262,34 +296,6 @@ export default function HostDashboard({ isVerified, user }) {
           upcomingConfirmed.slice(0, 5).map(mapBookingDisplay)
         );
 
-        // Get all reviews for this host's listings
-        const reviewsRef = collection(db, "reviews");
-        const reviewsQuery = query(reviewsRef, where("hostId", "==", userData.id));
-        const reviewsSnap = await getDocs(reviewsQuery);
-        const reviews = reviewsSnap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        // Calculate average rating per listing from reviews
-        const listingRatings = {};
-        const listingReviewCounts = {};
-
-        reviews.forEach((review) => {
-          const listingId = review.listingId;
-          if (!listingRatings[listingId]) {
-            listingRatings[listingId] = 0;
-            listingReviewCounts[listingId] = 0;
-          }
-          listingRatings[listingId] += review.rating || 0;
-          listingReviewCounts[listingId] += 1;
-        });
-
-        // Calculate average ratings
-        Object.keys(listingRatings).forEach((listingId) => {
-          listingRatings[listingId] = listingRatings[listingId] / listingReviewCounts[listingId];
-        });
-
         // Prepare listing data with calculated ratings
         const getTypeLabel = (type) => {
           if (type === "stays") return "Stay";
@@ -302,7 +308,11 @@ export default function HostDashboard({ isVerified, user }) {
           const listingBookings = allBookings.filter(
             (b) => b.listing_id === listing.id && b.status === "confirmed"
           );
-          const revenue = listingBookings.reduce(
+          // Revenue should only count completed bookings
+          const completedListingBookings = allBookings.filter(
+            (b) => b.listing_id === listing.id && b.status === "completed"
+          );
+          const revenue = completedListingBookings.reduce(
             (sum, b) => sum + (b.totalAmount || 0),
             0
           );

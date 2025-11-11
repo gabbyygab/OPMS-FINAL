@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   MapPin,
   Star,
@@ -23,6 +23,8 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { db } from "../../firebase/firebase";
 import { validateCoupon, calculateDiscount } from "../../utils/couponUtils";
+import { getServiceFeeForType } from "../../utils/platformSettingsUtils";
+import { sendBookingConfirmationEmail } from "../../utils/sendBookingConfirmationEmail";
 import {
   doc,
   getDoc,
@@ -88,10 +90,27 @@ export default function ServiceDetailPage() {
   const [loading, setLoading] = useState(false);
   const [isLoadingVerification, setIsLoadingVerification] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [isBookingCardVisible, setIsBookingCardVisible] = useState(true);
+  const [serviceFeePercentage, setServiceFeePercentage] = useState(null);
+  const bookingCardRef = useRef(null);
 
   const { user, isVerified } = useAuth();
   const navigate = useNavigate();
   const { listing_id } = useParams();
+
+  // Fetch service fee from platformSettings
+  useEffect(() => {
+    const fetchServiceFee = async () => {
+      try {
+        const fee = await getServiceFeeForType("services");
+        setServiceFeePercentage(fee);
+      } catch (error) {
+        console.error("Error fetching service fee:", error);
+        setServiceFeePercentage(5); // Fallback to 5%
+      }
+    };
+    fetchServiceFee();
+  }, []);
 
   const handleVerification = async () => {
     try {
@@ -175,6 +194,29 @@ export default function ServiceDetailPage() {
       };
       await addDoc(collection(db, "notifications"), notificationData);
 
+      // Send booking confirmation email to guest
+      try {
+        const guestData = {
+          email: user.email,
+          fullName: user.fullName || user.displayName || "Guest",
+        };
+
+        const bookingWithId = {
+          ...bookingData,
+          id: bookingRef.id,
+          selectedDate: selectedDate,
+        };
+
+        await sendBookingConfirmationEmail(
+          bookingWithId,
+          { type: "services", ...serviceData },
+          guestData
+        );
+      } catch (emailError) {
+        console.error("Error sending booking email:", emailError);
+        // Don't fail the booking if email fails
+      }
+
       // DO NOT process payment here - payment will be processed when host confirms the booking
       // This allows the host to accept or reject the booking before payment is taken
 
@@ -224,7 +266,8 @@ export default function ServiceDetailPage() {
 
   const pointsDiscount = pointsToUse;
   const totalPrice = basePrice - discountAmount - pointsDiscount;
-  const serviceFee = totalPrice * 0.12;
+  const feePercentage = serviceFeePercentage !== null ? serviceFeePercentage : 5;
+  const serviceFee = totalPrice * (feePercentage / 100);
   const finalTotal = totalPrice + serviceFee;
 
   const nextPhoto = () => {
@@ -348,6 +391,40 @@ export default function ServiceDetailPage() {
     };
     fetchRewards();
   }, [user?.uid]);
+
+  // Fetch service fee from platform settings
+  useEffect(() => {
+    const fetchServiceFee = async () => {
+      try {
+        const feePercentage = await getServiceFeeForType("services");
+        setServiceFeePercentage(feePercentage);
+      } catch (error) {
+        console.error("Error fetching service fee:", error);
+        setServiceFeePercentage(10); // Default to 10% on error
+      }
+    };
+    fetchServiceFee();
+  }, []);
+
+  // Track visibility of booking card
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsBookingCardVisible(entry.isIntersecting);
+      },
+      { threshold: 0.1 }
+    );
+
+    if (bookingCardRef.current) {
+      observer.observe(bookingCardRef.current);
+    }
+
+    return () => {
+      if (bookingCardRef.current) {
+        observer.unobserve(bookingCardRef.current);
+      }
+    };
+  }, []);
 
   if (loading) return <LoadingSpinner />;
   console.log(serviceData);
@@ -678,18 +755,21 @@ export default function ServiceDetailPage() {
               )}
 
             {/* Reviews */}
-            {reviewsData.length > 0 && (
-              <div className="pb-8 border-b border-slate-700">
-                <div className="flex items-center gap-2 mb-6">
-                  <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
-                  <h3 className="text-xl font-semibold text-white">
-                    {serviceData?.rating || 0} · {serviceData?.reviewCount || 0}{" "}
-                    reviews
-                  </h3>
-                </div>
-                <div className="space-y-6">
-                  {reviewsData.map((review) => (
-                    <div key={review.id} className="flex gap-4">
+            <div className="pb-8 border-b border-slate-700">
+              <div className="flex items-center gap-2 mb-6">
+                <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
+                <h3 className="text-xl font-semibold text-white">
+                  {serviceData?.rating || 0} · {serviceData?.reviewCount || 0}{" "}
+                  reviews
+                </h3>
+              </div>
+              <div className="space-y-6">
+                {reviewsData && reviewsData.length > 0 ? (
+                  reviewsData.map((review) => (
+                    <div
+                      key={review.id}
+                      className="flex gap-4 bg-slate-800/50 backdrop-blur-md p-6 rounded-xl border border-slate-700/50"
+                    >
                       <img
                         src={
                           review.user?.photoURL ||
@@ -730,10 +810,14 @@ export default function ServiceDetailPage() {
                         </p>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-slate-400">No reviews yet. Be the first to review this service!</p>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Terms & Conditions */}
             <div>
@@ -753,7 +837,7 @@ export default function ServiceDetailPage() {
 
           {/* Booking Card */}
           <div className="lg:col-span-1">
-            <div className="bg-slate-800/50 backdrop-blur-md rounded-2xl shadow-lg p-6 border border-slate-700/50 sticky top-24">
+            <div ref={bookingCardRef} className="bg-slate-800/50 backdrop-blur-md rounded-2xl shadow-lg p-6 border border-slate-700/50 sticky top-24">
               <div className="mb-6">
                 <div className="flex items-baseline gap-2 mb-2">
                   <span className="text-3xl font-bold text-white">
@@ -769,31 +853,16 @@ export default function ServiceDetailPage() {
               <div className="space-y-4 mb-6">
                 <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
                   <label className="text-xs font-medium text-slate-300 block mb-2">
+                    <Calendar className="w-3 h-3 inline mr-1" />
                     SELECT DATE
                   </label>
-                  <select
+                  <input
+                    type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-700 text-white"
-                  >
-                    {Array.isArray(serviceData?.availableDates) &&
-                    serviceData.availableDates.length > 0 ? (
-                      serviceData.availableDates.map((dateRange, idx) => {
-                        const startDate = dateRange.startDate;
-                        const endDate = dateRange.endDate;
-                        const displayRange = `${startDate} to ${endDate}`;
-                        return (
-                          <option key={idx} value={startDate}>
-                            {displayRange}
-                          </option>
-                        );
-                      })
-                    ) : (
-                      <option value="" disabled>
-                        No dates available
-                      </option>
-                    )}
-                  </select>
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-600/50 text-white px-3 py-2 border border-slate-600 focus:border-indigo-500 transition-all"
+                  />
                 </div>
 
                 <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
@@ -1182,6 +1251,21 @@ export default function ServiceDetailPage() {
                 </div>
             </div>
         </div>
+      )}
+
+      {/* Floating Booking Button - Shows when booking card is not visible */}
+      {!isBookingCardVisible && (
+        <motion.button
+          onClick={() => bookingCardRef.current?.scrollIntoView({ behavior: "smooth" })}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ duration: 0.3 }}
+          className="fixed bottom-6 right-6 bg-gradient-to-r from-indigo-600 to-indigo-600 hover:from-indigo-700 hover:to-indigo-700 text-white px-6 py-3 rounded-full font-semibold transition-all duration-200 shadow-md shadow-indigo-500/20 flex items-center gap-2 z-40 hover:shadow-indigo-500/30"
+        >
+          <Briefcase className="w-5 h-5" />
+          <span>Book Now</span>
+        </motion.button>
       )}
     </motion.div>
   );

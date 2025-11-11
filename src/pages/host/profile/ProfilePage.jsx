@@ -505,7 +505,7 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar - Hidden on mobile */}
           <div className="hidden lg:block">
-            <nav className="sticky top-24 space-y-2 bg-slate-800/50 backdrop-blur-xl rounded-xl p-3 shadow-lg border border-indigo-500/20">
+            <nav className="sticky top-24 space-y-2 bg-slate-800 rounded-xl p-3 shadow-lg border border-indigo-500/20">
               {[
                 { id: "personal", label: "Personal info", icon: User },
                 { id: "security", label: "Login & security", icon: Shield },

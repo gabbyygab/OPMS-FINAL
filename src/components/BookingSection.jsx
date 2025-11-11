@@ -152,25 +152,27 @@ function formatAvailability(listing) {
       .filter((item) => item !== null);
   }
 
-  // Handle experiences - availableDates is array of { date, time }
+  // Handle experiences - availableDates is array of { startDate, endDate } like stays
+  // Display with availableTimes if available
   if (listing.type === "experiences" && Array.isArray(listing.availableDates) && listing.availableDates.length > 0) {
-    return listing.availableDates
-      .map((dateItem) => {
-        if (dateItem.date) {
-          const dateObj = parseToDate(dateItem.date);
-          if (dateObj) {
-            const dateStr = dateObj.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            });
-            const timeStr = dateItem.time ? ` at ${dateItem.time}` : "";
-            return `${dateStr}${timeStr}`;
-          }
+    const dateRanges = listing.availableDates
+      .map((range) => {
+        const startDate = parseToDate(range.startDate);
+        const endDate = parseToDate(range.endDate);
+        if (startDate && endDate) {
+          return formatRange(startDate, endDate);
         }
         return null;
       })
       .filter((item) => item !== null);
+
+    // Add available times if they exist
+    if (Array.isArray(listing.availableTimes) && listing.availableTimes.length > 0) {
+      const timesStr = `Times: ${listing.availableTimes.join(", ")}`;
+      return [...dateRanges, timesStr];
+    }
+
+    return dateRanges;
   }
 
   // Handle services - availableDates is array of { startDate, endDate }
@@ -235,7 +237,8 @@ export default function BookingsSection({ userData, isFavoritePage }) {
 
   // Clear filters function
   const clearFilters = () => {
-    navigate("/guest");
+    // Navigate without any date parameters to truly clear filters
+    navigate(`/guest?type=${activeFilter}`, { replace: true });
   };
   const handleVerification = async () => {
     try {
@@ -439,49 +442,97 @@ export default function BookingsSection({ userData, isFavoritePage }) {
       }
     }
 
-    // Check availability dates
+    // Check availability dates based on listing type
     if (searchFilters.checkIn || searchFilters.checkOut) {
-      // Get available dates array
       const availableDates = listing.availableDates || [];
 
       if (availableDates.length === 0) {
         return false; // No availability info, exclude listing
       }
 
-      // Check if any availability range matches the search dates
-      const hasMatchingDates = availableDates.some((range) => {
-        const rangeStart = parseToDate(range.startDate);
-        const rangeEnd = parseToDate(range.endDate);
+      // Handle EXPERIENCES - with date ranges (like stays and services)
+      if (listing.type === "experiences") {
+        const searchDate = searchFilters.checkIn || searchFilters.checkOut;
+        if (!searchDate) return true;
 
-        if (!rangeStart || !rangeEnd) return false;
+        // Parse the search date string (YYYY-MM-DD) as local date
+        const [year, month, day] = searchDate.split("-").map(Number);
+        const searchDateObj = new Date(year, month - 1, day);
 
-        const searchCheckIn = searchFilters.checkIn
-          ? new Date(searchFilters.checkIn)
-          : null;
-        const searchCheckOut = searchFilters.checkOut
-          ? new Date(searchFilters.checkOut)
-          : null;
+        const hasMatchingDate = availableDates.some((range) => {
+          const rangeStart = parseToDate(range.startDate);
+          const rangeEnd = parseToDate(range.endDate);
 
-        // If only checkIn is provided, check if it's within range
-        if (searchCheckIn && !searchCheckOut) {
-          return searchCheckIn >= rangeStart && searchCheckIn <= rangeEnd;
+          if (!rangeStart || !rangeEnd) return false;
+
+          // Check if search date falls within the available date range
+          return searchDateObj >= rangeStart && searchDateObj <= rangeEnd;
+        });
+
+        if (!hasMatchingDate) {
+          return false;
         }
+      }
+      // Handle SERVICES - with date only (no time)
+      else if (listing.type === "services") {
+        const searchDate = searchFilters.checkIn || searchFilters.checkOut;
+        if (!searchDate) return true;
 
-        // If only checkOut is provided, check if it's within range
-        if (searchCheckOut && !searchCheckIn) {
-          return searchCheckOut >= rangeStart && searchCheckOut <= rangeEnd;
+        // Parse the search date string (YYYY-MM-DD) as local date
+        const [year, month, day] = searchDate.split("-").map(Number);
+        const searchDateObj = new Date(year, month - 1, day);
+
+        const hasMatchingDate = availableDates.some((range) => {
+          const rangeStart = parseToDate(range.startDate);
+          const rangeEnd = parseToDate(range.endDate);
+
+          if (!rangeStart || !rangeEnd) return false;
+
+          // Check if search date falls within the available date range
+          return searchDateObj >= rangeStart && searchDateObj <= rangeEnd;
+        });
+
+        if (!hasMatchingDate) {
+          return false;
         }
+      }
+      // Handle STAYS - with checkIn and checkOut date ranges
+      else {
+        // Check if any availability range matches the search dates
+        const hasMatchingDates = availableDates.some((range) => {
+          const rangeStart = parseToDate(range.startDate);
+          const rangeEnd = parseToDate(range.endDate);
 
-        // If both dates provided, check if date range overlaps
-        if (searchCheckIn && searchCheckOut) {
-          return searchCheckIn <= rangeEnd && searchCheckOut >= rangeStart;
+          if (!rangeStart || !rangeEnd) return false;
+
+          const searchCheckIn = searchFilters.checkIn
+            ? new Date(searchFilters.checkIn)
+            : null;
+          const searchCheckOut = searchFilters.checkOut
+            ? new Date(searchFilters.checkOut)
+            : null;
+
+          // If only checkIn is provided, check if it's within range
+          if (searchCheckIn && !searchCheckOut) {
+            return searchCheckIn >= rangeStart && searchCheckIn <= rangeEnd;
+          }
+
+          // If only checkOut is provided, check if it's within range
+          if (searchCheckOut && !searchCheckIn) {
+            return searchCheckOut >= rangeStart && searchCheckOut <= rangeEnd;
+          }
+
+          // If both dates provided, check if date range overlaps
+          if (searchCheckIn && searchCheckOut) {
+            return searchCheckIn <= rangeEnd && searchCheckOut >= rangeStart;
+          }
+
+          return false;
+        });
+
+        if (!hasMatchingDates) {
+          return false;
         }
-
-        return false;
-      });
-
-      if (!hasMatchingDates) {
-        return false;
       }
     }
 

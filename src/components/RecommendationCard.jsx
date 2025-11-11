@@ -119,7 +119,7 @@ export default function RecommendationCard({
         {/* Recommendation Reason - AI Tag Style */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
-            <motion.p
+            <motion.div
               className="text-xs font-semibold text-indigo-400 bg-indigo-500/10 px-2.5 py-1.5 rounded-lg w-fit mb-2 flex items-center gap-1"
               initial={{ x: -10, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
@@ -138,7 +138,7 @@ export default function RecommendationCard({
                 <Zap className="w-3 h-3" />
               </motion.div>
               Recommended for you
-            </motion.p>
+            </motion.div>
             <motion.p
               className="text-xs text-slate-300 italic"
               initial={{ opacity: 0 }}

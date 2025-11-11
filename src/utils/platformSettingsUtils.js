@@ -148,64 +148,61 @@ export async function getHostServiceFeeStats() {
       }
     });
 
-    // Fetch all transactions
-    const transactionsRef = collection(db, "transactions");
-    const q = query(transactionsRef);
-    const querySnapshot = await getDocs(q);
+    // Fetch all bookings to check completion status
+    const bookingsRef = collection(db, "bookings");
+    const bookingsSnapshot = await getDocs(bookingsRef);
+
+    // Only get completed bookings
+    const completedBookings = bookingsSnapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(booking => booking.status === "completed");
+
+    // Fetch platform revenue to get service fees
+    const platformRevenueRef = collection(db, "platformRevenue");
+    const revenueSnapshot = await getDocs(platformRevenueRef);
+    const platformRevenue = revenueSnapshot.docs.map(doc => doc.data());
 
     const hostStats = {};
-    const bookingCounts = {};
 
-    for (const docSnap of querySnapshot.docs) {
-      const transaction = docSnap.data();
+    // Calculate earnings from completed bookings only
+    for (const booking of completedBookings) {
+      const hostId = booking.hostId || booking.host_id;
 
-      const userId = transaction.user_id;
-      if (!userId) continue;
-
-      // Only process transactions for hosts
-      if (!hostUserIds.has(userId)) continue;
+      if (!hostUserIds.has(hostId)) continue;
 
       // Initialize host stats if not exists
-      if (!hostStats[userId]) {
-        hostStats[userId] = {
-          hostId: userId,
+      if (!hostStats[hostId]) {
+        hostStats[hostId] = {
+          hostId: hostId,
           totalEarnings: 0,
           bookingsCount: 0,
           serviceFeeCollected: 0,
-          listingType: transaction.listingType || "stays",
+          listingType: booking.listing?.type || booking.type || "stays",
         };
       }
 
-      // Handle different transaction types
-      if (transaction.type === "service_fee") {
-        // Service fee amount is stored as negative in transactions
-        const serviceFee = Math.abs(transaction.amount || 0);
-        hostStats[userId].serviceFeeCollected += serviceFee;
-
-        // Track unique bookings using bookingId
-        if (transaction.bookingId && !bookingCounts[userId]) {
-          bookingCounts[userId] = new Set();
-        }
-        if (transaction.bookingId) {
-          bookingCounts[userId].add(transaction.bookingId);
-        }
-      } else if (transaction.type === "payment" && transaction.amount > 0) {
-        // Payment to host (positive amount) - this is their earnings
-        hostStats[userId].totalEarnings += transaction.amount;
-      }
+      // Add earnings from this completed booking
+      hostStats[hostId].totalEarnings += (Number(booking.totalAmount) || 0);
+      hostStats[hostId].bookingsCount += 1;
 
       // Update listing type if available
-      if (transaction.listingType && !hostStats[userId].listingType) {
-        hostStats[userId].listingType = transaction.listingType;
+      if (booking.listing?.type && !hostStats[hostId].listingType) {
+        hostStats[hostId].listingType = booking.listing.type;
       }
     }
 
-    // Set booking counts from unique bookingIds
-    Object.keys(bookingCounts).forEach(hostId => {
-      if (hostStats[hostId]) {
-        hostStats[hostId].bookingsCount = bookingCounts[hostId].size;
+    // Add service fees collected from completed bookings only
+    for (const revenue of platformRevenue) {
+      const hostId = revenue.hostId;
+
+      if (!hostStats[hostId]) continue;
+
+      // Only count service fees for completed bookings
+      const isCompletedBooking = completedBookings.some(b => b.id === revenue.bookingId);
+      if (isCompletedBooking) {
+        hostStats[hostId].serviceFeeCollected += (Number(revenue.amount) || 0);
       }
-    });
+    }
 
     // Convert to array and sort by service fee collected
     return Object.values(hostStats).sort(
@@ -249,10 +246,44 @@ export async function getTotalServiceFeeRevenue() {
 
 /**
  * Get monthly revenue breakdown by listing type from transactions
- * @returns {Promise<Object>} Revenue breakdown
+ * Includes all bookings created this month (confirmed/completed/refunded)
+ * Revenue is calculated as net amount (service fees collected minus refunds)
+ * Excludes only pending and rejected bookings
+ * @returns {Promise<Object>} Revenue breakdown with net revenue and booking counts
  */
 export async function getMonthlyRevenueBreakdown() {
   try {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    // Fetch all bookings
+    const bookingsRef = collection(db, "bookings");
+    const bookingsSnapshot = await getDocs(bookingsRef);
+
+    // Filter for bookings created this month and are completed
+    const thisMonthBookingIds = new Set();
+    const bookingHostMap = new Map(); // Map booking ID to host ID
+    const bookingTypeMap = new Map(); // Map booking ID to listing type
+
+    bookingsSnapshot.docs.forEach(doc => {
+      const booking = doc.data();
+      const bookingDate = booking.createdAt?.toDate();
+
+      // Include all confirmed/completed/refunded bookings created this month
+      // Exclude only pending and rejected bookings
+      if (
+        (booking.status === "completed" || booking.status === "confirmed" || booking.status === "refunded") &&
+        bookingDate &&
+        bookingDate.getMonth() === currentMonth &&
+        bookingDate.getFullYear() === currentYear
+      ) {
+        thisMonthBookingIds.add(doc.id);
+        bookingHostMap.set(doc.id, booking.hostId || booking.host_id);
+        bookingTypeMap.set(doc.id, booking.listing?.type || booking.type || "stays");
+      }
+    });
+
+    // Fetch transactions
     const transactionsRef = collection(db, "transactions");
     const q = query(transactionsRef);
     const querySnapshot = await getDocs(q);
@@ -263,53 +294,42 @@ export async function getMonthlyRevenueBreakdown() {
       services: { revenue: 0, hosts: new Set(), bookings: 0, bookingIds: new Set() },
     };
 
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-
     for (const docSnap of querySnapshot.docs) {
       const transaction = docSnap.data();
 
-      // Only count service_fee transactions
-      if (transaction.type !== "service_fee") continue;
-
-      // Check if transaction is from current month
-      const transactionDate = transaction.created_at?.toDate();
-      if (
-        !transactionDate ||
-        transactionDate.getMonth() !== currentMonth ||
-        transactionDate.getFullYear() !== currentYear
-      ) {
+      // Only include transactions for bookings created this month
+      if (!transaction.bookingId || !thisMonthBookingIds.has(transaction.bookingId)) {
         continue;
       }
 
-      // Extract listing type from description (e.g., "Service fee (stays) for booking...")
-      const description = transaction.description || "";
-      let listingType = "stays"; // default
-
-      if (description.includes("(stays)")) {
-        listingType = "stays";
-      } else if (description.includes("(experiences)")) {
-        listingType = "experiences";
-      } else if (description.includes("(services)")) {
-        listingType = "services";
-      }
+      // Get listing type from booking data
+      let listingType = bookingTypeMap.get(transaction.bookingId) || "stays";
 
       if (!breakdown[listingType]) continue;
 
-      // Service fee is stored as negative, convert to positive
-      const serviceFee = Math.abs(transaction.amount || 0);
+      // Count service_fee transactions (revenue earned)
+      if (transaction.type === "service_fee") {
+        // Service fee is stored as negative, convert to positive
+        const serviceFee = Math.abs(transaction.amount || 0);
+        breakdown[listingType].revenue += serviceFee;
 
-      breakdown[listingType].revenue += serviceFee;
+        // Track unique bookings
+        if (!breakdown[listingType].bookingIds.has(transaction.bookingId)) {
+          breakdown[listingType].bookingIds.add(transaction.bookingId);
+          breakdown[listingType].bookings += 1;
+        }
 
-      // Track unique bookings
-      if (transaction.bookingId && !breakdown[listingType].bookingIds.has(transaction.bookingId)) {
-        breakdown[listingType].bookingIds.add(transaction.bookingId);
-        breakdown[listingType].bookings += 1;
+        // Track unique hosts from booking data
+        const hostId = bookingHostMap.get(transaction.bookingId);
+        if (hostId) {
+          breakdown[listingType].hosts.add(hostId);
+        }
       }
-
-      // Track unique hosts
-      if (transaction.user_id) {
-        breakdown[listingType].hosts.add(transaction.user_id);
+      // Subtract service_fee_refund transactions (revenue lost)
+      else if (transaction.type === "service_fee_refund") {
+        // Service fee refund is stored as negative, subtract the absolute value
+        const refundAmount = Math.abs(transaction.amount || 0);
+        breakdown[listingType].revenue -= refundAmount;
       }
     }
 

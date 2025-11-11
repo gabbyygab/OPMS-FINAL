@@ -18,8 +18,8 @@ export async function getGuestPreviousBookings(userId) {
     const bookingsRef = collection(db, "bookings");
     const q = query(
       bookingsRef,
-      where("guest_id", "==", userId),
-      where("status", "==", "confirmed") // Only confirmed bookings
+      where("guest_id", "==", userId)
+      // Fetch all bookings for the user, filter by status below
     );
 
     const querySnapshot = await getDocs(q);
@@ -27,6 +27,11 @@ export async function getGuestPreviousBookings(userId) {
 
     for (const bookingDoc of querySnapshot.docs) {
       const booking = { id: bookingDoc.id, ...bookingDoc.data() };
+
+      // Filter for confirmed OR completed bookings
+      if (booking.status !== "confirmed" && booking.status !== "completed") {
+        continue; // Skip this booking
+      }
 
       // Fetch listing details
       if (booking.listing_id) {

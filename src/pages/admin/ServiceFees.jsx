@@ -21,6 +21,7 @@ import {
   updateServiceFees,
   getHostServiceFeeStats,
   getMonthlyRevenueBreakdown,
+  getTotalServiceFeeRevenue,
 } from "../../utils/platformSettingsUtils";
 
 export default function ServiceFees() {
@@ -43,6 +44,7 @@ export default function ServiceFees() {
     experiences: { revenue: 0, hosts: 0, bookings: 0 },
     services: { revenue: 0, hosts: 0, bookings: 0 },
   });
+  const [totalServiceFeeRevenue, setTotalServiceFeeRevenue] = useState(0);
 
   // Load service fees and statistics on mount
   useEffect(() => {
@@ -57,6 +59,10 @@ export default function ServiceFees() {
       const currentFees = await getServiceFees();
       setFees(currentFees);
       setOriginalFees(currentFees);
+
+      // Load total service fee revenue from transactions
+      const totalRevenue = await getTotalServiceFeeRevenue();
+      setTotalServiceFeeRevenue(totalRevenue);
 
       // Load monthly revenue breakdown
       const revenueData = await getMonthlyRevenueBreakdown();
@@ -219,16 +225,23 @@ export default function ServiceFees() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-indigo-100 text-sm font-medium mb-2">
-              Total Monthly Revenue from Service Fees
+              Total Revenue from Service Fees
             </p>
             <h2 className="text-4xl font-bold text-white mb-4">
-              ₱{totalMonthlyRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₱{totalServiceFeeRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </h2>
             <div className="flex items-center gap-4 text-indigo-100">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
-                <span className="text-sm">{totalBookings} bookings this month</span>
+                <span className="text-sm">All-time service fee revenue</span>
               </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-indigo-400/20">
+              <p className="text-xs text-indigo-200 mb-1">This Month:</p>
+              <p className="text-lg font-semibold text-white">
+                ₱{totalMonthlyRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-xs text-indigo-200 mt-1">{totalBookings} bookings this month</p>
             </div>
           </div>
           <div className="hidden md:block">
@@ -320,32 +333,6 @@ export default function ServiceFees() {
                       <Percent className="w-5 h-5 text-slate-400" />
                     </div>
                   )}
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-slate-800/50 rounded-xl p-3">
-                    <p className="text-xs text-slate-400 mb-1">Active Hosts</p>
-                    <p className="text-lg font-bold text-white">
-                      {item.totalHosts}
-                    </p>
-                  </div>
-                  <div className="bg-slate-800/50 rounded-xl p-3">
-                    <p className="text-xs text-slate-400 mb-1">
-                      Monthly Revenue
-                    </p>
-                    <p className="text-lg font-bold text-emerald-400">
-                      ₱{item.monthlyRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                    </p>
-                  </div>
-                  <div className="bg-slate-800/50 rounded-xl p-3 col-span-2">
-                    <p className="text-xs text-slate-400 mb-1">
-                      Bookings This Month
-                    </p>
-                    <p className="text-lg font-bold text-white">
-                      {item.bookings}
-                    </p>
-                  </div>
                 </div>
               </div>
             </div>

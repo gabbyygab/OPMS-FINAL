@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FileText,
   Download,
@@ -14,12 +14,29 @@ import {
   Clock,
   Filter,
   Plus,
+  Loader2,
 } from "lucide-react";
+import {
+  getDateRange,
+  generateFinancialReportData,
+  generateBookingsReportData,
+  generateHostPerformanceReportData,
+  generateListingAnalyticsReportData,
+} from "../../utils/reportUtils";
+import {
+  generateFinancialReportPDF,
+  generateBookingsReportPDF,
+  generateHostPerformanceReportPDF,
+  generateListingAnalyticsReportPDF,
+} from "../../utils/pdfGenerator";
+import { formatCurrency } from "../../utils/adminAnalytics";
 
 export default function Reports() {
   const [selectedReportType, setSelectedReportType] = useState("financial");
   const [dateRange, setDateRange] = useState("last30days");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [reportPreview, setReportPreview] = useState(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
   const reportTypes = [
     {
@@ -67,97 +84,100 @@ export default function Reports() {
     { value: "custom", label: "Custom Range" },
   ];
 
-  const recentReports = [
+  const quickTemplates = [
     {
-      id: 1,
-      name: "Monthly Financial Summary - January 2024",
-      type: "Financial Report",
-      generatedBy: "Admin",
-      date: "2024-02-01",
-      size: "2.4 MB",
-      format: "PDF",
-      status: "completed",
-    },
-    {
-      id: 2,
-      name: "Bookings Analysis Q4 2023",
-      type: "Bookings Report",
-      generatedBy: "Admin",
-      date: "2024-01-15",
-      size: "1.8 MB",
-      format: "Excel",
-      status: "completed",
-    },
-    {
-      id: 3,
-      name: "Host Performance - December 2023",
-      type: "Host Performance",
-      generatedBy: "Admin",
-      date: "2024-01-05",
-      size: "3.1 MB",
-      format: "PDF",
-      status: "completed",
-    },
-    {
-      id: 4,
-      name: "Listing Analytics Year-End Report",
-      type: "Listing Analytics",
-      generatedBy: "System",
-      date: "2024-01-01",
-      size: "4.2 MB",
-      format: "Excel",
-      status: "completed",
-    },
-  ];
-
-  const quickStats = [
-    {
-      label: "Reports Generated",
-      value: "248",
-      change: "+12%",
-      icon: FileText,
+      id: "monthly",
+      name: "Monthly Summary",
+      description: "Complete overview of all metrics for the past month",
+      icon: TrendingUp,
       color: "indigo",
+      reportType: "financial",
+      dateRange: "last30days",
     },
     {
-      label: "This Month",
-      value: "24",
-      change: "+8%",
-      icon: Calendar,
+      id: "revenue",
+      name: "Revenue Report",
+      description: "Detailed breakdown of all revenue streams",
+      icon: DollarSign,
       color: "emerald",
+      reportType: "financial",
+      dateRange: "last3months",
     },
     {
-      label: "Pending",
-      value: "0",
-      change: "0%",
-      icon: Clock,
-      color: "amber",
-    },
-    {
-      label: "Storage Used",
-      value: "128 MB",
-      change: "+15%",
-      icon: FileSpreadsheet,
+      id: "analytics",
+      name: "Analytics Dashboard",
+      description: "Visual analytics with charts and graphs",
+      icon: PieChart,
       color: "violet",
+      reportType: "listings",
+      dateRange: "last30days",
     },
   ];
 
-  const handleGenerateReport = () => {
-    setIsGenerating(true);
-    // Simulate report generation
-    setTimeout(() => {
-      setIsGenerating(false);
-      alert("Report generated successfully!");
-    }, 2000);
+  // Load report preview when report type or date range changes
+  useEffect(() => {
+    loadReportPreview();
+  }, [selectedReportType, dateRange]);
+
+  const loadReportPreview = async () => {
+    setIsLoadingPreview(true);
+    try {
+      const range = getDateRange(dateRange);
+      let preview = null;
+
+      switch (selectedReportType) {
+        case "financial":
+          preview = await generateFinancialReportData(range);
+          break;
+        case "bookings":
+          preview = await generateBookingsReportData(range);
+          break;
+        case "hosts":
+          preview = await generateHostPerformanceReportData(range);
+          break;
+        case "listings":
+          preview = await generateListingAnalyticsReportData(range);
+          break;
+      }
+
+      setReportPreview(preview);
+    } catch (error) {
+      console.error("Error loading report preview:", error);
+    } finally {
+      setIsLoadingPreview(false);
+    }
   };
 
-  const getFormatIcon = (format) => {
-    switch (format) {
-      case "PDF":
-        return FilePieChart;
-      case "Excel":
-        return FileSpreadsheet;
-      default:
-        return FileText;
+  const handleGenerateReport = async () => {
+    setIsGenerating(true);
+    try {
+      const range = getDateRange(dateRange);
+      let data = null;
+
+      // Generate report data
+      switch (selectedReportType) {
+        case "financial":
+          data = await generateFinancialReportData(range);
+          generateFinancialReportPDF(data);
+          break;
+        case "bookings":
+          data = await generateBookingsReportData(range);
+          generateBookingsReportPDF(data);
+          break;
+        case "hosts":
+          data = await generateHostPerformanceReportData(range);
+          generateHostPerformanceReportPDF(data);
+          break;
+        case "listings":
+          data = await generateListingAnalyticsReportData(range);
+          generateListingAnalyticsReportPDF(data);
+          break;
+      }
+    } catch (error) {
+      console.error("Error generating report:", error);
+      alert("Failed to generate report. Please try again.");
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -171,34 +191,6 @@ export default function Reports() {
         <p className="text-slate-400">
           Generate and download comprehensive platform reports
         </p>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {quickStats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={index}
-              className="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-colors"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div
-                  className={`p-2 rounded-lg bg-${stat.color}-500/10 text-${stat.color}-400`}
-                >
-                  <Icon className="w-5 h-5" />
-                </div>
-                <span className="text-xs text-emerald-400 font-medium">
-                  {stat.change}
-                </span>
-              </div>
-              <h3 className="text-xl font-bold text-white mb-1">
-                {stat.value}
-              </h3>
-              <p className="text-sm text-slate-400">{stat.label}</p>
-            </div>
-          );
-        })}
       </div>
 
       {/* Report Generator */}
@@ -273,125 +265,381 @@ export default function Reports() {
             <label className="block text-sm font-medium text-slate-300 mb-2">
               Export Format
             </label>
-            <select className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500">
-              <option value="pdf">PDF Document</option>
-              <option value="excel">Excel Spreadsheet</option>
-              <option value="csv">CSV File</option>
-              <option value="json">JSON Data</option>
-            </select>
+            <div className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white">
+              <div className="flex items-center gap-2">
+                <FilePieChart className="w-5 h-5 text-indigo-400" />
+                <span>PDF Document</span>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Selected Report Preview */}
         {selectedReportType && (
           <div className="bg-slate-800/50 rounded-xl p-5 mb-6">
-            <h3 className="text-sm font-semibold text-white mb-3">
-              Report will include:
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {reportTypes
-                .find((t) => t.id === selectedReportType)
-                ?.fields.map((field, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 text-sm text-slate-300"
-                  >
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    {field}
-                  </div>
-                ))}
-            </div>
+            {isLoadingPreview ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+                <span className="ml-2 text-slate-400">
+                  Loading preview...
+                </span>
+              </div>
+            ) : reportPreview ? (
+              <>
+                <h3 className="text-sm font-semibold text-white mb-4">
+                  Report Preview
+                </h3>
+                {selectedReportType === "financial" && reportPreview && (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          Total Revenue
+                        </p>
+                        <p className="text-lg font-bold text-emerald-400">
+                          {formatCurrency(reportPreview.totalRevenue || 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          Service Fees
+                        </p>
+                        <p className="text-lg font-bold text-white">
+                          {formatCurrency(reportPreview.serviceFees || 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          Transactions
+                        </p>
+                        <p className="text-lg font-bold text-white">
+                          {reportPreview.transactions || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Refunds</p>
+                        <p className="text-lg font-bold text-amber-400">
+                          {formatCurrency(reportPreview.refunds || 0)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="border-t border-slate-700 pt-4">
+                      <p className="text-xs font-semibold text-slate-300 mb-3">
+                        Revenue by Type
+                      </p>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-slate-400">Stays</span>
+                          <span className="text-sm font-semibold text-white">
+                            {formatCurrency(reportPreview.revenueByType?.stays || 0)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-slate-400">
+                            Experiences
+                          </span>
+                          <span className="text-sm font-semibold text-white">
+                            {formatCurrency(reportPreview.revenueByType?.experiences || 0)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-slate-400">Services</span>
+                          <span className="text-sm font-semibold text-white">
+                            {formatCurrency(reportPreview.revenueByType?.services || 0)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {selectedReportType === "bookings" && reportPreview && (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          Total Bookings
+                        </p>
+                        <p className="text-lg font-bold text-white">
+                          {reportPreview.totalBookings || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Confirmed</p>
+                        <p className="text-lg font-bold text-emerald-400">
+                          {reportPreview.confirmedBookings || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          Completion Rate
+                        </p>
+                        <p className="text-lg font-bold text-white">
+                          {(reportPreview.completionRate || 0).toFixed(1)}%
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          Avg. Value
+                        </p>
+                        <p className="text-lg font-bold text-indigo-400">
+                          {formatCurrency(reportPreview.averageBookingValue || 0)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 border-t border-slate-700 pt-4 mb-4">
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Stays</p>
+                        <p className="text-sm font-semibold text-white">
+                          {reportPreview.bookingsByType?.stays || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          Experiences
+                        </p>
+                        <p className="text-sm font-semibold text-white">
+                          {reportPreview.bookingsByType?.experiences || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Services</p>
+                        <p className="text-sm font-semibold text-white">
+                          {reportPreview.bookingsByType?.services || 0}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="border-t border-slate-700 pt-4">
+                      <p className="text-xs font-semibold text-slate-300 mb-3">
+                        Status Breakdown
+                      </p>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-slate-700/30 rounded-lg p-2">
+                          <p className="text-xs text-slate-400">Pending</p>
+                          <p className="text-sm font-bold text-amber-400">
+                            {reportPreview.statusBreakdown?.pending || 0}
+                          </p>
+                        </div>
+                        <div className="bg-slate-700/30 rounded-lg p-2">
+                          <p className="text-xs text-slate-400">Confirmed</p>
+                          <p className="text-sm font-bold text-emerald-400">
+                            {reportPreview.statusBreakdown?.confirmed || 0}
+                          </p>
+                        </div>
+                        <div className="bg-slate-700/30 rounded-lg p-2">
+                          <p className="text-xs text-slate-400">Rejected</p>
+                          <p className="text-sm font-bold text-red-400">
+                            {reportPreview.statusBreakdown?.rejected || 0}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {selectedReportType === "hosts" && reportPreview && (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          Total Hosts
+                        </p>
+                        <p className="text-lg font-bold text-white">
+                          {reportPreview.totalHosts || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          Active Hosts
+                        </p>
+                        <p className="text-lg font-bold text-emerald-400">
+                          {reportPreview.activeHosts || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          Total Earnings
+                        </p>
+                        <p className="text-lg font-bold text-white">
+                          {formatCurrency(reportPreview.totalEarnings || 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          Avg. Rating
+                        </p>
+                        <p className="text-lg font-bold text-amber-400">
+                          {(reportPreview.averageRating || 0).toFixed(2)} / 5.00
+                        </p>
+                      </div>
+                    </div>
+                    <div className="border-t border-slate-700 pt-4">
+                      <p className="text-xs font-semibold text-slate-300 mb-3">
+                        Top Performing Hosts (Top 5)
+                      </p>
+                      <div className="space-y-2">
+                        {reportPreview.topHosts?.slice(0, 5).map((host, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between bg-slate-700/20 rounded-lg p-2"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-indigo-400 w-6">
+                                #{idx + 1}
+                              </span>
+                              <span className="text-sm text-white">
+                                {host.hostName}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <span className="text-xs text-slate-400">
+                                {host.confirmedBookings} bookings
+                              </span>
+                              <span className="text-sm font-semibold text-emerald-400">
+                                {formatCurrency(host.totalEarnings)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        {(!reportPreview.topHosts || reportPreview.topHosts.length === 0) && (
+                          <p className="text-sm text-slate-400 text-center py-4">
+                            No active hosts in this period
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+                {selectedReportType === "listings" && reportPreview && (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          Total Listings
+                        </p>
+                        <p className="text-lg font-bold text-white">
+                          {reportPreview.totalListings || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          Active Listings
+                        </p>
+                        <p className="text-lg font-bold text-emerald-400">
+                          {reportPreview.activeListings || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          New Listings
+                        </p>
+                        <p className="text-lg font-bold text-indigo-400">
+                          {reportPreview.newListings || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          Conversion Rate
+                        </p>
+                        <p className="text-lg font-bold text-white">
+                          {(reportPreview.conversionRate || 0).toFixed(2)}%
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 border-t border-slate-700 pt-4 mb-4">
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Stays</p>
+                        <p className="text-sm font-semibold text-white">
+                          {reportPreview.listingsByType?.stays || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
+                          Experiences
+                        </p>
+                        <p className="text-sm font-semibold text-white">
+                          {reportPreview.listingsByType?.experiences || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Services</p>
+                        <p className="text-sm font-semibold text-white">
+                          {reportPreview.listingsByType?.services || 0}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="border-t border-slate-700 pt-4">
+                      <p className="text-xs font-semibold text-slate-300 mb-3">
+                        Top Performing Listings (Top 5)
+                      </p>
+                      <div className="space-y-2">
+                        {reportPreview.topListings?.slice(0, 5).map((listing, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between bg-slate-700/20 rounded-lg p-2"
+                          >
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <span className="text-xs font-bold text-indigo-400 w-6">
+                                #{idx + 1}
+                              </span>
+                              <span className="text-sm text-white truncate">
+                                {listing.title}
+                              </span>
+                              <span className="text-xs text-slate-500 px-2 py-0.5 bg-slate-700 rounded">
+                                {listing.type}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-slate-400">
+                                {listing.bookingCount} bookings
+                              </span>
+                              <span className="text-sm font-semibold text-emerald-400">
+                                {formatCurrency(listing.totalRevenue)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        {(!reportPreview.topListings || reportPreview.topListings.length === 0) && (
+                          <p className="text-sm text-slate-400 text-center py-4">
+                            No listings with bookings in this period
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-8 text-slate-400">
+                <p>No preview available</p>
+              </div>
+            )}
           </div>
         )}
 
         {/* Generate Button */}
         <button
           onClick={handleGenerateReport}
-          disabled={isGenerating}
+          disabled={isGenerating || isLoadingPreview}
           className={`w-full md:w-auto px-6 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
-            isGenerating
+            isGenerating || isLoadingPreview
               ? "bg-slate-700 text-slate-400 cursor-not-allowed"
               : "bg-indigo-600 hover:bg-indigo-700 text-white"
           }`}
         >
           {isGenerating ? (
             <>
-              <Clock className="w-5 h-5 animate-spin" />
-              Generating Report...
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Generating PDF...
             </>
           ) : (
             <>
               <Download className="w-5 h-5" />
-              Generate Report
+              Download PDF Report
             </>
           )}
         </button>
       </div>
 
-      {/* Recent Reports */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-xl font-bold text-white">Recent Reports</h2>
-          </div>
-          <button className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-            <Filter className="w-4 h-4" />
-            Filter
-          </button>
-        </div>
-
-        <div className="space-y-3">
-          {recentReports.map((report) => {
-            const FormatIcon = getFormatIcon(report.format);
-            return (
-              <div
-                key={report.id}
-                className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl hover:bg-slate-800 transition-colors border border-slate-700"
-              >
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="p-3 bg-indigo-500/10 rounded-lg">
-                    <FormatIcon className="w-6 h-6 text-indigo-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-white mb-1 truncate">
-                      {report.name}
-                    </h3>
-                    <div className="flex items-center gap-3 text-xs text-slate-400">
-                      <span>{report.type}</span>
-                      <span>•</span>
-                      <span>{report.date}</span>
-                      <span>•</span>
-                      <span>{report.size}</span>
-                      <span>•</span>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
-                        {report.format}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 ml-4">
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 hidden sm:block">
-                    Completed
-                  </span>
-                  <button className="p-2 text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors">
-                    <Download className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-4 text-center">
-          <button className="text-indigo-400 text-sm hover:text-indigo-300 transition-colors">
-            View All Reports
-          </button>
-        </div>
-      </div>
-
-      {/* Report Templates */}
+      {/* Quick Templates */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-6">
           <FilePieChart className="w-5 h-5 text-violet-400" />
@@ -399,47 +647,36 @@ export default function Reports() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="p-4 bg-slate-800/50 border border-slate-700 rounded-xl hover:border-indigo-500 hover:bg-slate-800 transition-all text-left group">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-indigo-500/10 rounded-lg group-hover:bg-indigo-500/20 transition-colors">
-                <TrendingUp className="w-5 h-5 text-indigo-400" />
-              </div>
-              <h3 className="text-sm font-semibold text-white">
-                Monthly Summary
-              </h3>
-            </div>
-            <p className="text-xs text-slate-400">
-              Complete overview of all metrics for the past month
-            </p>
-          </button>
-
-          <button className="p-4 bg-slate-800/50 border border-slate-700 rounded-xl hover:border-emerald-500 hover:bg-slate-800 transition-all text-left group">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
-                <DollarSign className="w-5 h-5 text-emerald-400" />
-              </div>
-              <h3 className="text-sm font-semibold text-white">
-                Revenue Report
-              </h3>
-            </div>
-            <p className="text-xs text-slate-400">
-              Detailed breakdown of all revenue streams
-            </p>
-          </button>
-
-          <button className="p-4 bg-slate-800/50 border border-slate-700 rounded-xl hover:border-violet-500 hover:bg-slate-800 transition-all text-left group">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-violet-500/10 rounded-lg group-hover:bg-violet-500/20 transition-colors">
-                <PieChart className="w-5 h-5 text-violet-400" />
-              </div>
-              <h3 className="text-sm font-semibold text-white">
-                Analytics Dashboard
-              </h3>
-            </div>
-            <p className="text-xs text-slate-400">
-              Visual analytics with charts and graphs
-            </p>
-          </button>
+          {quickTemplates.map((template) => {
+            const Icon = template.icon;
+            return (
+              <button
+                key={template.id}
+                onClick={() => {
+                  setSelectedReportType(template.reportType);
+                  setDateRange(template.dateRange);
+                }}
+                className={`p-4 bg-slate-800/50 border rounded-xl hover:bg-slate-800 transition-all text-left group ${
+                  selectedReportType === template.reportType &&
+                  dateRange === template.dateRange
+                    ? `border-${template.color}-500`
+                    : "border-slate-700 hover:border-slate-600"
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div
+                    className={`p-2 bg-${template.color}-500/10 rounded-lg group-hover:bg-${template.color}-500/20 transition-colors`}
+                  >
+                    <Icon className={`w-5 h-5 text-${template.color}-400`} />
+                  </div>
+                  <h3 className="text-sm font-semibold text-white">
+                    {template.name}
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-400">{template.description}</p>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

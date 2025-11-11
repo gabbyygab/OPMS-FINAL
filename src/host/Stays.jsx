@@ -222,20 +222,41 @@ export default function HostMyStays({ user, userData }) {
         querySnapshot.docs.map(async (doc) => {
           const listingData = { id: doc.id, ...doc.data() };
 
-          // 2️⃣ Fetch booking count for this listing
+          // 2️⃣ Fetch booking count for this listing (only completed)
           const bookingsRef = collection(db, "bookings");
           const bookingQuery = query(
             bookingsRef,
-            where("listing_id", "==", doc.id)
+            where("listing_id", "==", doc.id),
+            where("status", "==", "completed")
           );
           const bookingSnapshot = await getDocs(bookingQuery);
           const revenue = listingData.price * bookingSnapshot.size;
-          // 3️⃣ Add count into listing data
+
+          // 3️⃣ Fetch reviews for this listing to calculate average rating
+          const reviewsRef = collection(db, "reviews");
+          const reviewQuery = query(
+            reviewsRef,
+            where("listingId", "==", doc.id)
+          );
+          const reviewSnapshot = await getDocs(reviewQuery);
+
+          let averageRating = 0;
+          if (reviewSnapshot.size > 0) {
+            const totalRating = reviewSnapshot.docs.reduce(
+              (sum, reviewDoc) => sum + (reviewDoc.data().rating || 0),
+              0
+            );
+            averageRating = (totalRating / reviewSnapshot.size).toFixed(1);
+          }
+
+          // 4️⃣ Add count into listing data
           return {
             id: listingData.id,
             ...listingData,
             bookingCount: bookingSnapshot.size,
             revenue: revenue,
+            rating: parseFloat(averageRating),
+            reviewCount: reviewSnapshot.size,
           };
         })
       );
@@ -987,11 +1008,11 @@ export default function HostMyStays({ user, userData }) {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-white transition"
+                className="px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
               >
-                <option value="all" className="bg-slate-900 text-white">All Status</option>
-                <option value="active" className="bg-slate-900 text-white">Active</option>
-                <option value="inactive" className="bg-slate-900 text-white">Inactive</option>
+                <option value="all" className="bg-slate-800 text-white">All Status</option>
+                <option value="active" className="bg-slate-800 text-white">Active</option>
+                <option value="inactive" className="bg-slate-800 text-white">Inactive</option>
               </select>
             </div>
           </div>
@@ -1086,7 +1107,7 @@ export default function HostMyStays({ user, userData }) {
                         {stay.rating || 0}
                       </span>
                       <span className="text-slate-400 text-sm">
-                        ({stay.reviews || 0})
+                        ({stay.reviewCount || 0})
                       </span>
                     </div>
                     <div className="text-right">
@@ -1295,7 +1316,7 @@ export default function HostMyStays({ user, userData }) {
                 <button
                   type="button"
                   onClick={() => setShowDateRangeModal(true)}
-                  className="w-full mb-4 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium flex items-center justify-center gap-2 shadow-md"
+                  className="w-full mb-4 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition font-medium flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30"
                 >
                   <Calendar className="w-4 h-4" />
                   Select Date Range
@@ -1307,9 +1328,9 @@ export default function HostMyStays({ user, userData }) {
                     {formData.availableDates.map((range, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-2"
+                        className="flex items-center justify-between bg-slate-700/40 border border-slate-600 rounded-lg px-4 py-2"
                       >
-                        <span className="text-gray-700 text-sm">
+                        <span className="text-slate-200 text-sm">
                           {new Date(range.startDate).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
@@ -1325,7 +1346,7 @@ export default function HostMyStays({ user, userData }) {
                         <button
                           type="button"
                           onClick={() => removeAvailableDate(index)}
-                          className="text-gray-400 hover:text-red-500 transition"
+                          className="text-slate-400 hover:text-rose-400 transition"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -1333,7 +1354,7 @@ export default function HostMyStays({ user, userData }) {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500">No date ranges added yet</p>
+                  <p className="text-sm text-slate-400">No date ranges added yet</p>
                 )}
               </div>
 
@@ -1433,10 +1454,10 @@ export default function HostMyStays({ user, userData }) {
                         },
                       })
                     }
-                    className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-white transition"
+                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                   >
-                    <option value="percentage" className="bg-white text-gray-900">Percentage</option>
-                    <option value="fixed" className="bg-white text-gray-900">Fixed</option>
+                    <option value="percentage" className="bg-slate-800 text-white">Percentage</option>
+                    <option value="fixed" className="bg-slate-800 text-white">Fixed</option>
                   </select>
                 </div>
 
@@ -1494,10 +1515,34 @@ export default function HostMyStays({ user, userData }) {
                     "Air Conditioning",
                     "TV",
                     "Kitchen",
+                    "Washing Machine",
+                    "Dryer",
+                    "Dishwasher",
+                    "Microwave",
+                    "Oven",
+                    "Refrigerator",
+                    "Heating",
+                    "Hot Water",
+                    "Gym",
+                    "Balcony",
+                    "Garden",
+                    "BBQ Grill",
+                    "Elevator",
+                    "Security Cameras",
+                    "Iron",
+                    "Hairdryer",
+                    "Work Desk",
+                    "Crib",
+                    "High Chair",
+                    "Bathtub",
+                    "Shower",
+                    "Outdoor Furniture",
+                    "Fire Extinguisher",
+                    "First Aid Kit",
                   ].map((item) => (
                     <label
                       key={item}
-                      className="flex items-center gap-2 text-sm px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg hover:border-gray-300 cursor-pointer transition"
+                      className="flex items-center gap-2 text-sm px-3 py-2 bg-slate-700/40 border border-slate-600 rounded-lg hover:bg-slate-700/60 hover:border-slate-500 cursor-pointer transition"
                     >
                       <input
                         type="checkbox"
@@ -1513,7 +1558,7 @@ export default function HostMyStays({ user, userData }) {
                         }}
                         className="w-4 h-4 accent-indigo-500"
                       />
-                      <span className="text-indigo-200">{item}</span>
+                      <span className="text-slate-200">{item}</span>
                     </label>
                   ))}
                 </div>
@@ -1530,7 +1575,7 @@ export default function HostMyStays({ user, userData }) {
                     setFormData({ ...formData, description: e.target.value })
                   }
                   rows="4"
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 placeholder-gray-400 transition resize-none"
+                  className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-white placeholder-slate-400 transition resize-none"
                 ></textarea>
               </div>
 
@@ -1547,7 +1592,7 @@ export default function HostMyStays({ user, userData }) {
                     value={newRule || ""}
                     onChange={(e) => setNewRule(e.target.value)}
                     placeholder="Enter a rule (e.g., No smoking)"
-                    className="flex-1 px-4 py-2 bg-slate-700/50 border border-indigo-500/30 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400/50 outline-none text-indigo-100 placeholder-indigo-300/40 transition"
+                    className="flex-1 px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-white placeholder-slate-400 transition"
                   />
                   <button
                     type="button"
@@ -1563,7 +1608,7 @@ export default function HostMyStays({ user, userData }) {
                         setNewRule("");
                       }
                     }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
                   >
                     Add
                   </button>
@@ -1575,9 +1620,9 @@ export default function HostMyStays({ user, userData }) {
                     {formData.houseRules.map((rule, index) => (
                       <li
                         key={index}
-                        className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 hover:border-gray-300 transition"
+                        className="flex items-center justify-between bg-slate-700/40 border border-slate-600 rounded-lg px-4 py-2 hover:bg-slate-700/60 hover:border-slate-500 transition"
                       >
-                        <span className="text-gray-700 text-sm">{rule}</span>
+                        <span className="text-slate-200 text-sm">{rule}</span>
                         <button
                           onClick={() => {
                             const updated = formData.houseRules.filter(
@@ -1585,7 +1630,7 @@ export default function HostMyStays({ user, userData }) {
                             );
                             setFormData({ ...formData, houseRules: updated });
                           }}
-                          className="text-gray-400 hover:text-rose-500 transition"
+                          className="text-slate-400 hover:text-rose-400 transition"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -1593,7 +1638,7 @@ export default function HostMyStays({ user, userData }) {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-slate-400">
                     No house rules added yet.
                   </p>
                 )}
@@ -1605,10 +1650,10 @@ export default function HostMyStays({ user, userData }) {
                 </label>
                 <div
                   onClick={() => document.getElementById("photoInput").click()}
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 hover:bg-gray-50 transition cursor-pointer bg-white"
+                  className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-slate-500 hover:bg-slate-700/20 transition cursor-pointer bg-slate-900/30"
                 >
-                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-600 text-sm">
+                  <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                  <p className="text-slate-300 text-sm">
                     Click to upload or drag and drop
                   </p>
                   <input
@@ -1628,13 +1673,13 @@ export default function HostMyStays({ user, userData }) {
                         <img
                           src={src}
                           alt={`Preview ${i}`}
-                          className="rounded-lg object-cover w-full h-32 border border-gray-200"
+                          className="rounded-lg object-cover w-full h-32 border border-slate-600"
                         />
                         <button
                           onClick={() => removeImage(i)}
-                          className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100 transition border border-gray-300"
+                          className="absolute top-2 right-2 bg-slate-800/90 rounded-full p-1 shadow hover:bg-slate-700 transition border border-slate-600"
                         >
-                          <X className="w-4 h-4 text-gray-600" />
+                          <X className="w-4 h-4 text-slate-300" />
                         </button>
                       </div>
                     ))}
@@ -1780,7 +1825,7 @@ export default function HostMyStays({ user, userData }) {
                 <button
                   type="button"
                   onClick={() => setShowDateRangeModal(true)}
-                  className="w-full mb-4 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium flex items-center justify-center gap-2 shadow-md"
+                  className="w-full mb-4 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition font-medium flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30"
                 >
                   <Calendar className="w-4 h-4" />
                   Select Date Range
@@ -1792,9 +1837,9 @@ export default function HostMyStays({ user, userData }) {
                     {formData.availableDates.map((range, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-2"
+                        className="flex items-center justify-between bg-slate-700/40 border border-slate-600 rounded-lg px-4 py-2"
                       >
-                        <span className="text-gray-700 text-sm">
+                        <span className="text-slate-200 text-sm">
                           {new Date(range.startDate).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
@@ -1810,7 +1855,7 @@ export default function HostMyStays({ user, userData }) {
                         <button
                           type="button"
                           onClick={() => removeAvailableDate(index)}
-                          className="text-gray-400 hover:text-red-500 transition"
+                          className="text-slate-400 hover:text-rose-400 transition"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -1818,7 +1863,7 @@ export default function HostMyStays({ user, userData }) {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500">No date ranges added yet</p>
+                  <p className="text-sm text-slate-400">No date ranges added yet</p>
                 )}
               </div>
 
@@ -1917,10 +1962,10 @@ export default function HostMyStays({ user, userData }) {
                         },
                       })
                     }
-                    className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-white transition"
+                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition hover:bg-slate-700/50"
                   >
-                    <option value="percentage" className="bg-white text-gray-900">Percentage</option>
-                    <option value="fixed" className="bg-white text-gray-900">Fixed</option>
+                    <option value="percentage" className="bg-slate-800 text-white">Percentage</option>
+                    <option value="fixed" className="bg-slate-800 text-white">Fixed</option>
                   </select>
                 </div>
 
@@ -1978,10 +2023,34 @@ export default function HostMyStays({ user, userData }) {
                     "Air Conditioning",
                     "TV",
                     "Kitchen",
+                    "Washing Machine",
+                    "Dryer",
+                    "Dishwasher",
+                    "Microwave",
+                    "Oven",
+                    "Refrigerator",
+                    "Heating",
+                    "Hot Water",
+                    "Gym",
+                    "Balcony",
+                    "Garden",
+                    "BBQ Grill",
+                    "Elevator",
+                    "Security Cameras",
+                    "Iron",
+                    "Hairdryer",
+                    "Work Desk",
+                    "Crib",
+                    "High Chair",
+                    "Bathtub",
+                    "Shower",
+                    "Outdoor Furniture",
+                    "Fire Extinguisher",
+                    "First Aid Kit",
                   ].map((item) => (
                     <label
                       key={item}
-                      className="flex items-center gap-2 text-sm px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg hover:border-gray-300 cursor-pointer transition"
+                      className="flex items-center gap-2 text-sm px-3 py-2 bg-slate-700/40 border border-slate-600 rounded-lg hover:bg-slate-700/60 hover:border-slate-500 cursor-pointer transition"
                     >
                       <input
                         type="checkbox"
@@ -1997,7 +2066,7 @@ export default function HostMyStays({ user, userData }) {
                         }}
                         className="w-4 h-4 accent-indigo-500"
                       />
-                      <span className="text-indigo-200">{item}</span>
+                      <span className="text-slate-200">{item}</span>
                     </label>
                   ))}
                 </div>
@@ -2014,7 +2083,7 @@ export default function HostMyStays({ user, userData }) {
                     setFormData({ ...formData, description: e.target.value })
                   }
                   rows="4"
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 placeholder-gray-400 transition resize-none"
+                  className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-white placeholder-slate-400 transition resize-none"
                 ></textarea>
               </div>
 
@@ -2057,9 +2126,9 @@ export default function HostMyStays({ user, userData }) {
                     {formData.houseRules.map((rule, index) => (
                       <li
                         key={index}
-                        className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 hover:border-gray-300 transition"
+                        className="flex items-center justify-between bg-slate-700/40 border border-slate-600 rounded-lg px-4 py-2 hover:bg-slate-700/60 hover:border-slate-500 transition"
                       >
-                        <span className="text-gray-700 text-sm">{rule}</span>
+                        <span className="text-slate-200 text-sm">{rule}</span>
                         <button
                           onClick={() => {
                             const updated = formData.houseRules.filter(
@@ -2067,7 +2136,7 @@ export default function HostMyStays({ user, userData }) {
                             );
                             setFormData({ ...formData, houseRules: updated });
                           }}
-                          className="text-gray-400 hover:text-rose-500 transition"
+                          className="text-slate-400 hover:text-rose-400 transition"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -2075,7 +2144,7 @@ export default function HostMyStays({ user, userData }) {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-slate-400">
                     No house rules added yet.
                   </p>
                 )}
@@ -2090,10 +2159,10 @@ export default function HostMyStays({ user, userData }) {
                   onClick={() =>
                     document.getElementById("editPhotoInput").click()
                   }
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 hover:bg-gray-50 transition cursor-pointer bg-white"
+                  className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-slate-500 hover:bg-slate-700/20 transition cursor-pointer bg-slate-900/30"
                 >
-                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-600 text-sm">
+                  <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                  <p className="text-slate-300 text-sm">
                     Click to upload or drag and drop
                   </p>
                   <input
@@ -2113,13 +2182,13 @@ export default function HostMyStays({ user, userData }) {
                         <img
                           src={src}
                           alt={`Preview ${i}`}
-                          className="rounded-lg object-cover w-full h-32 border border-gray-200"
+                          className="rounded-lg object-cover w-full h-32 border border-slate-600"
                         />
                         <button
                           onClick={() => removeImage(i)}
-                          className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100 transition border border-gray-300"
+                          className="absolute top-2 right-2 bg-slate-800/90 rounded-full p-1 shadow hover:bg-slate-700 transition border border-slate-600"
                         >
-                          <X className="w-4 h-4 text-gray-600" />
+                          <X className="w-4 h-4 text-slate-300" />
                         </button>
                       </div>
                     ))}

@@ -96,8 +96,13 @@ export default function Dashboard() {
       color: "emerald",
     },
     {
-      title: "Total Revenue (Service Fees)",
+      title: "Total Revenue",
+      subtitle: "Service Fees + Listing Upgrades",
       value: formatCurrency(stats.revenue.total),
+      breakdown: {
+        serviceFees: stats.revenue.serviceFeeRevenue || 0,
+        listingUpgrades: stats.revenue.listingUpgradeRevenue || 0,
+      },
       change: stats.revenue.trends.length > 1
         ? formatPercentage(
             ((stats.revenue.trends[stats.revenue.trends.length - 1].revenue -
@@ -269,6 +274,25 @@ export default function Dashboard() {
                 {stat.value}
               </h3>
               <p className="text-sm text-slate-400">{stat.title}</p>
+              {stat.subtitle && (
+                <p className="text-xs text-slate-500 mt-1">{stat.subtitle}</p>
+              )}
+              {stat.breakdown && (
+                <div className="mt-3 pt-3 border-t border-slate-800 space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500">Service Fees:</span>
+                    <span className="text-emerald-400 font-medium">
+                      {formatCurrency(stat.breakdown.serviceFees)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500">Listing Upgrades:</span>
+                    <span className="text-indigo-400 font-medium">
+                      {formatCurrency(stat.breakdown.listingUpgrades)}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

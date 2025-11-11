@@ -341,25 +341,54 @@ const GuestUserActions = ({
       </button>
 
       {notificationDropdownOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 p-3 z-50">
+        <div className="absolute right-0 mt-2 w-80 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 z-50 max-h-96 overflow-y-auto">
           {unreadNotificationsCount > 0 ? (
-            <div className="text-sm">
-              <p className="text-slate-300 font-medium mb-2">
-                {unreadNotificationsCount} unread{" "}
-                {unreadNotificationsCount === 1
-                  ? "notification"
-                  : "notifications"}
-              </p>
+            <>
+              <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-3 z-10">
+                <p className="text-slate-300 font-medium">
+                  {unreadNotificationsCount} unread{" "}
+                  {unreadNotificationsCount === 1
+                    ? "notification"
+                    : "notifications"}
+                </p>
+              </div>
+              <div className="p-2">
+                {unreadNotifications.slice(0, 5).map((notification) => (
+                  <Link
+                    key={notification.id}
+                    to={ROUTES.GUEST.NOTIFICATIONS}
+                    onClick={() => setNotificationDropdownOpen(false)}
+                    className="block p-3 mb-2 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors border border-slate-600"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs font-semibold text-indigo-400">
+                        {notification.title}
+                      </p>
+                      <p className="text-xs text-slate-300 line-clamp-2">
+                        {notification.message}
+                      </p>
+                      {notification.createdAt && (
+                        <p className="text-xs text-slate-500 mt-1">
+                          {new Date(
+                            notification.createdAt.toMillis?.() ||
+                              notification.createdAt
+                          ).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
               <Link
                 to={ROUTES.GUEST.NOTIFICATIONS}
-                className="text-indigo-400 hover:text-indigo-300 text-xs font-medium"
+                className="block p-3 text-center border-t border-slate-700 text-indigo-400 hover:text-indigo-300 text-xs font-medium hover:bg-slate-700/30 transition-colors"
                 onClick={() => setNotificationDropdownOpen(false)}
               >
                 View all notifications →
               </Link>
-            </div>
+            </>
           ) : (
-            <p className="text-sm text-slate-400">No new notifications</p>
+            <p className="p-3 text-sm text-slate-400">No new notifications</p>
           )}
         </div>
       )}
@@ -1351,6 +1380,7 @@ const GuestTabNavigation = ({
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
   const [serviceTypeSuggestions, setServiceTypeSuggestions] = useState([]);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState([]);
   const [notificationDropdownOpen, setNotificationDropdownOpen] =
     useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -1358,7 +1388,7 @@ const GuestTabNavigation = ({
   // Get auth modal context functions
   const { openSignIn, selectSignUpRole } = useContext(AuthModalContext);
 
-  // Fetch unread notifications count
+  // Fetch unread notifications
   useEffect(() => {
     if (!userData?.id) return;
 
@@ -1370,7 +1400,17 @@ const GuestTabNavigation = ({
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setUnreadNotificationsCount(snapshot.size);
+      const notifications = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .sort((a, b) => {
+          // Sort by createdAt timestamp, newest first
+          const aTime = a.createdAt?.toMillis?.() || 0;
+          const bTime = b.createdAt?.toMillis?.() || 0;
+          return bTime - aTime;
+        });
+
+      setUnreadNotificationsCount(notifications.length);
+      setUnreadNotifications(notifications);
     });
 
     return () => unsubscribe();
@@ -1443,6 +1483,56 @@ const GuestTabNavigation = ({
   useEffect(() => {
     const typeParam = searchParams.get("type") || "stays";
     setActiveFilter(typeParam);
+  }, [searchParams]);
+
+  // Sync searchData and dateRange with URL params (handles filter clearing)
+  useEffect(() => {
+    const checkInParam = searchParams.get("checkIn");
+    const checkOutParam = searchParams.get("checkOut");
+
+    // If both checkIn and checkOut are cleared, reset the date range and searchData
+    if (!checkInParam && !checkOutParam) {
+      setSearchData((prev) => ({
+        ...prev,
+        checkIn: "",
+        checkOut: "",
+      }));
+      // Set to a future date to show empty selection (no overlap with today)
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+      setDateRange([
+        {
+          startDate: futureDate,
+          endDate: futureDate,
+          key: "selection",
+        },
+      ]);
+    } else {
+      // Update searchData and dateRange based on URL params
+      const updateData = {};
+      if (checkInParam) updateData.checkIn = checkInParam;
+      else updateData.checkIn = "";
+
+      if (checkOutParam) updateData.checkOut = checkOutParam;
+      else updateData.checkOut = "";
+
+      if (Object.keys(updateData).length > 0) {
+        setSearchData((prev) => ({ ...prev, ...updateData }));
+      }
+
+      // Update dateRange if dates are provided
+      if (checkInParam && checkOutParam) {
+        const startDate = parseLocalDate(checkInParam);
+        const endDate = parseLocalDate(checkOutParam);
+        setDateRange([
+          {
+            startDate,
+            endDate,
+            key: "selection",
+          },
+        ]);
+      }
+    }
   }, [searchParams]);
 
   // Handle scroll to show/hide tabs and close dropdowns
@@ -1717,25 +1807,54 @@ const GuestTabNavigation = ({
                   </button>
 
                   {notificationDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-64 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 p-3 z-50">
+                    <div className="absolute right-0 mt-2 w-80 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 z-50 max-h-96 overflow-y-auto">
                       {unreadNotificationsCount > 0 ? (
-                        <div className="text-sm">
-                          <p className="text-slate-300 font-medium mb-2">
-                            {unreadNotificationsCount} unread{" "}
-                            {unreadNotificationsCount === 1
-                              ? "notification"
-                              : "notifications"}
-                          </p>
+                        <>
+                          <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-3 z-10">
+                            <p className="text-slate-300 font-medium">
+                              {unreadNotificationsCount} unread{" "}
+                              {unreadNotificationsCount === 1
+                                ? "notification"
+                                : "notifications"}
+                            </p>
+                          </div>
+                          <div className="p-2">
+                            {unreadNotifications.slice(0, 5).map((notification) => (
+                              <Link
+                                key={notification.id}
+                                to={ROUTES.GUEST.NOTIFICATIONS}
+                                onClick={() => setNotificationDropdownOpen(false)}
+                                className="block p-3 mb-2 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors border border-slate-600"
+                              >
+                                <div className="flex flex-col gap-1">
+                                  <p className="text-xs font-semibold text-indigo-400">
+                                    {notification.title}
+                                  </p>
+                                  <p className="text-xs text-slate-300 line-clamp-2">
+                                    {notification.message}
+                                  </p>
+                                  {notification.createdAt && (
+                                    <p className="text-xs text-slate-500 mt-1">
+                                      {new Date(
+                                        notification.createdAt.toMillis?.() ||
+                                          notification.createdAt
+                                      ).toLocaleDateString()}
+                                    </p>
+                                  )}
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
                           <Link
                             to={ROUTES.GUEST.NOTIFICATIONS}
-                            className="text-indigo-400 hover:text-indigo-300 text-xs font-medium"
+                            className="block p-3 text-center border-t border-slate-700 text-indigo-400 hover:text-indigo-300 text-xs font-medium hover:bg-slate-700/30 transition-colors"
                             onClick={() => setNotificationDropdownOpen(false)}
                           >
                             View all notifications →
                           </Link>
-                        </div>
+                        </>
                       ) : (
-                        <p className="text-sm text-slate-400">
+                        <p className="p-3 text-sm text-slate-400">
                           No new notifications
                         </p>
                       )}
@@ -2779,9 +2898,9 @@ const HostSimpleNavBar = ({
 
             {/* Profile Dropdown */}
             {dropdownOpen && (
-              <div className="absolute right-0 mt-3 w-72 bg-slate-800 backdrop-blur-xl text-slate-200 rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden z-50 transition-all duration-200">
+              <div className="absolute right-0 mt-3 w-56 bg-slate-800 backdrop-blur-xl text-slate-200 rounded-xl shadow-xl border border-slate-700/30 overflow-hidden z-50 transition-all duration-200">
                 {/* User Info Header */}
-                <div className="px-5 py-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-700/50">
+                <div className="px-4 py-3 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-700/30">
                   <p className="text-sm font-semibold text-white truncate">
                     {user?.fullName || "Host"}
                   </p>
@@ -2790,105 +2909,69 @@ const HostSimpleNavBar = ({
                   </p>
                 </div>
 
-                {/* Profile Section */}
-                <div className="border-b border-slate-700/50 my-1">
+                {/* Menu Items */}
+                <div className="divide-y divide-slate-700/30">
                   <Link
                     to={ROUTES.HOST.PROFILE}
                     onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-blue-500/15 hover:text-blue-300"
                   >
-                    <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    <User className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
                     My Profile
                   </Link>
-                </div>
 
-                {/* Host Listings Section */}
-                <div className="border-b border-slate-700/50 my-1">
                   <Link
                     to={ROUTES.HOST.DASHBOARD}
                     onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-indigo-500/20 hover:to-indigo-500/20 hover:text-indigo-300"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-indigo-500/15 hover:text-indigo-300"
                   >
-                    <BarChart3 className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    <BarChart3 className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
                     Dashboard
                   </Link>
 
                   <Link
                     to={ROUTES.HOST.STAYS}
                     onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-cyan-500/20 hover:text-cyan-300"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-cyan-500/15 hover:text-cyan-300"
                   >
-                    <Home className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    <Home className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
                     My Stays
                   </Link>
 
                   <Link
                     to={ROUTES.HOST.EXPERIENCES}
                     onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-purple-500/15 hover:text-purple-300"
                   >
-                    <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    <Calendar className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
                     My Experiences
                   </Link>
 
                   <Link
                     to={ROUTES.HOST.SERVICES}
                     onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-green-500/20 hover:to-green-500/20 hover:text-green-300"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-green-500/15 hover:text-green-300"
                   >
-                    <Briefcase className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    <Briefcase className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
                     My Services
-                  </Link>
-                </div>
-
-                {/* Account Section */}
-                <div className="border-b border-slate-700/50 my-1">
-                  <Link
-                    to={ROUTES.HOST.SETTINGS}
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-green-500/20 hover:to-green-500/20 hover:text-green-300"
-                  >
-                    <Settings className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                    Account Settings
                   </Link>
 
                   <Link
                     to={ROUTES.HOST.E_WALLET}
                     onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-yellow-500/15 hover:text-yellow-300"
                   >
-                    <Wallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    <Wallet className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
                     E-wallet
                   </Link>
 
                   <Link
-                    to={ROUTES.HOST.CALENDAR}
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
-                  >
-                    <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                    Calendar
-                  </Link>
-
-                  <Link
-                    to={ROUTES.HOST.DRAFTS}
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-orange-500/20 hover:to-orange-500/20 hover:text-orange-300"
-                  >
-                    <FileEdit className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                    Drafts
-                  </Link>
-                </div>
-
-                {/* Communication Section */}
-                <div className="border-b border-slate-700/50 my-1">
-                  <Link
                     to={ROUTES.HOST.MESSAGES}
                     onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-purple-500/15 hover:text-purple-300"
                   >
                     <div className="relative">
-                      <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
+                      <MessageSquare className="w-4 h-4 group-hover/item:scale-110 transition-transform" />
                       {unreadMessagesCount > 0 && (
                         <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
                           {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
@@ -2897,18 +2980,27 @@ const HostSimpleNavBar = ({
                     </div>
                     Messages
                   </Link>
-                </div>
 
-                <button
-                  className="w-full flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item text-left hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-500/20 hover:text-red-300"
-                  onClick={() => {
-                    setDropdownOpen(false);
-                    handleLogout();
-                  }}
-                >
-                  <LogOut className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                  Logout
-                </button>
+                  <Link
+                    to={ROUTES.HOST.DRAFTS}
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-orange-500/15 hover:text-orange-300"
+                  >
+                    <FileEdit className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
+                    Drafts
+                  </Link>
+
+                  <button
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item text-left hover:bg-red-500/15 hover:text-red-300"
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      handleLogout();
+                    }}
+                  >
+                    <LogOut className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
+                    Logout
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -2984,9 +3076,9 @@ const GuestSimpleNavBar = ({
 
             {/* Profile Dropdown */}
             {dropdownOpen && (
-              <div className="absolute right-0 mt-3 w-72 bg-slate-800 backdrop-blur-xl text-slate-200 rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden z-50 transition-all duration-200">
+              <div className="absolute right-0 mt-3 w-56 bg-slate-800 backdrop-blur-xl text-slate-200 rounded-xl shadow-xl border border-slate-700/30 overflow-hidden z-50 transition-all duration-200">
                 {/* User Info Header */}
-                <div className="px-5 py-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-700/50">
+                <div className="px-4 py-3 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-700/30">
                   <p className="text-sm font-semibold text-white truncate">
                     {user?.fullName || "Guest"}
                   </p>
@@ -2996,43 +3088,41 @@ const GuestSimpleNavBar = ({
                 </div>
 
                 {/* Menu Items */}
-                <div className="border-b border-slate-700/50 my-1">
+                <div className="divide-y divide-slate-700/30">
                   <Link
                     to={ROUTES.GUEST.PROFILE}
                     onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-blue-500/15 hover:text-blue-300"
                   >
-                    <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    <User className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
                     My Profile
                   </Link>
 
                   <Link
                     to={ROUTES.GUEST.FAVORITES}
                     onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-pink-500/20 hover:to-pink-500/20 hover:text-pink-300"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-pink-500/15 hover:text-pink-300"
                   >
-                    <Heart className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    <Heart className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
                     Favorites
                   </Link>
-                </div>
 
-                <div className="border-b border-slate-700/50 my-1">
                   <Link
                     to={ROUTES.GUEST.MY_BOOKINGS}
                     onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-cyan-500/20 hover:text-cyan-300"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-cyan-500/15 hover:text-cyan-300"
                   >
-                    <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    <Calendar className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
                     My Bookings
                   </Link>
 
                   <Link
                     to={ROUTES.GUEST.MESSAGES}
                     onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-purple-500/15 hover:text-purple-300"
                   >
                     <div className="relative">
-                      <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
+                      <MessageSquare className="w-4 h-4 group-hover/item:scale-110 transition-transform" />
                       {unreadMessagesCount > 0 && (
                         <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
                           {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
@@ -3041,29 +3131,27 @@ const GuestSimpleNavBar = ({
                     </div>
                     Messages
                   </Link>
-                </div>
 
-                <div className="border-b border-slate-700/50 my-1">
                   <Link
                     to={ROUTES.GUEST.E_WALLET}
                     onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-yellow-500/15 hover:text-yellow-300"
                   >
-                    <LucideWallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                    <LucideWallet className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
                     E-Wallet
                   </Link>
-                </div>
 
-                <button
-                  className="w-full flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item text-left hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-500/20 hover:text-red-300"
-                  onClick={() => {
-                    setDropdownOpen(false);
-                    handleLogout();
-                  }}
-                >
-                  <LogOut className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                  Logout
-                </button>
+                  <button
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item text-left hover:bg-red-500/15 hover:text-red-300"
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      handleLogout();
+                    }}
+                  >
+                    <LogOut className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
+                    Logout
+                  </button>
+                </div>
               </div>
             )}
           </div>

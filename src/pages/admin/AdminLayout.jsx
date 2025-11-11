@@ -87,16 +87,12 @@ export default function AdminLayout({ user, userData }) {
               <Menu className="w-6 h-6" />
             </button>
 
-            <div className="flex items-center gap-2">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="28"
-                height="28"
-                viewBox="0 0 24 24"
-                fill="white"
-              >
-                <path d="M7 2v2H5a2 2 0 0 0-2 2v2h18V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zm13 8H4v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10zm-4 4h-4v4h4v-4z" />
-              </svg>
+            <div className="flex items-center gap-3">
+              <img
+                src="/bookingNestLogoFInal.png"
+                alt="BookingNest Logo"
+                className="w-10 h-10 object-contain"
+              />
               <div>
                 <h1 className="text-lg font-bold text-white">BookingNest</h1>
                 <p className="text-xs text-slate-400">Admin Panel</p>

@@ -34,7 +34,7 @@ import { useAuth } from "../../context/AuthContext";
 import { toast } from "react-toastify";
 import { addPointsToUser } from "../../utils/rewardsUtils";
 import { approveRefund, denyRefund } from "../../utils/refundUtils";
-import { calculateServiceFee } from "../../utils/platformSettingsUtils";
+import { getServiceFeeForType } from "../../utils/platformSettingsUtils";
 
 export default function HostMyBookings() {
   const [bookings, setBookings] = useState([]);
@@ -57,10 +57,28 @@ export default function HostMyBookings() {
   const [viewMode, setViewMode] = useState("list"); // "list" or "calendar"
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [currentServiceFeePercentage, setCurrentServiceFeePercentage] = useState(null);
 
   const { user, userData } = useAuth();
   const navigate = useNavigate();
   const itemsPerPage = 8;
+
+  // Fetch service fee percentage when booking to action changes
+  useEffect(() => {
+    const fetchServiceFee = async () => {
+      if (bookingToAction) {
+        try {
+          const listingType = bookingToAction.listing?.type || bookingToAction.type || "stays";
+          const fee = await getServiceFeeForType(listingType);
+          setCurrentServiceFeePercentage(fee);
+        } catch (error) {
+          console.error("Error fetching service fee:", error);
+          setCurrentServiceFeePercentage(5); // Fallback to 5%
+        }
+      }
+    };
+    fetchServiceFee();
+  }, [bookingToAction]);
 
   // Initialize EmailJS
   useEffect(() => {
@@ -220,9 +238,9 @@ export default function HostMyBookings() {
         return;
       }
 
-      // Calculate base price and service fee
+      // Use the amounts stored in the booking document
       const totalAmount = booking.totalAmount || 0;
-      const serviceFee = totalAmount * 0.05;
+      const serviceFee = booking.serviceFee || 0;
 
       // Generate booking type-specific details HTML
       let bookingDetailsHtml = "";
@@ -302,6 +320,9 @@ export default function HostMyBookings() {
         `;
       }
 
+      // Calculate grandTotal (what guest actually pays)
+      const grandTotal = totalAmount + serviceFee;
+
       // Prepare email template variables (MUST match template {{variables}})
       const emailParams = {
         to_email: guestData.email,
@@ -316,7 +337,7 @@ export default function HostMyBookings() {
         numberOfGuests: booking.numberOfGuests || booking.totalGuests || 1,
         basePrice: totalAmount.toFixed(2),
         serviceFee: serviceFee.toFixed(2),
-        totalAmount: totalAmount.toFixed(2),
+        totalAmount: grandTotal.toFixed(2),
         dashboardLink: `${window.location.origin}/guest/my-bookings`,
       };
 
@@ -416,9 +437,27 @@ export default function HostMyBookings() {
       const guestWalletDoc = guestWalletSnap.docs[0];
       const guestWalletData = guestWalletDoc.data();
 
-      if (guestWalletData.balance < bookingToAction.totalAmount) {
+      // Guest pays the grandTotal (totalPrice + serviceFee)
+      // ALWAYS use the current service fee percentage from platformSettings
+      // This ensures the fee is calculated correctly even if rates changed
+      const totalAmount = bookingToAction.totalAmount || 0;
+      const listingType = bookingToAction.listing?.type || bookingToAction.type || "stays";
+
+      let serviceFeeAmount = 0;
+      try {
+        const feePercentage = await getServiceFeeForType(listingType);
+        serviceFeeAmount = totalAmount * (feePercentage / 100);
+      } catch (error) {
+        console.warn("Could not fetch service fee, using default 5%", error);
+        serviceFeeAmount = totalAmount * 0.05; // Fallback to 5%
+      }
+
+      // Calculate guest payment with current service fee
+      const guestPaymentAmount = totalAmount + serviceFeeAmount;
+
+      if (guestWalletData.balance < guestPaymentAmount) {
         toast.error(
-          `Guest has insufficient balance. Need ₱${bookingToAction.totalAmount.toLocaleString()} but has ₱${guestWalletData.balance.toLocaleString()}`
+          `Guest has insufficient balance. Need ₱${guestPaymentAmount.toLocaleString()} but has ₱${guestWalletData.balance.toLocaleString()}`
         );
         setIsProcessing(false);
         return;
@@ -426,16 +465,16 @@ export default function HostMyBookings() {
 
       const loadingToast = toast.loading("Processing booking confirmation...");
 
-      // Update guest wallet (deduct)
+      // Update guest wallet (deduct the full payment amount including service fee)
       await updateDoc(doc(db, "wallets", guestWalletDoc.id), {
-        balance: guestWalletData.balance - bookingToAction.totalAmount,
+        balance: guestWalletData.balance - guestPaymentAmount,
         total_spent:
-          (guestWalletData.total_spent || 0) + bookingToAction.totalAmount,
+          (guestWalletData.total_spent || 0) + guestPaymentAmount,
       });
 
       // Create guest transaction
       await addDoc(collection(db, "transactions"), {
-        amount: -bookingToAction.totalAmount,
+        amount: -guestPaymentAmount,
         created_at: serverTimestamp(),
         type: "payment",
         status: "completed",
@@ -449,7 +488,7 @@ export default function HostMyBookings() {
         guestId: bookingToAction.guest_id,
         type: "payment",
         title: "Payment Successful",
-        message: `An amount of ₱${bookingToAction.totalAmount.toLocaleString()} has been deducted from your wallet for your booking of "${
+        message: `An amount of ₱${guestPaymentAmount.toLocaleString()} has been deducted from your wallet for your booking of "${
           bookingToAction.listing?.title
         }".`,
         listingId: bookingToAction.listing_id,
@@ -458,31 +497,31 @@ export default function HostMyBookings() {
         createdAt: serverTimestamp(),
       });
 
-      // Calculate service fee for this booking
-      const listingType = bookingToAction.listing?.type || bookingToAction.type || "stays";
-      const serviceFeeAmount = await calculateServiceFee(bookingToAction.totalAmount, listingType);
-
-      // Update host wallet (add booking amount minus service fee)
+      // Update host wallet (add the full payment, then deduct service fee separately)
+      // listingType was already calculated above
       if (!hostWalletSnap.empty) {
         const hostWalletDoc = hostWalletSnap.docs[0];
         const hostWalletData = hostWalletDoc.data();
-        const hostNetAmount = bookingToAction.totalAmount - serviceFeeAmount;
 
+        // Host receives the full payment amount (including service fee)
+        // Service fee will be deducted as a separate transaction
         await updateDoc(doc(db, "wallets", hostWalletDoc.id), {
-          balance: hostWalletData.balance + hostNetAmount,
+          balance: hostWalletData.balance + guestPaymentAmount - serviceFeeAmount,
           total_cash_in:
-            (hostWalletData.total_cash_in || 0) + bookingToAction.totalAmount,
+            (hostWalletData.total_cash_in || 0) + guestPaymentAmount,
         });
 
-        // Create host transaction for booking payment
+        // Create host transaction for booking payment (host receives full payment)
         await addDoc(collection(db, "transactions"), {
-          amount: bookingToAction.totalAmount,
+          amount: guestPaymentAmount,
           created_at: serverTimestamp(),
           type: "payment",
           status: "completed",
           user_id: userData.id,
           wallet_id: hostWalletDoc.id,
           description: `Booking payment from ${bookingToAction.guest?.fullName || 'guest'}`,
+          bookingId: bookingToAction.id,
+          listingType: listingType,
         });
 
         // Create host transaction for service fee deduction
@@ -493,11 +532,12 @@ export default function HostMyBookings() {
           status: "completed",
           user_id: userData.id,
           wallet_id: hostWalletDoc.id,
-          description: `Service fee (${listingType}) for booking ${bookingToAction.id}`,
+          description: `Service fee (${((serviceFeeAmount / guestPaymentAmount) * 100).toFixed(1)}%) deducted from booking`,
           bookingId: bookingToAction.id,
+          listingType: listingType,
         });
 
-        // Create platform revenue transaction (for admin tracking)
+        // Create platform revenue transaction (for admin tracking of service fees collected)
         await addDoc(collection(db, "platformRevenue"), {
           amount: serviceFeeAmount,
           created_at: serverTimestamp(),
@@ -1526,16 +1566,18 @@ export default function HostMyBookings() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-300">Service Fee (10%)</span>
-                    <span className="text-white font-medium">
+                    <span className="text-slate-300">
+                      Service Fee ({currentServiceFeePercentage !== null ? currentServiceFeePercentage : 5}%)
+                    </span>
+                    <span className="text-orange-400 font-medium">
                       ₱{selectedBooking.serviceFee?.toLocaleString() || 0}
                     </span>
                   </div>
                   <div className="flex justify-between pt-2 border-t border-slate-700">
                     <span className="text-white font-semibold">
-                      Total Amount
+                      Guest Pays (Grand Total)
                     </span>
-                    <span className="text-white font-bold text-lg">
+                    <span className="text-green-400 font-bold text-lg">
                       ₱
                       {(
                         (selectedBooking.totalAmount || 0) +
@@ -1689,9 +1731,27 @@ export default function HostMyBookings() {
             </p>
 
             <div className="bg-slate-700 rounded-lg p-4 mb-6">
-              <div className="text-sm text-slate-400 mb-2">Total Amount</div>
-              <div className="text-2xl font-bold text-white">
-                ₱{bookingToAction?.totalAmount?.toLocaleString() || 0}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-400">Listing Price</span>
+                  <span className="text-white font-medium">
+                    ₱{bookingToAction?.totalAmount?.toLocaleString() || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-400">
+                    Service Fee ({currentServiceFeePercentage !== null ? currentServiceFeePercentage : 5}%)
+                  </span>
+                  <span className="text-orange-400 font-medium">
+                    ₱{(bookingToAction?.serviceFee || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="border-t border-slate-600 pt-3 flex justify-between items-center">
+                  <span className="text-sm font-semibold text-slate-300">Guest Pays (Grand Total)</span>
+                  <span className="text-2xl font-bold text-green-400">
+                    ₱{(bookingToAction?.grandTotal || ((bookingToAction?.totalAmount || 0) + (bookingToAction?.serviceFee || 0))).toLocaleString()}
+                  </span>
+                </div>
               </div>
             </div>
 

@@ -77,10 +77,24 @@ export default function WalletPage({ user, userData }) {
       orderBy("created_at", "desc")
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const transactionData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const transactionData = snapshot.docs
+        .map((doc) => {
+          const data = doc.data();
+          // Transform listing_limit_upgrade to display as Limit Upgrade with negative amount
+          if (data.type === "listing_limit_upgrade") {
+            return {
+              id: doc.id,
+              ...data,
+              displayType: "Limit Upgrade",
+              amount: -Math.abs(data.amount), // Ensure negative
+            };
+          }
+          return {
+            id: doc.id,
+            ...data,
+          };
+        })
+        .filter((transaction) => transaction.type !== "service_fee");
       setTransactions(transactionData);
     });
     return () => unsubscribe();
@@ -278,6 +292,24 @@ export default function WalletPage({ user, userData }) {
             </svg>
           </div>
         );
+      case "listing_limit_upgrade":
+        return (
+          <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
+            <svg
+              className="w-5 h-5 text-purple-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+              />
+            </svg>
+          </div>
+        );
       default:
         return null;
     }
@@ -286,14 +318,10 @@ export default function WalletPage({ user, userData }) {
   return (
     <div className="min-h-screen bg-slate-900 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
-        {/* Header with Logo and Navigation */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-
-          </div>
-          <h1 className="text-5xl font-bold text-white">My Wallet</h1>
+        {/* Header with Back Button */}
+        <div className="flex items-center mb-8">
           <button
-            onClick={() => (window.location.href = "/")}
+            onClick={() => window.history.back()}
             className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors group text-sm"
           >
             <svg
@@ -306,10 +334,10 @@ export default function WalletPage({ user, userData }) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                d="M15 19l-7-7 7-7"
               />
             </svg>
-            <span className="text-slate-300">Home</span>
+            <span className="text-slate-300">Back</span>
           </button>
         </div>
 
@@ -348,205 +376,214 @@ export default function WalletPage({ user, userData }) {
         {/* Wallet Tab Content */}
         {activeTab === "wallet" && (
           <>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Balance Card */}
-          <div className="lg:col-span-2 bg-slate-800 rounded-2xl shadow-lg p-8 border border-slate-700">
-            <div className="flex items-start justify-between mb-8">
-              <div>
-                <p className="text-slate-400 text-sm mb-2 uppercase tracking-wider">
-                  Available Balance
-                </p>
-                <h2 className="text-5xl font-bold text-white">
-                  ₱{balance.toFixed(2)}
-                </h2>
-              </div>
-              <div className="w-12 h-12 bg-indigo-600/20 rounded-full flex items-center justify-center">
-                <svg
-                  className="w-6 h-6 text-indigo-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                  />
-                </svg>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowAddFunds(true)}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                Add Funds
-              </button>
-              <button
-                onClick={() => setShowWithdraw(true)}
-                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 border border-slate-600"
-              >
-                <Send className="w-5 h-5" />
-                Withdraw
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="space-y-4">
-            <div className="bg-slate-800 rounded-2xl shadow-lg p-6 border border-slate-700">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-slate-400 text-sm font-medium">Total Spent</p>
-                <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
-                  <TrendingDown className="w-4 h-4 text-red-400" />
-                </div>
-              </div>
-              <p className="text-2xl font-bold text-white">
-                ₱{totalSpent.toFixed(2)}
-              </p>
-            </div>
-
-            <div className="bg-slate-800 rounded-2xl shadow-lg p-6 border border-slate-700">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-slate-400 text-sm font-medium">Total Added</p>
-                <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-green-400" />
-                </div>
-              </div>
-              <p className="text-2xl font-bold text-white">
-                ₱{totalAdded.toFixed(2)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Transaction History */}
-        <div className="bg-slate-800 rounded-2xl shadow-lg border border-slate-700">
-          <div className="p-6 border-b border-slate-700">
-            <h3 className="text-2xl font-bold text-white">
-              Transaction History
-            </h3>
-            <p className="text-slate-400 text-sm mt-1">
-              Your recent wallet activity
-            </p>
-          </div>
-
-          <div className="divide-y divide-slate-700">
-            {currentTransactions.length > 0 ? (
-              currentTransactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="p-6 hover:bg-slate-700/20 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    {getTransactionIcon(transaction.type)}
-
-                    <div className="flex-1">
-                      <p className="text-white font-medium mb-1 capitalize">
-                        {transaction.type}
-                      </p>
-                      <p className="text-slate-400 text-sm">
-                        {transaction.created_at
-                          ? new Date(
-                              transaction.created_at.toDate()
-                            ).toLocaleDateString("en-PH", {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            })
-                          : "—"}{" "}
-                        at{" "}
-                        {transaction.created_at
-                          ? new Date(
-                              transaction.created_at.toDate()
-                            ).toLocaleTimeString("en-PH", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : ""}
-                      </p>
-                    </div>
-
-                    <div className="text-right space-y-2">
-                      <div>
-                        <p
-                          className={`text-lg font-bold ${
-                            transaction.amount > 0
-                              ? "text-green-400"
-                              : "text-red-400"
-                          }`}
-                        >
-                          {transaction.amount > 0 ? "+" : ""}₱
-                          {Math.abs(transaction.amount).toFixed(2)}
-                        </p>
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
-                          {transaction.status}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => handleViewReceipt(transaction)}
-                        className="w-full px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 hover:text-indigo-200 text-xs font-semibold rounded transition-colors flex items-center justify-center gap-1"
-                      >
-                        <File className="w-4 h-4" />
-                        Receipt
-                      </button>
-                    </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              {/* Balance Card */}
+              <div className="lg:col-span-2 bg-slate-800 rounded-2xl shadow-lg p-8 border border-slate-700">
+                <div className="flex items-start justify-between mb-8">
+                  <div>
+                    <p className="text-slate-400 text-sm mb-2 uppercase tracking-wider">
+                      Available Balance
+                    </p>
+                    <h2 className="text-5xl font-bold text-white">
+                      ₱{balance.toFixed(2)}
+                    </h2>
+                  </div>
+                  <div className="w-12 h-12 bg-indigo-600/20 rounded-full flex items-center justify-center">
+                    <svg
+                      className="w-6 h-6 text-indigo-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                      />
+                    </svg>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="p-12 text-center">
-                <p className="text-slate-400">No transactions yet</p>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowAddFunds(true)}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Add Funds
+                  </button>
+                  <button
+                    onClick={() => setShowWithdraw(true)}
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 border border-slate-600"
+                  >
+                    <Send className="w-5 h-5" />
+                    Withdraw
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 p-4 border-t border-slate-700">
-              <button
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 rounded-md bg-slate-700 text-white disabled:opacity-50 hover:bg-slate-600"
-              >
-                Prev
-              </button>
+              {/* Quick Stats */}
+              <div className="space-y-4">
+                <div className="bg-slate-800 rounded-2xl shadow-lg p-6 border border-slate-700">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-slate-400 text-sm font-medium">
+                      Total Spent
+                    </p>
+                    <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
+                      <TrendingDown className="w-4 h-4 text-red-400" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-white">
+                    ₱{totalSpent.toFixed(2)}
+                  </p>
+                </div>
 
-              {[...Array(totalPages)].map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentPage(idx + 1)}
-                  className={`px-3 py-1 rounded-md ${
-                    currentPage === idx + 1
-                      ? "bg-indigo-600 text-white"
-                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                  }`}
-                >
-                  {idx + 1}
-                </button>
-              ))}
-
-              <button
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                }
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 rounded-md bg-slate-700 text-white disabled:opacity-50 hover:bg-slate-600"
-              >
-                Next
-              </button>
+                <div className="bg-slate-800 rounded-2xl shadow-lg p-6 border border-slate-700">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-slate-400 text-sm font-medium">
+                      Total Added
+                    </p>
+                    <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+                      <TrendingUp className="w-4 h-4 text-green-400" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-white">
+                    ₱{totalAdded.toFixed(2)}
+                  </p>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
-        </>
+
+            {/* Transaction History */}
+            <div className="bg-slate-800 rounded-2xl shadow-lg border border-slate-700">
+              <div className="p-6 border-b border-slate-700">
+                <h3 className="text-2xl font-bold text-white">
+                  Transaction History
+                </h3>
+                <p className="text-slate-400 text-sm mt-1">
+                  Your recent wallet activity
+                </p>
+              </div>
+
+              <div className="divide-y divide-slate-700">
+                {currentTransactions.length > 0 ? (
+                  currentTransactions.map((transaction) => (
+                    <div
+                      key={transaction.id}
+                      className="p-6 hover:bg-slate-700/20 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        {getTransactionIcon(transaction.type)}
+
+                        <div className="flex-1">
+                          <p className="text-white font-medium mb-1 capitalize">
+                            {transaction.displayType || transaction.type}
+                          </p>
+                          <p className="text-slate-400 text-sm">
+                            {transaction.created_at
+                              ? new Date(
+                                  transaction.created_at.toDate()
+                                ).toLocaleDateString("en-PH", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })
+                              : "—"}{" "}
+                            at{" "}
+                            {transaction.created_at
+                              ? new Date(
+                                  transaction.created_at.toDate()
+                                ).toLocaleTimeString("en-PH", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                              : ""}
+                          </p>
+                        </div>
+
+                        <div className="text-right space-y-2">
+                          <div>
+                            <p
+                              className={`text-lg font-bold ${
+                                transaction.amount > 0
+                                  ? "text-green-400"
+                                  : "text-red-400"
+                              }`}
+                            >
+                              {transaction.amount > 0 ? "+" : ""}₱
+                              {Math.abs(transaction.amount).toFixed(2)}
+                            </p>
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
+                              {transaction.status}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleViewReceipt(transaction)}
+                            className="w-full px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 hover:text-indigo-200 text-xs font-semibold rounded transition-colors flex items-center justify-center gap-1"
+                          >
+                            <File className="w-4 h-4" />
+                            Receipt
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-12 text-center">
+                    <p className="text-slate-400">No transactions yet</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 p-4 border-t border-slate-700">
+                  <button
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 rounded-md bg-slate-700 text-white disabled:opacity-50 hover:bg-slate-600"
+                  >
+                    Prev
+                  </button>
+
+                  {[...Array(totalPages)].map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentPage(idx + 1)}
+                      className={`px-3 py-1 rounded-md ${
+                        currentPage === idx + 1
+                          ? "bg-indigo-600 text-white"
+                          : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 rounded-md bg-slate-700 text-white disabled:opacity-50 hover:bg-slate-600"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {/* Points Tab Content */}
         {activeTab === "points" && (
-          <PointsRewardsSection userData={userData} userRole={userData?.role || "guest"} />
+          <PointsRewardsSection
+            userData={userData}
+            userRole={userData?.role || "guest"}
+          />
         )}
       </div>
 

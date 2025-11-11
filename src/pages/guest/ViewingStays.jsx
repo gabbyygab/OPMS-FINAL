@@ -33,6 +33,8 @@ import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import { db } from "../../firebase/firebase";
 import { validateCoupon, calculateDiscount } from "../../utils/couponUtils";
+import { getServiceFeeForType } from "../../utils/platformSettingsUtils";
+import { sendBookingConfirmationEmail } from "../../utils/sendBookingConfirmationEmail";
 import {
   doc,
   getDoc,
@@ -124,10 +126,27 @@ export default function ListingDetailPage() {
   const [guestRewards, setGuestRewards] = useState(null);
   const [pointsToUse, setPointsToUse] = useState(0);
   const [showPointsSlider, setShowPointsSlider] = useState(false);
+  const [isBookingCardVisible, setIsBookingCardVisible] = useState(true);
+  const [serviceFeePercentage, setServiceFeePercentage] = useState(null);
+  const bookingCardRef = useRef(null);
 
   const { user, isVerified } = useAuth();
   //navigation
   const navigate = useNavigate();
+
+  // Fetch service fee from platformSettings
+  useEffect(() => {
+    const fetchServiceFee = async () => {
+      try {
+        const fee = await getServiceFeeForType("stays");
+        setServiceFeePercentage(fee);
+      } catch (error) {
+        console.error("Error fetching service fee:", error);
+        setServiceFeePercentage(5); // Fallback to 5%
+      }
+    };
+    fetchServiceFee();
+  }, []);
 
   const handleVerification = async () => {
     try {
@@ -287,6 +306,30 @@ export default function ListingDetailPage() {
       };
       await addDoc(collection(db, "notifications"), notificationData);
 
+      // Send booking confirmation email to guest
+      try {
+        const guestData = {
+          email: user.email,
+          fullName: user.fullName || user.displayName || "Guest",
+        };
+
+        const bookingWithId = {
+          ...bookingData,
+          id: bookingRef.id,
+          checkIn: checkInDate,
+          checkOut: checkOutDate,
+        };
+
+        await sendBookingConfirmationEmail(
+          bookingWithId,
+          { type: "stays", ...listingData },
+          guestData
+        );
+      } catch (emailError) {
+        console.error("Error sending booking email:", emailError);
+        // Don't fail the booking if email fails
+      }
+
       // DO NOT process payment here - payment will be processed when host confirms the booking
       // This allows the host to accept or reject the booking before payment is taken
 
@@ -387,7 +430,8 @@ export default function ListingDetailPage() {
   const pointsDiscount = pointsToUse;
 
   const totalPrice = basePrice - discountAmount - pointsDiscount;
-  const serviceFee = totalPrice * 0.1;
+  const feePercentage = serviceFeePercentage !== null ? serviceFeePercentage : 5;
+  const serviceFee = totalPrice * (feePercentage / 100);
   const grandTotal = totalPrice + serviceFee;
 
   const nextPhoto = () => {
@@ -581,6 +625,40 @@ export default function ListingDetailPage() {
 
     fetchCoordinatesFromLocation();
   }, [listingData?.location, listingData?.coordinates]);
+
+  // Fetch service fee from platform settings
+  useEffect(() => {
+    const fetchServiceFee = async () => {
+      try {
+        const feePercentage = await getServiceFeeForType("stays");
+        setServiceFeePercentage(feePercentage);
+      } catch (error) {
+        console.error("Error fetching service fee:", error);
+        setServiceFeePercentage(10); // Default to 10% on error
+      }
+    };
+    fetchServiceFee();
+  }, []);
+
+  // Track visibility of booking card
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsBookingCardVisible(entry.isIntersecting);
+      },
+      { threshold: 0.1 }
+    );
+
+    if (bookingCardRef.current) {
+      observer.observe(bookingCardRef.current);
+    }
+
+    return () => {
+      if (bookingCardRef.current) {
+        observer.unobserve(bookingCardRef.current);
+      }
+    };
+  }, []);
 
   if (loading) return <LoadingSpinner />;
   return (
@@ -827,17 +905,17 @@ export default function ListingDetailPage() {
             </div>
 
             {/* Reviews */}
-            {reviewsData.length > 0 && (
-              <div className="pb-8 border-b border-slate-700">
-                <div className="flex items-center gap-2 mb-6">
-                  <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
-                  <h3 className="text-xl font-semibold text-white">
-                    {listingData?.rating || 0} · {listingData?.reviewCount || 0}{" "}
-                    reviews
-                  </h3>
-                </div>
-                <div className="space-y-6">
-                  {reviewsData.map((review) => (
+            <div className="pb-8 border-b border-slate-700">
+              <div className="flex items-center gap-2 mb-6">
+                <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
+                <h3 className="text-xl font-semibold text-white">
+                  {listingData?.rating || 0} · {listingData?.reviewCount || 0}{" "}
+                  reviews
+                </h3>
+              </div>
+              <div className="space-y-6">
+                {reviewsData && reviewsData.length > 0 ? (
+                  reviewsData.map((review) => (
                     <div
                       key={review.id}
                       className="flex gap-4 bg-slate-800/50 backdrop-blur-md p-6 rounded-xl border border-slate-700/50"
@@ -882,10 +960,14 @@ export default function ListingDetailPage() {
                         </p>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-slate-400">No reviews yet. Be the first to review this stay!</p>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* House Rules */}
             <div className="pb-8 border-b border-slate-700">
@@ -908,7 +990,7 @@ export default function ListingDetailPage() {
 
           {/* Booking Card */}
           <div className="lg:col-span-1">
-            <div className="bg-slate-800/50 backdrop-blur-md rounded-2xl shadow-lg p-6 border border-slate-700/50 sticky top-24">
+            <div ref={bookingCardRef} className="bg-slate-800/50 backdrop-blur-md rounded-2xl shadow-lg p-6 border border-slate-700/50 sticky top-24">
               <div className="flex items-baseline gap-2 mb-6">
                 <span className="text-3xl font-bold text-white">
                   ₱{listingData?.price?.toLocaleString() || 0}
@@ -1406,6 +1488,21 @@ export default function ListingDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Floating Booking Button - Shows when booking card is not visible */}
+      {!isBookingCardVisible && (
+        <motion.button
+          onClick={() => bookingCardRef.current?.scrollIntoView({ behavior: "smooth" })}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ duration: 0.3 }}
+          className="fixed bottom-6 right-6 bg-gradient-to-r from-indigo-600 to-indigo-600 hover:from-indigo-700 hover:to-indigo-700 text-white px-6 py-3 rounded-full font-semibold transition-all duration-200 shadow-md shadow-indigo-500/20 flex items-center gap-2 z-40 hover:shadow-indigo-500/30"
+        >
+          <Calendar className="w-5 h-5" />
+          <span>Book Now</span>
+        </motion.button>
       )}
 
       {/* Date Range Picker Modal */}
