@@ -91,11 +91,15 @@ export default function AdminLayout({ user, userData }) {
               <img
                 src="/bookingNestLogoFInal.png"
                 alt="BookingNest Logo"
-                className="w-10 h-10 object-contain"
+                className=" relative top-1 left-2 w-[80px] m-0  h-auto lg:w-20 lg:h-20 lg:relative lg:top-1.5 lg:left-2 object-contain"
               />
               <div>
-                <h1 className="text-lg font-bold text-white">BookingNest</h1>
-                <p className="text-xs text-slate-400">Admin Panel</p>
+                <h1 className="text-lg font-bold text-white relative right-2">
+                  BookingNest
+                </h1>
+                <p className="text-xs text-slate-400 relative right-2">
+                  Admin Panel
+                </p>
               </div>
             </div>
           </div>
@@ -150,19 +154,27 @@ export default function AdminLayout({ user, userData }) {
                     {active && (
                       <div className="absolute inset-0 bg-indigo-600/20 blur-xl -z-10"></div>
                     )}
-                    <Icon className={`w-6 h-6 flex-shrink-0 ${active ? "text-white" : "group-hover:text-indigo-400"} transition-colors`} />
+                    <Icon
+                      className={`w-6 h-6 flex-shrink-0 ${
+                        active ? "text-white" : "group-hover:text-indigo-400"
+                      } transition-colors`}
+                    />
                     {isSidebarOpen && (
                       <div className="flex-1 min-w-0">
                         <p
                           className={`text-sm font-semibold truncate ${
-                            active ? "text-white" : "text-slate-300 group-hover:text-white"
+                            active
+                              ? "text-white"
+                              : "text-slate-300 group-hover:text-white"
                           }`}
                         >
                           {item.name}
                         </p>
                         <p
                           className={`text-xs truncate mt-1 ${
-                            active ? "text-indigo-100" : "text-slate-500 group-hover:text-slate-400"
+                            active
+                              ? "text-indigo-100"
+                              : "text-slate-500 group-hover:text-slate-400"
                           }`}
                         >
                           {item.description}
@@ -230,9 +242,21 @@ export default function AdminLayout({ user, userData }) {
                         {active && (
                           <div className="absolute inset-0 bg-indigo-600/20 blur-xl -z-10"></div>
                         )}
-                        <Icon className={`w-6 h-6 flex-shrink-0 ${active ? "text-white" : "group-hover:text-indigo-400"} transition-colors`} />
+                        <Icon
+                          className={`w-6 h-6 flex-shrink-0 ${
+                            active
+                              ? "text-white"
+                              : "group-hover:text-indigo-400"
+                          } transition-colors`}
+                        />
                         <div className="flex-1">
-                          <p className={`text-sm font-semibold ${active ? "text-white" : "text-slate-300"}`}>{item.name}</p>
+                          <p
+                            className={`text-sm font-semibold ${
+                              active ? "text-white" : "text-slate-300"
+                            }`}
+                          >
+                            {item.name}
+                          </p>
                           <p
                             className={`text-xs mt-1 ${
                               active ? "text-indigo-100" : "text-slate-500"

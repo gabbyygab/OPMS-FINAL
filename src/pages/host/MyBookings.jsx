@@ -413,201 +413,21 @@ export default function HostMyBookings() {
 
     try {
       setIsProcessing(true);
-
-      // Get guest and host wallet data
-      const guestWalletQuery = query(
-        collection(db, "wallets"),
-        where("user_id", "==", bookingToAction.guest_id)
-      );
-      const guestWalletSnap = await getDocs(guestWalletQuery);
-
-      const hostWalletQuery = query(
-        collection(db, "wallets"),
-        where("user_id", "==", userData.id)
-      );
-      const hostWalletSnap = await getDocs(hostWalletQuery);
-
-      // Check guest has sufficient balance
-      if (guestWalletSnap.empty) {
-        toast.error("Guest wallet not found");
-        setIsProcessing(false);
-        return;
-      }
-
-      const guestWalletDoc = guestWalletSnap.docs[0];
-      const guestWalletData = guestWalletDoc.data();
-
-      // Guest pays the grandTotal (totalPrice + serviceFee)
-      // ALWAYS use the current service fee percentage from platformSettings
-      // This ensures the fee is calculated correctly even if rates changed
-      const totalAmount = bookingToAction.totalAmount || 0;
-      const listingType = bookingToAction.listing?.type || bookingToAction.type || "stays";
-
-      let serviceFeeAmount = 0;
-      try {
-        const feePercentage = await getServiceFeeForType(listingType);
-        serviceFeeAmount = totalAmount * (feePercentage / 100);
-      } catch (error) {
-        console.warn("Could not fetch service fee, using default 5%", error);
-        serviceFeeAmount = totalAmount * 0.05; // Fallback to 5%
-      }
-
-      // Calculate guest payment with current service fee
-      const guestPaymentAmount = totalAmount + serviceFeeAmount;
-
-      if (guestWalletData.balance < guestPaymentAmount) {
-        toast.error(
-          `Guest has insufficient balance. Need ₱${guestPaymentAmount.toLocaleString()} but has ₱${guestWalletData.balance.toLocaleString()}`
-        );
-        setIsProcessing(false);
-        return;
-      }
-
       const loadingToast = toast.loading("Processing booking confirmation...");
 
-      // Update guest wallet (deduct the full payment amount including service fee)
-      await updateDoc(doc(db, "wallets", guestWalletDoc.id), {
-        balance: guestWalletData.balance - guestPaymentAmount,
-        total_spent:
-          (guestWalletData.total_spent || 0) + guestPaymentAmount,
-      });
-
-      // Create guest transaction
-      await addDoc(collection(db, "transactions"), {
-        amount: -guestPaymentAmount,
-        created_at: serverTimestamp(),
-        type: "payment",
-        status: "completed",
-        user_id: bookingToAction.guest_id,
-        wallet_id: guestWalletDoc.id,
-        bookingId: bookingToAction.id,
-        listingType: listingType,
-        description: `Booking payment for ${bookingToAction.listing?.title || 'listing'}`,
-      });
-
-      // Create notification for guest about payment deduction
-      await addDoc(collection(db, "notifications"), {
-        userId: bookingToAction.guest_id,
-        guestId: bookingToAction.guest_id,
-        type: "payment",
-        title: "Payment Successful",
-        message: `An amount of ₱${guestPaymentAmount.toLocaleString()} has been deducted from your wallet for your booking of "${
-          bookingToAction.listing?.title
-        }".`,
-        listingId: bookingToAction.listing_id,
-        bookingId: bookingToAction.id,
-        isRead: false,
-        createdAt: serverTimestamp(),
-      });
-
-      // Update host wallet (add the full payment - service fee will be deducted on completion)
-      // listingType was already calculated above
-      if (!hostWalletSnap.empty) {
-        const hostWalletDoc = hostWalletSnap.docs[0];
-        const hostWalletData = hostWalletDoc.data();
-
-        // Host receives the full payment amount (including service fee)
-        // Service fee will be deducted when booking is marked as completed
-        await updateDoc(doc(db, "wallets", hostWalletDoc.id), {
-          balance: hostWalletData.balance + guestPaymentAmount,
-          total_cash_in:
-            (hostWalletData.total_cash_in || 0) + guestPaymentAmount,
-        });
-
-        // Create host transaction for booking payment (host receives full payment)
-        await addDoc(collection(db, "transactions"), {
-          amount: guestPaymentAmount,
-          created_at: serverTimestamp(),
-          type: "payment",
-          status: "completed",
-          user_id: userData.id,
-          wallet_id: hostWalletDoc.id,
-          description: `Booking payment from ${bookingToAction.guest?.fullName || 'guest'}`,
-          bookingId: bookingToAction.id,
-          listingType: listingType,
-        });
-      }
-
-      // Update booking status to confirmed
+      // Update booking status to confirmed (NO payment deducted yet)
       await updateDoc(doc(db, "bookings", bookingToAction.id), {
         status: "confirmed",
         confirmedAt: serverTimestamp(),
       });
 
-      // Award points to both host and guest on booking confirmation
-      try {
-        // Fetch listing to get the type
-        const listingRef = doc(db, "listings", bookingToAction.listing_id);
-        const listingSnap = await getDoc(listingRef);
-        const listingType = listingSnap.exists() ? listingSnap.data().type : "stays";
-
-        // Award points to host
-        await addPointsToUser(
-          userData.id,
-          bookingToAction.id,
-          listingType,
-          10
-        );
-
-        // Award points to guest
-        await addPointsToUser(
-          bookingToAction.guest_id,
-          bookingToAction.id,
-          listingType,
-          10
-        );
-
-        // Deduct points if guest used points during booking
-        if (bookingToAction.pointsUsed && bookingToAction.pointsUsed > 0) {
-          const rewardsRef = collection(db, "rewards");
-          const q = query(
-            rewardsRef,
-            where("userId", "==", bookingToAction.guest_id)
-          );
-          const guestRewardsSnap = await getDocs(q);
-
-          if (!guestRewardsSnap.empty) {
-            const guestRewardsDoc = guestRewardsSnap.docs[0];
-            const guestRewards = guestRewardsDoc.data();
-            const pointsToDeduct = Math.min(
-              bookingToAction.pointsUsed,
-              guestRewards.availablePoints || 0
-            );
-
-            const pointsHistory = guestRewards.pointsHistory || [];
-            pointsHistory.push({
-              action: "points_used_for_booking",
-              bookingId: bookingToAction.id,
-              pointsDeducted: pointsToDeduct,
-              reason: "Points redeemed for booking discount",
-              createdAt: new Date().toISOString(),
-            });
-
-            const guestRewardsRef = doc(db, "rewards", guestRewardsDoc.id);
-            await updateDoc(guestRewardsRef, {
-              availablePoints: Math.max(
-                0,
-                (guestRewards.availablePoints || 0) - pointsToDeduct
-              ),
-              redeemedPoints:
-                (guestRewards.redeemedPoints || 0) + pointsToDeduct,
-              pointsHistory,
-              updatedAt: serverTimestamp(),
-            });
-          }
-        }
-      } catch (pointsError) {
-        console.error("Error awarding/deducting points:", pointsError);
-        // Don't fail the booking if points operations fail
-      }
-
-      // Create notification for guest
+      // Create notification for guest about confirmation
       await addDoc(collection(db, "notifications"), {
         userId: bookingToAction.guest_id,
         guestId: bookingToAction.guest_id,
         type: "booking_confirmed",
         title: "Booking Confirmed",
-        message: `Your booking for ${bookingToAction.listing?.title} has been confirmed!`,
+        message: `Your booking for ${bookingToAction.listing?.title} has been confirmed! Payment will be processed when the host marks it as completed.`,
         listingId: bookingToAction.listing_id,
         bookingId: bookingToAction.id,
         isRead: false,
@@ -637,7 +457,7 @@ export default function HostMyBookings() {
       filterBookings(updatedBookings, statusFilter, searchTerm);
 
       toast.dismiss(loadingToast);
-      toast.success("Booking confirmed successfully!");
+      toast.success("Booking confirmed successfully! No payment charged yet.");
 
       setShowConfirmModal(false);
       setBookingToAction(null);
@@ -710,7 +530,7 @@ export default function HostMyBookings() {
 
     try {
       setIsProcessing(true);
-      const loadingToast = toast.loading("Marking booking as completed...");
+      const loadingToast = toast.loading("Processing payment and completing booking...");
 
       // Get listing type for service fee calculation
       const listingType = bookingToAction.listing?.type || bookingToAction.type || "stays";
@@ -726,48 +546,170 @@ export default function HostMyBookings() {
         serviceFeeAmount = totalAmount * 0.05; // Fallback to 5%
       }
 
-      // Deduct service fee from host wallet
+      // Calculate guest payment amount (base + service fee)
+      const guestPaymentAmount = totalAmount + serviceFeeAmount;
+
+      // Get guest and host wallet data
+      const guestWalletQuery = query(
+        collection(db, "wallets"),
+        where("user_id", "==", bookingToAction.guest_id)
+      );
+      const guestWalletSnap = await getDocs(guestWalletQuery);
+
       const hostWalletQuery = query(
         collection(db, "wallets"),
         where("user_id", "==", userData.id)
       );
       const hostWalletSnap = await getDocs(hostWalletQuery);
 
+      // Check guest has sufficient balance
+      if (guestWalletSnap.empty) {
+        toast.error("Guest wallet not found");
+        setIsProcessing(false);
+        return;
+      }
+
+      const guestWalletDoc = guestWalletSnap.docs[0];
+      const guestWalletData = guestWalletDoc.data();
+
+      if (guestWalletData.balance < guestPaymentAmount) {
+        toast.error(
+          `Guest has insufficient balance. Need ₱${guestPaymentAmount.toLocaleString()} but has ₱${guestWalletData.balance.toLocaleString()}`
+        );
+        setIsProcessing(false);
+        return;
+      }
+
+      // STEP 1: Deduct payment from guest wallet
+      await updateDoc(doc(db, "wallets", guestWalletDoc.id), {
+        balance: guestWalletData.balance - guestPaymentAmount,
+        total_spent: (guestWalletData.total_spent || 0) + guestPaymentAmount,
+      });
+
+      // Create guest transaction
+      await addDoc(collection(db, "transactions"), {
+        amount: -guestPaymentAmount,
+        created_at: serverTimestamp(),
+        type: "payment",
+        status: "completed",
+        user_id: bookingToAction.guest_id,
+        wallet_id: guestWalletDoc.id,
+        bookingId: bookingToAction.id,
+        listingType: listingType,
+        description: `Booking payment for ${bookingToAction.listing?.title || 'listing'} (₱${totalAmount.toFixed(2)} + ₱${serviceFeeAmount.toFixed(2)} service fee)`,
+      });
+
+      // Create notification for guest about payment deduction
+      await addDoc(collection(db, "notifications"), {
+        userId: bookingToAction.guest_id,
+        guestId: bookingToAction.guest_id,
+        type: "payment",
+        title: "Payment Processed",
+        message: `Payment of ₱${guestPaymentAmount.toLocaleString()} has been deducted from your wallet for your completed booking of "${bookingToAction.listing?.title}".`,
+        listingId: bookingToAction.listing_id,
+        bookingId: bookingToAction.id,
+        isRead: false,
+        createdAt: serverTimestamp(),
+      });
+
+      // STEP 2: Add payment to host wallet (only the base amount, not service fee)
       if (!hostWalletSnap.empty) {
         const hostWalletDoc = hostWalletSnap.docs[0];
         const hostWalletData = hostWalletDoc.data();
 
-        // Deduct service fee from host wallet
         await updateDoc(doc(db, "wallets", hostWalletDoc.id), {
-          balance: hostWalletData.balance - serviceFeeAmount,
+          balance: hostWalletData.balance + totalAmount,
+          total_cash_in: (hostWalletData.total_cash_in || 0) + totalAmount,
         });
 
-        // Create host transaction for service fee deduction
+        // Create host transaction for booking payment
         await addDoc(collection(db, "transactions"), {
-          amount: -serviceFeeAmount,
+          amount: totalAmount,
           created_at: serverTimestamp(),
-          type: "service_fee",
+          type: "payment",
           status: "completed",
           user_id: userData.id,
           wallet_id: hostWalletDoc.id,
-          description: `Service fee (${((serviceFeeAmount / (totalAmount + serviceFeeAmount)) * 100).toFixed(1)}%) deducted from booking`,
+          description: `Booking payment from ${bookingToAction.guest?.fullName || 'guest'}`,
           bookingId: bookingToAction.id,
           listingType: listingType,
-        });
-
-        // Create platform revenue transaction (for admin tracking of service fees collected)
-        await addDoc(collection(db, "platformRevenue"), {
-          amount: serviceFeeAmount,
-          created_at: serverTimestamp(),
-          type: "service_fee",
-          listingType: listingType,
-          bookingId: bookingToAction.id,
-          hostId: userData.id,
-          guestId: bookingToAction.guest_id,
         });
       }
 
-      // Update booking status to completed
+      // STEP 3: Record platform revenue (service fee)
+      await addDoc(collection(db, "platformRevenue"), {
+        amount: serviceFeeAmount,
+        created_at: serverTimestamp(),
+        type: "service_fee",
+        listingType: listingType,
+        bookingId: bookingToAction.id,
+        hostId: userData.id,
+        guestId: bookingToAction.guest_id,
+      });
+
+      // STEP 4: Award points to both host and guest
+      try {
+        // Award points to host
+        await addPointsToUser(
+          userData.id,
+          bookingToAction.id,
+          listingType,
+          10
+        );
+
+        // Award points to guest
+        await addPointsToUser(
+          bookingToAction.guest_id,
+          bookingToAction.id,
+          listingType,
+          10
+        );
+
+        // Deduct points if guest used points during booking
+        if (bookingToAction.pointsUsed && bookingToAction.pointsUsed > 0) {
+          const rewardsRef = collection(db, "rewards");
+          const q = query(
+            rewardsRef,
+            where("userId", "==", bookingToAction.guest_id)
+          );
+          const guestRewardsSnap = await getDocs(q);
+
+          if (!guestRewardsSnap.empty) {
+            const guestRewardsDoc = guestRewardsSnap.docs[0];
+            const guestRewards = guestRewardsDoc.data();
+            const pointsToDeduct = Math.min(
+              bookingToAction.pointsUsed,
+              guestRewards.availablePoints || 0
+            );
+
+            const pointsHistory = guestRewards.pointsHistory || [];
+            pointsHistory.push({
+              action: "points_used_for_booking",
+              bookingId: bookingToAction.id,
+              pointsDeducted: pointsToDeduct,
+              reason: "Points redeemed for booking discount",
+              createdAt: new Date().toISOString(),
+            });
+
+            const guestRewardsRef = doc(db, "rewards", guestRewardsDoc.id);
+            await updateDoc(guestRewardsRef, {
+              availablePoints: Math.max(
+                0,
+                (guestRewards.availablePoints || 0) - pointsToDeduct
+              ),
+              redeemedPoints:
+                (guestRewards.redeemedPoints || 0) + pointsToDeduct,
+              pointsHistory,
+              updatedAt: serverTimestamp(),
+            });
+          }
+        }
+      } catch (pointsError) {
+        console.error("Error awarding/deducting points:", pointsError);
+        // Don't fail the booking if points operations fail
+      }
+
+      // STEP 5: Update booking status to completed
       await updateDoc(doc(db, "bookings", bookingToAction.id), {
         status: "completed",
         completedAt: serverTimestamp(),
@@ -800,7 +742,7 @@ export default function HostMyBookings() {
       filterBookings(updatedBookings, statusFilter, searchTerm);
 
       toast.dismiss(loadingToast);
-      toast.success("Booking marked as completed!");
+      toast.success("Booking completed! Payment processed and points awarded.");
 
       setShowCompleteModal(false);
       setBookingToAction(null);
@@ -844,7 +786,7 @@ export default function HostMyBookings() {
       // Update local state
       const updatedBooking = {
         ...bookingToAction,
-        status: "refunded",
+        status: "cancelled",
       };
 
       const updatedBookings = bookings.map((b) =>
@@ -856,7 +798,7 @@ export default function HostMyBookings() {
 
       toast.dismiss(loadingToast);
       toast.success(
-        "Refund approved! Money returned to guest and points deducted."
+        "Cancellation approved! Booking has been cancelled with no charges."
       );
 
       setShowRefundApprovalModal(false);
@@ -939,7 +881,9 @@ export default function HostMyBookings() {
     total: bookings.length,
     pending: bookings.filter((b) => b.status === "pending").length,
     confirmed: bookings.filter((b) => b.status === "confirmed").length,
+    completed: bookings.filter((b) => b.status === "completed").length,
     rejected: bookings.filter((b) => b.status === "rejected").length,
+    cancelled: bookings.filter((b) => b.status === "cancelled").length,
   };
 
   const formatDate = (date) => {
@@ -958,8 +902,14 @@ export default function HostMyBookings() {
         return "bg-yellow-500/20 text-yellow-300";
       case "confirmed":
         return "bg-green-500/20 text-green-300";
+      case "completed":
+        return "bg-blue-500/20 text-blue-300";
       case "rejected":
         return "bg-red-500/20 text-red-300";
+      case "cancelled":
+        return "bg-orange-500/20 text-orange-300";
+      case "refund_requested":
+        return "bg-purple-500/20 text-purple-300";
       default:
         return "bg-slate-500/20 text-slate-300";
     }
@@ -1100,7 +1050,7 @@ export default function HostMyBookings() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
             <div className="text-slate-400 text-sm font-medium mb-2">
               Total Bookings
@@ -1124,11 +1074,27 @@ export default function HostMyBookings() {
             </div>
           </div>
           <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+            <div className="text-blue-400 text-sm font-medium mb-2">
+              Completed
+            </div>
+            <div className="text-3xl font-bold text-blue-300">
+              {stats.completed}
+            </div>
+          </div>
+          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
             <div className="text-red-400 text-sm font-medium mb-2">
               Rejected
             </div>
             <div className="text-3xl font-bold text-red-300">
               {stats.rejected}
+            </div>
+          </div>
+          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+            <div className="text-orange-400 text-sm font-medium mb-2">
+              Cancelled
+            </div>
+            <div className="text-3xl font-bold text-orange-300">
+              {stats.cancelled}
             </div>
           </div>
         </div>
@@ -1276,7 +1242,7 @@ export default function HostMyBookings() {
 
           {/* Status Filter */}
           <div className="flex gap-2 flex-wrap">
-            {["all", "pending", "confirmed", "rejected"].map((status) => (
+            {["all", "pending", "confirmed", "completed", "rejected", "cancelled"].map((status) => (
               <button
                 key={status}
                 onClick={() => handleStatusFilter(status)}
@@ -1691,33 +1657,35 @@ export default function HostMyBookings() {
                 </div>
               )}
               {selectedBooking.status === "refund_requested" && (
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="flex-1">
-                    <p className="text-yellow-300 text-sm mb-3">
-                      <strong>Refund Requested:</strong>{" "}
-                      {selectedBooking.refund_request_reason}
+                <div className="flex flex-col gap-3">
+                  <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/20">
+                    <p className="text-yellow-300 text-sm">
+                      <strong>Cancellation Requested:</strong>{" "}
+                      {selectedBooking.refund_request_reason || "No reason provided"}
                     </p>
                   </div>
-                  <button
-                    onClick={() => {
-                      setShowRefundApprovalModal(true);
-                      setBookingToAction(selectedBooking);
-                    }}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
-                  >
-                    <Check className="w-5 h-5" />
-                    Approve Refund
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowRefundDenialModal(true);
-                      setBookingToAction(selectedBooking);
-                    }}
-                    className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
-                  >
-                    <X className="w-5 h-5" />
-                    Deny Refund
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={() => {
+                        setShowRefundApprovalModal(true);
+                        setBookingToAction(selectedBooking);
+                      }}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+                    >
+                      <Check className="w-5 h-5" />
+                      Approve Cancellation
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowRefundDenialModal(true);
+                        setBookingToAction(selectedBooking);
+                      }}
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+                    >
+                      <X className="w-5 h-5" />
+                      Deny Cancellation
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -1746,6 +1714,22 @@ export default function HostMyBookings() {
                   )}
                 </div>
               )}
+
+              {selectedBooking.status === "cancelled" && (
+                <div className="text-center py-4 bg-orange-500/10 rounded-lg border border-orange-500/20">
+                  <X className="w-6 h-6 text-orange-400 mx-auto mb-2" />
+
+                  <p className="text-orange-300 font-medium">
+                    This booking has been cancelled.
+                  </p>
+
+                  {selectedBooking.refund_request_reason && (
+                    <p className="text-orange-300 text-sm mt-2">
+                      Reason: {selectedBooking.refund_request_reason}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1759,9 +1743,9 @@ export default function HostMyBookings() {
               Confirm Booking?
             </h2>
             <p className="text-slate-300 mb-6">
-              By confirming this booking, you're allowing the guest to proceed
-              with payment. Their wallet will be debited and the booking will be
-              marked as confirmed.
+              By confirming this booking, you're accepting the guest's request.
+              <strong className="text-white"> No payment will be charged yet.</strong> Payment will
+              be processed when you mark the booking as completed.
             </p>
 
             <div className="bg-slate-700 rounded-lg p-4 mb-6">
@@ -1781,8 +1765,8 @@ export default function HostMyBookings() {
                   </span>
                 </div>
                 <div className="border-t border-slate-600 pt-3 flex justify-between items-center">
-                  <span className="text-sm font-semibold text-slate-300">Guest Pays (Grand Total)</span>
-                  <span className="text-2xl font-bold text-green-400">
+                  <span className="text-sm font-semibold text-slate-300">Total (will charge on completion)</span>
+                  <span className="text-2xl font-bold text-yellow-400">
                     ₱{(bookingToAction?.grandTotal || ((bookingToAction?.totalAmount || 0) + (bookingToAction?.serviceFee || 0))).toLocaleString()}
                   </span>
                 </div>
@@ -1864,9 +1848,20 @@ export default function HostMyBookings() {
               Mark as Completed?
             </h2>
             <p className="text-slate-300 mb-6">
-              This will mark the booking as completed and notify the guest to
-              leave a review. This action cannot be undone.
+              This will process the payment, award points to both you and the guest,
+              and mark the booking as completed. The guest will be notified to leave
+              a review. <strong className="text-white">This action cannot be undone.</strong>
             </p>
+            <div className="bg-blue-500/10 rounded-lg p-4 mb-6 border border-blue-500/20">
+              <p className="text-blue-300 text-sm">
+                <strong>Payment Details:</strong>
+              </p>
+              <ul className="text-blue-200 text-sm mt-2 space-y-1">
+                <li>• Guest will be charged: ₱{((bookingToAction?.totalAmount || 0) + (bookingToAction?.serviceFee || 0)).toLocaleString()}</li>
+                <li>• You will receive: ₱{(bookingToAction?.totalAmount || 0).toLocaleString()}</li>
+                <li>• Both will earn 10 reward points</li>
+              </ul>
+            </div>
             <div className="flex gap-3">
               <button
                 onClick={handleCompleteBooking}
@@ -1895,19 +1890,21 @@ export default function HostMyBookings() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
           <div className="bg-slate-800 rounded-2xl shadow-lg w-full max-w-md p-6 border border-slate-700">
             <h2 className="text-2xl font-bold text-white mb-4">
-              Approve Refund?
+              Approve Cancellation?
             </h2>
             <p className="text-slate-300 mb-6">
-              You are about to approve a refund for this booking. The guest will
-              receive ₱{bookingToAction?.totalAmount?.toLocaleString() || 0}{" "}
-              back to their wallet, and both guest and host points will be
-              deducted.
+              You are about to approve a cancellation request for this booking.
+              Since payment has not been processed yet, no charges will be refunded.
+              The booking will simply be cancelled and the dates will be freed up.
             </p>
 
             <div className="bg-slate-700 rounded-lg p-4 mb-6">
-              <div className="text-sm text-slate-400 mb-2">Refund Amount</div>
+              <div className="text-sm text-slate-400 mb-2">Booking Amount</div>
               <div className="text-2xl font-bold text-white">
                 ₱{bookingToAction?.totalAmount?.toLocaleString() || 0}
+              </div>
+              <div className="text-xs text-slate-400 mt-2">
+                (No payment has been charged to the guest yet)
               </div>
             </div>
 
@@ -1938,10 +1935,10 @@ export default function HostMyBookings() {
       {showRefundDenialModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
           <div className="bg-slate-800 rounded-2xl shadow-lg w-full max-w-md p-6 border border-slate-700">
-            <h2 className="text-2xl font-bold text-white mb-4">Deny Refund?</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">Deny Cancellation?</h2>
             <p className="text-slate-300 mb-4">
-              Please provide a reason for denying this refund request. The guest
-              will be notified with your reason.
+              Please provide a reason for denying this cancellation request. The guest
+              will be notified with your reason and the booking will remain confirmed.
             </p>
 
             <textarea
