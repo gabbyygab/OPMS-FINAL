@@ -127,43 +127,51 @@ export default function AdminLayout({ user, userData }) {
 
       {/* Sidebar - Desktop */}
       <aside
-        className={`hidden lg:block fixed left-0 top-16 bottom-0 bg-slate-900 border-r border-slate-800 transition-all duration-300 ${
-          isSidebarOpen ? "w-72" : "w-20"
+        className={`hidden lg:block fixed left-0 top-16 bottom-0 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-r border-slate-800 transition-all duration-300 ${
+          isSidebarOpen ? "w-80" : "w-24"
         } overflow-hidden`}
       >
         <div className="flex flex-col h-full">
-          <div className="flex-1 overflow-y-auto py-6 px-3">
-            <nav className="space-y-2">
-              {menuItems.map((item) => {
+          <div className="flex-1 overflow-y-auto py-8 px-4">
+            <nav className="space-y-3">
+              {menuItems.map((item, index) => {
                 const Icon = item.icon;
                 const active = isActive(item.path);
                 return (
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
+                    className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-200 group relative overflow-hidden ${
                       active
-                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30"
-                        : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                        ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/40"
+                        : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
                     }`}
                   >
-                    <Icon className={`w-5 h-5 flex-shrink-0`} />
+                    {active && (
+                      <div className="absolute inset-0 bg-indigo-600/20 blur-xl -z-10"></div>
+                    )}
+                    <Icon className={`w-6 h-6 flex-shrink-0 ${active ? "text-white" : "group-hover:text-indigo-400"} transition-colors`} />
                     {isSidebarOpen && (
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-sm font-medium truncate ${
-                            active ? "text-white" : "text-slate-300"
+                          className={`text-sm font-semibold truncate ${
+                            active ? "text-white" : "text-slate-300 group-hover:text-white"
                           }`}
                         >
                           {item.name}
                         </p>
                         <p
-                          className={`text-xs truncate ${
-                            active ? "text-indigo-200" : "text-slate-500"
+                          className={`text-xs truncate mt-1 ${
+                            active ? "text-indigo-100" : "text-slate-500 group-hover:text-slate-400"
                           }`}
                         >
                           {item.description}
                         </p>
+                      </div>
+                    )}
+                    {!isSidebarOpen && (
+                      <div className="absolute left-24 top-1/2 -translate-y-1/2 bg-slate-950 text-white text-xs font-medium px-3 py-2 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                        {item.name}
                       </div>
                     )}
                   </Link>
@@ -173,16 +181,21 @@ export default function AdminLayout({ user, userData }) {
           </div>
 
           {/* Sidebar Footer */}
-          <div className="border-t border-slate-800 p-4">
+          <div className="border-t border-slate-800 p-4 bg-slate-900/50">
             <button
               onClick={handleLogout}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all w-full ${
+              className={`flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-400 hover:bg-red-500/15 hover:text-red-400 transition-all w-full group relative overflow-hidden ${
                 !isSidebarOpen && "justify-center"
               }`}
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-6 h-6 flex-shrink-0 transition-colors" />
               {isSidebarOpen && (
-                <span className="text-sm font-medium">Logout</span>
+                <span className="text-sm font-semibold">Logout</span>
+              )}
+              {!isSidebarOpen && (
+                <div className="absolute left-24 top-1/2 -translate-y-1/2 bg-slate-950 text-white text-xs font-medium px-3 py-2 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                  Logout
+                </div>
               )}
             </button>
           </div>
@@ -196,10 +209,10 @@ export default function AdminLayout({ user, userData }) {
             className="lg:hidden fixed inset-0 bg-black/50 z-40 top-16"
             onClick={() => setIsMobileSidebarOpen(false)}
           ></div>
-          <aside className="lg:hidden fixed left-0 top-16 bottom-0 w-72 bg-slate-900 border-r border-slate-800 z-50 overflow-y-auto">
+          <aside className="lg:hidden fixed left-0 top-16 bottom-0 w-72 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-r border-slate-800 z-50 overflow-y-auto">
             <div className="flex flex-col h-full">
-              <div className="flex-1 py-6 px-3">
-                <nav className="space-y-2">
+              <div className="flex-1 py-8 px-4">
+                <nav className="space-y-3">
                   {menuItems.map((item) => {
                     const Icon = item.icon;
                     const active = isActive(item.path);
@@ -208,18 +221,21 @@ export default function AdminLayout({ user, userData }) {
                         key={item.path}
                         to={item.path}
                         onClick={() => setIsMobileSidebarOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                        className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all relative overflow-hidden ${
                           active
-                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30"
-                            : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                            ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/40"
+                            : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
                         }`}
                       >
-                        <Icon className="w-5 h-5" />
+                        {active && (
+                          <div className="absolute inset-0 bg-indigo-600/20 blur-xl -z-10"></div>
+                        )}
+                        <Icon className={`w-6 h-6 flex-shrink-0 ${active ? "text-white" : "group-hover:text-indigo-400"} transition-colors`} />
                         <div className="flex-1">
-                          <p className="text-sm font-medium">{item.name}</p>
+                          <p className={`text-sm font-semibold ${active ? "text-white" : "text-slate-300"}`}>{item.name}</p>
                           <p
-                            className={`text-xs ${
-                              active ? "text-indigo-200" : "text-slate-500"
+                            className={`text-xs mt-1 ${
+                              active ? "text-indigo-100" : "text-slate-500"
                             }`}
                           >
                             {item.description}
@@ -231,13 +247,13 @@ export default function AdminLayout({ user, userData }) {
                 </nav>
               </div>
 
-              <div className="border-t border-slate-800 p-4">
+              <div className="border-t border-slate-800 p-4 bg-slate-900/50">
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all w-full"
+                  className="flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-400 hover:bg-red-500/15 hover:text-red-400 transition-all w-full"
                 >
-                  <LogOut className="w-5 h-5" />
-                  <span className="text-sm font-medium">Logout</span>
+                  <LogOut className="w-6 h-6 flex-shrink-0" />
+                  <span className="text-sm font-semibold">Logout</span>
                 </button>
               </div>
             </div>
@@ -248,7 +264,7 @@ export default function AdminLayout({ user, userData }) {
       {/* Main Content Area */}
       <main
         className={`pt-16 transition-all duration-300 ${
-          isSidebarOpen ? "lg:pl-72" : "lg:pl-20"
+          isSidebarOpen ? "lg:pl-80" : "lg:pl-24"
         }`}
       >
         <div className="p-6 lg:p-8">
