@@ -9,7 +9,6 @@ import {
   BarChart3,
   PieChart,
   FileSpreadsheet,
-  FilePieChart,
   CheckCircle,
   Clock,
   Filter,
@@ -84,36 +83,6 @@ export default function Reports() {
     { value: "custom", label: "Custom Range" },
   ];
 
-  const quickTemplates = [
-    {
-      id: "monthly",
-      name: "Monthly Summary",
-      description: "Complete overview of all metrics for the past month",
-      icon: TrendingUp,
-      color: "indigo",
-      reportType: "financial",
-      dateRange: "last30days",
-    },
-    {
-      id: "revenue",
-      name: "Revenue Report",
-      description: "Detailed breakdown of all revenue streams",
-      icon: DollarSign,
-      color: "emerald",
-      reportType: "financial",
-      dateRange: "last3months",
-    },
-    {
-      id: "analytics",
-      name: "Analytics Dashboard",
-      description: "Visual analytics with charts and graphs",
-      icon: PieChart,
-      color: "violet",
-      reportType: "listings",
-      dateRange: "last30days",
-    },
-  ];
-
   // Load report preview when report type or date range changes
   useEffect(() => {
     loadReportPreview();
@@ -158,19 +127,19 @@ export default function Reports() {
       switch (selectedReportType) {
         case "financial":
           data = await generateFinancialReportData(range);
-          generateFinancialReportPDF(data);
+          await generateFinancialReportPDF(data);
           break;
         case "bookings":
           data = await generateBookingsReportData(range);
-          generateBookingsReportPDF(data);
+          await generateBookingsReportPDF(data);
           break;
         case "hosts":
           data = await generateHostPerformanceReportData(range);
-          generateHostPerformanceReportPDF(data);
+          await generateHostPerformanceReportPDF(data);
           break;
         case "listings":
           data = await generateListingAnalyticsReportData(range);
-          generateListingAnalyticsReportPDF(data);
+          await generateListingAnalyticsReportPDF(data);
           break;
       }
     } catch (error) {
@@ -195,9 +164,34 @@ export default function Reports() {
 
       {/* Report Generator */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-        <div className="flex items-center gap-2 mb-6">
-          <Plus className="w-5 h-5 text-indigo-400" />
-          <h2 className="text-xl font-bold text-white">Generate New Report</h2>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <Plus className="w-5 h-5 text-indigo-400" />
+            <h2 className="text-xl font-bold text-white">Generate New Report</h2>
+          </div>
+
+          {/* Generate Button */}
+          <button
+            onClick={handleGenerateReport}
+            disabled={isGenerating || isLoadingPreview}
+            className={`px-6 py-3 rounded-xl font-medium transition-all flex items-center gap-2 ${
+              isGenerating || isLoadingPreview
+                ? "bg-slate-700 text-slate-400 cursor-not-allowed"
+                : "bg-indigo-600 hover:bg-indigo-700 text-white"
+            }`}
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Generating PDF...
+              </>
+            ) : (
+              <>
+                <Download className="w-5 h-5" />
+                Download PDF Report
+              </>
+            )}
+          </button>
         </div>
 
         {/* Report Type Selection */}
@@ -267,7 +261,7 @@ export default function Reports() {
             </label>
             <div className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white">
               <div className="flex items-center gap-2">
-                <FilePieChart className="w-5 h-5 text-indigo-400" />
+                <FileText className="w-5 h-5 text-indigo-400" />
                 <span>PDF Document</span>
               </div>
             </div>
@@ -370,6 +364,12 @@ export default function Reports() {
                         </p>
                       </div>
                       <div>
+                        <p className="text-xs text-slate-400 mb-1">Completed</p>
+                        <p className="text-lg font-bold text-indigo-400">
+                          {reportPreview.completedBookings || 0}
+                        </p>
+                      </div>
+                      <div>
                         <p className="text-xs text-slate-400 mb-1">
                           Completion Rate
                         </p>
@@ -377,12 +377,32 @@ export default function Reports() {
                           {(reportPreview.completionRate || 0).toFixed(1)}%
                         </p>
                       </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                       <div>
                         <p className="text-xs text-slate-400 mb-1">
                           Avg. Value
                         </p>
-                        <p className="text-lg font-bold text-indigo-400">
+                        <p className="text-lg font-bold text-emerald-400">
                           {formatCurrency(reportPreview.averageBookingValue || 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Cancelled</p>
+                        <p className="text-lg font-bold text-red-400">
+                          {reportPreview.cancelledBookings || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Refunded</p>
+                        <p className="text-lg font-bold text-amber-400">
+                          {reportPreview.refundedBookings || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Pending</p>
+                        <p className="text-lg font-bold text-slate-400">
+                          {reportPreview.pendingBookings || 0}
                         </p>
                       </div>
                     </div>
@@ -614,70 +634,6 @@ export default function Reports() {
             )}
           </div>
         )}
-
-        {/* Generate Button */}
-        <button
-          onClick={handleGenerateReport}
-          disabled={isGenerating || isLoadingPreview}
-          className={`w-full md:w-auto px-6 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
-            isGenerating || isLoadingPreview
-              ? "bg-slate-700 text-slate-400 cursor-not-allowed"
-              : "bg-indigo-600 hover:bg-indigo-700 text-white"
-          }`}
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Generating PDF...
-            </>
-          ) : (
-            <>
-              <Download className="w-5 h-5" />
-              Download PDF Report
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Quick Templates */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-        <div className="flex items-center gap-2 mb-6">
-          <FilePieChart className="w-5 h-5 text-violet-400" />
-          <h2 className="text-xl font-bold text-white">Quick Templates</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {quickTemplates.map((template) => {
-            const Icon = template.icon;
-            return (
-              <button
-                key={template.id}
-                onClick={() => {
-                  setSelectedReportType(template.reportType);
-                  setDateRange(template.dateRange);
-                }}
-                className={`p-4 bg-slate-800/50 border rounded-xl hover:bg-slate-800 transition-all text-left group ${
-                  selectedReportType === template.reportType &&
-                  dateRange === template.dateRange
-                    ? `border-${template.color}-500`
-                    : "border-slate-700 hover:border-slate-600"
-                }`}
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <div
-                    className={`p-2 bg-${template.color}-500/10 rounded-lg group-hover:bg-${template.color}-500/20 transition-colors`}
-                  >
-                    <Icon className={`w-5 h-5 text-${template.color}-400`} />
-                  </div>
-                  <h3 className="text-sm font-semibold text-white">
-                    {template.name}
-                  </h3>
-                </div>
-                <p className="text-xs text-slate-400">{template.description}</p>
-              </button>
-            );
-          })}
-        </div>
       </div>
     </div>
   );

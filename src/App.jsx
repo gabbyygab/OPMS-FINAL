@@ -52,7 +52,7 @@ import {
   Dashboard,
   ServiceFees,
   Reports,
-  PaymentMethods,
+  Payments,
 } from "./pages/admin";
 import DraftsPage from "./pages/host/DraftsPage";
 import SeedData from "./pages/admin/SeedData";
@@ -89,10 +89,7 @@ function App() {
 
         {/* ========== PUBLIC AUTH ROUTES ========== */}
         {/* Forgot Password */}
-        <Route
-          path={ROUTES.FORGOT_PASSWORD}
-          element={<ForgotPasswordPage />}
-        />
+        <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
 
         {/* ========== PUBLIC LISTING DETAILS ROUTES ========== */}
         {/* Available to all users (logged in or not) */}
@@ -274,7 +271,7 @@ function App() {
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="service-fees" element={<ServiceFees />} />
             <Route path="reports" element={<Reports />} />
-            <Route path="payments" element={<PaymentMethods />} />
+            <Route path="payments" element={<Payments />} />
             <Route path="seed-data" element={<SeedData />} />
             <Route index element={<Navigate to="dashboard" replace />} />
           </Route>

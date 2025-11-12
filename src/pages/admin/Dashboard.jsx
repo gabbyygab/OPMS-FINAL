@@ -13,6 +13,8 @@ import {
   RefreshCw,
   Award,
   TrendingUpIcon,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   getDashboardData,
@@ -25,6 +27,12 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [error, setError] = useState(null);
+
+  // Pagination states
+  const [topRatedPage, setTopRatedPage] = useState(1);
+  const [lowRatedPage, setLowRatedPage] = useState(1);
+  const [recentBookingsPage, setRecentBookingsPage] = useState(1);
+  const itemsPerPage = 5;
 
   // Fetch dashboard data on mount
   useEffect(() => {
@@ -309,13 +317,13 @@ export default function Dashboard() {
                 Best Reviewed Listings
               </h2>
             </div>
-            <button className="text-indigo-400 text-sm hover:text-indigo-300 transition-colors">
-              View All
-            </button>
+            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/50">
+              {topRatedListings?.length || 0} total
+            </span>
           </div>
           <div className="space-y-4">
             {topRatedListings && topRatedListings.length > 0 ? (
-              topRatedListings.map((listing) => (
+              topRatedListings.slice((topRatedPage - 1) * itemsPerPage, topRatedPage * itemsPerPage).map((listing) => (
                 <div
                   key={listing.id}
                   className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl hover:bg-slate-800 transition-colors"
@@ -364,6 +372,31 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+
+          {/* Pagination for Top Rated */}
+          {topRatedListings && topRatedListings.length > itemsPerPage && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-800">
+              <button
+                onClick={() => setTopRatedPage(Math.max(1, topRatedPage - 1))}
+                disabled={topRatedPage === 1}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </button>
+              <span className="text-xs text-slate-400">
+                Page {topRatedPage} of {Math.ceil(topRatedListings.length / itemsPerPage)}
+              </span>
+              <button
+                onClick={() => setTopRatedPage(Math.min(Math.ceil(topRatedListings.length / itemsPerPage), topRatedPage + 1))}
+                disabled={topRatedPage === Math.ceil(topRatedListings.length / itemsPerPage)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Low Rated */}
@@ -375,13 +408,13 @@ export default function Dashboard() {
                 Needs Attention
               </h2>
             </div>
-            <button className="text-indigo-400 text-sm hover:text-indigo-300 transition-colors">
-              View All
-            </button>
+            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-red-500/20 text-red-300 border border-red-500/50">
+              {lowRatedListings?.length || 0} total
+            </span>
           </div>
           <div className="space-y-4">
             {lowRatedListings && lowRatedListings.length > 0 ? (
-              lowRatedListings.map((listing) => (
+              lowRatedListings.slice((lowRatedPage - 1) * itemsPerPage, lowRatedPage * itemsPerPage).map((listing) => (
                 <div
                   key={listing.id}
                   className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl hover:bg-slate-800 transition-colors border border-red-500/10"
@@ -430,6 +463,31 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+
+          {/* Pagination for Low Rated */}
+          {lowRatedListings && lowRatedListings.length > itemsPerPage && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-800">
+              <button
+                onClick={() => setLowRatedPage(Math.max(1, lowRatedPage - 1))}
+                disabled={lowRatedPage === 1}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </button>
+              <span className="text-xs text-slate-400">
+                Page {lowRatedPage} of {Math.ceil(lowRatedListings.length / itemsPerPage)}
+              </span>
+              <button
+                onClick={() => setLowRatedPage(Math.min(Math.ceil(lowRatedListings.length / itemsPerPage), lowRatedPage + 1))}
+                disabled={lowRatedPage === Math.ceil(lowRatedListings.length / itemsPerPage)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -440,9 +498,9 @@ export default function Dashboard() {
             <Calendar className="w-5 h-5 text-indigo-400" />
             <h2 className="text-xl font-bold text-white">Recent Bookings</h2>
           </div>
-          <button className="text-indigo-400 text-sm hover:text-indigo-300 transition-colors">
-            View All
-          </button>
+          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/50">
+            {recentBookings?.length || 0} total
+          </span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -470,7 +528,7 @@ export default function Dashboard() {
             </thead>
             <tbody>
               {recentBookings && recentBookings.length > 0 ? (
-                recentBookings.map((booking) => (
+                recentBookings.slice((recentBookingsPage - 1) * itemsPerPage, recentBookingsPage * itemsPerPage).map((booking) => (
                   <tr
                     key={booking.id}
                     className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors"
@@ -511,6 +569,31 @@ export default function Dashboard() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination for Recent Bookings */}
+        {recentBookings && recentBookings.length > itemsPerPage && (
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-800">
+            <button
+              onClick={() => setRecentBookingsPage(Math.max(1, recentBookingsPage - 1))}
+              disabled={recentBookingsPage === 1}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Previous
+            </button>
+            <span className="text-xs text-slate-400">
+              Page {recentBookingsPage} of {Math.ceil(recentBookings.length / itemsPerPage)}
+            </span>
+            <button
+              onClick={() => setRecentBookingsPage(Math.min(Math.ceil(recentBookings.length / itemsPerPage), recentBookingsPage + 1))}
+              disabled={recentBookingsPage === Math.ceil(recentBookings.length / itemsPerPage)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

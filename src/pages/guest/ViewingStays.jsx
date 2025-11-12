@@ -269,6 +269,7 @@ export default function ListingDetailPage() {
       // Create booking with pending status
       // Payment will be processed only when host confirms the booking
       const bookingData = {
+        type: "stays",
         listing_id: listing_id,
         guest_id: userData.id,
         host_id: listingData.hostId,

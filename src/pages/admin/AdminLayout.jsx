@@ -53,10 +53,10 @@ export default function AdminLayout({ user, userData }) {
       description: "Generate Reports",
     },
     {
-      name: "Payment Methods",
+      name: "Payments",
       icon: CreditCard,
       path: "/admin/payments",
-      description: "Payment Processing",
+      description: "Revenue & Transactions",
     },
   ];
 

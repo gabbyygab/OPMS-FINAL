@@ -27,26 +27,69 @@ const COLORS = {
 };
 
 // ============================================
+// LOGO (Base64 - will be loaded dynamically)
+// ============================================
+
+let logoBase64 = null;
+
+// Load logo as base64
+const loadLogo = async () => {
+  if (logoBase64) return logoBase64;
+
+  try {
+    const response = await fetch('/BookingNestLogo.png');
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        logoBase64 = reader.result;
+        resolve(logoBase64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error("Error loading logo:", error);
+    return null;
+  }
+};
+
+// ============================================
 // PDF HEADER & FOOTER
 // ============================================
 
-const getHeader = (reportTitle) => {
-  return {
-    columns: [
+const getHeader = (reportTitle, logo = null) => {
+  const headerContent = {
+    columns: [],
+    margin: [40, 30, 40, 20],
+  };
+
+  // Add logo if available
+  if (logo) {
+    headerContent.columns.push({
+      image: logo,
+      width: 40,
+      height: 40,
+      alignment: 'left',
+    });
+  }
+
+  headerContent.columns.push({
+    stack: [
       {
         text: "BookingNest",
         style: "headerTitle",
-        width: "*",
       },
       {
         text: reportTitle,
         style: "headerSubtitle",
-        alignment: "right",
-        width: "auto",
       },
     ],
-    margin: [40, 30, 40, 20],
-  };
+    width: "*",
+    margin: logo ? [10, 0, 0, 0] : [0, 0, 0, 0],
+  });
+
+  return headerContent;
 };
 
 const getFooter = (currentPage, pageCount) => {
@@ -86,6 +129,11 @@ const styles = {
   headerSubtitle: {
     fontSize: 12,
     color: COLORS.textMuted,
+  },
+  headerDate: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    margin: [0, 5, 0, 0],
   },
   footer: {
     fontSize: 9,
@@ -154,13 +202,15 @@ const createMetricCard = (label, value, icon = null) => {
 // FINANCIAL REPORT PDF
 // ============================================
 
-export const generateFinancialReportPDF = (data) => {
+export const generateFinancialReportPDF = async (data) => {
+  // Load logo
+  const logo = await loadLogo();
+
   const docDefinition = {
     pageSize: "A4",
     pageMargins: [40, 80, 40, 60],
     header: (currentPage, pageCount) => {
-      if (currentPage === 1) return null;
-      return getHeader("Financial Report");
+      return getHeader("Financial Report", logo);
     },
     footer: getFooter,
     content: [
@@ -273,13 +323,15 @@ export const generateFinancialReportPDF = (data) => {
 // BOOKINGS REPORT PDF
 // ============================================
 
-export const generateBookingsReportPDF = (data) => {
+export const generateBookingsReportPDF = async (data) => {
+  // Load logo
+  const logo = await loadLogo();
+
   const docDefinition = {
     pageSize: "A4",
     pageMargins: [40, 80, 40, 60],
     header: (currentPage, pageCount) => {
-      if (currentPage === 1) return null;
-      return getHeader("Bookings Report");
+      return getHeader("Bookings Report", logo);
     },
     footer: getFooter,
     content: [
@@ -300,8 +352,8 @@ export const generateBookingsReportPDF = (data) => {
             data.confirmedBookings.toString()
           ),
           createMetricCard(
-            "Completion Rate",
-            `${data.completionRate.toFixed(1)}%`
+            "Completed Bookings",
+            data.completedBookings.toString()
           ),
         ],
       },
@@ -316,9 +368,19 @@ export const generateBookingsReportPDF = (data) => {
             data.refundedBookings.toString()
           ),
           createMetricCard(
+            "Completion Rate",
+            `${data.completionRate.toFixed(1)}%`
+          ),
+        ],
+      },
+      {
+        columns: [
+          createMetricCard(
             "Average Value",
             formatCurrency(data.averageBookingValue)
           ),
+          { text: "" },
+          { text: "" },
         ],
       },
 
@@ -451,13 +513,15 @@ export const generateBookingsReportPDF = (data) => {
 // HOST PERFORMANCE REPORT PDF
 // ============================================
 
-export const generateHostPerformanceReportPDF = (data) => {
+export const generateHostPerformanceReportPDF = async (data) => {
+  // Load logo
+  const logo = await loadLogo();
+
   const docDefinition = {
     pageSize: "A4",
     pageMargins: [40, 80, 40, 60],
     header: (currentPage, pageCount) => {
-      if (currentPage === 1) return null;
-      return getHeader("Host Performance Report");
+      return getHeader("Host Performance Report", logo);
     },
     footer: getFooter,
     content: [
@@ -554,13 +618,15 @@ export const generateHostPerformanceReportPDF = (data) => {
 // LISTING ANALYTICS REPORT PDF
 // ============================================
 
-export const generateListingAnalyticsReportPDF = (data) => {
+export const generateListingAnalyticsReportPDF = async (data) => {
+  // Load logo
+  const logo = await loadLogo();
+
   const docDefinition = {
     pageSize: "A4",
     pageMargins: [40, 80, 40, 60],
     header: (currentPage, pageCount) => {
-      if (currentPage === 1) return null;
-      return getHeader("Listing Analytics Report");
+      return getHeader("Listing Analytics Report", logo);
     },
     footer: getFooter,
     content: [

@@ -107,11 +107,11 @@ const MessagesLinkWithBadge = ({ to, unreadCount = 0, className, onClick }) => {
 // Logo Component
 const Logo = () => (
   <Link to={ROUTES.HOME} className="flex-shrink-0">
-    <div className="flex items-center gap-2 cursor-pointer">
+    <div className="flex items-center cursor-pointer">
       <img
         src="/bookingNestLogoFInal.png"
         alt=""
-        className="w-16 h-16 sm:w-24 sm:h-24 lg:w-32 lg:h-32 hover:scale-105 transition-transform"
+        className="w-16 h-16 sm:w-24 sm:h-24 lg:w-28 lg:h-28 hover:scale-105 transition-transform relative top-1.5 left-4"
       />
       <div className="hidden sm:flex flex-col items-start">
         <div className="text-base sm:text-lg lg:text-2xl font-bold leading-none">
@@ -1628,202 +1628,207 @@ const GuestTabNavigation = ({
       <nav
         className={`transition-all duration-500 text-white border-b overflow-visible ${
           isScrolled
-            ? "py-1.5 bg-slate-900/70 backdrop-blur-[20px] shadow-lg border-white/20"
-            : "py-2.5 bg-slate-900/95 backdrop-blur-sm shadow-md border-white/10"
+            ? "py-1.5 bg-slate-900 shadow-lg border-white/20"
+            : "py-2.5 bg-slate-900 shadow-md border-white/10"
         }`}
       >
         {/* Top Row - Logo, Tabs, Profile */}
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="flex items-center justify-between gap-2 sm:gap-3 lg:gap-6">
-              {/* Logo & Brand Name - Left */}
-              <Link
-                to={ROUTES.GUEST.HOME}
-                className="flex-shrink-0 flex items-center gap-2"
-              >
-                <img
-                  src="/bookingNestLogoFInal.png"
-                  alt="BookingNest Logo"
-                  className="w-16 h-16 sm:w-20 sm:h-20 hover:scale-105 transition-transform"
-                />
-                <div className="hidden sm:flex flex-col items-start">
-                  <div className="text-base sm:text-lg lg:text-xl font-bold leading-none">
-                    <span className="text-white">Booking</span>
-                    <span className="text-indigo-600">Nest</span>
-                  </div>
+            {/* Logo & Brand Name - Left */}
+            <Link
+              to={ROUTES.GUEST.HOME}
+              className="flex-shrink-0 flex items-center gap-2"
+            >
+              <img
+                src="/bookingNestLogoFInal.png"
+                alt="BookingNest Logo"
+                className="w-16 h-16 sm:w-20 sm:h-20 hover:scale-105 transition-transform"
+              />
+              <div className="hidden sm:flex flex-col items-start">
+                <div className="text-base sm:text-lg lg:text-xl font-bold leading-none">
+                  <span className="text-white">Booking</span>
+                  <span className="text-indigo-600">Nest</span>
                 </div>
-              </Link>
-
-              {/* Center - Nav Tabs (slide up when scrolled) - Hidden on mobile */}
-              <div
-                className={`hidden md:flex flex-1 items-center justify-center gap-1 lg:gap-3 transition-all duration-700 ease-in-out ${
-                  isScrolled
-                    ? "-translate-y-24 opacity-0 pointer-events-none"
-                    : "translate-y-0 opacity-100 pointer-events-auto"
-                }`}
-              >
-                {guestTabs.map(({ id, label, icon: Icon, color }) => (
-                  <button
-                    key={id}
-                    onClick={() => handleTabClick(id)}
-                    className={`nav-link-border group relative px-2 lg:px-4 py-2 lg:py-2.5 rounded-lg lg:rounded-xl transition-all duration-300 text-xs lg:text-sm ${
-                      activeFilter === id
-                        ? `nav-link-active bg-gradient-to-r ${color} text-white shadow-lg`
-                        : "text-slate-300 hover:text-white hover:bg-slate-800/50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-1 lg:gap-2">
-                      <Icon
-                        className={`w-4 lg:w-5 h-4 lg:h-5 transition-transform ${
-                          activeFilter === id
-                            ? "scale-110"
-                            : "group-hover:scale-110"
-                        }`}
-                      />
-                      <span className="hidden lg:inline font-medium">
-                        {label}
-                      </span>
-                      <span className="lg:hidden font-medium text-xs">
-                        {label.split("")[0]}
-                      </span>
-                    </div>
-                    {activeFilter === id && (
-                      <div
-                        className={`absolute inset-0 bg-gradient-to-r ${color} rounded-lg lg:rounded-xl blur-xl opacity-30 -z-10`}
-                      ></div>
-                    )}
-                  </button>
-                ))}
               </div>
+            </Link>
 
-              {/* Compact Search Bar - Appears in center when scrolled */}
-              <div
-                onClick={handleSearchClick}
-                className={`hidden md:flex flex-1 items-center justify-center transition-all duration-700 ease-in-out cursor-pointer absolute inset-0 ${
-                  isScrolled
-                    ? "translate-y-0 opacity-100 pointer-events-auto"
-                    : "-translate-y-24 opacity-0 pointer-events-none"
-                }`}
-              >
-                <div className="flex items-center bg-white rounded-full px-3 lg:px-4 py-1.5 lg:py-2 text-gray-700 shadow-md gap-1.5 lg:gap-2.5 hover:shadow-lg max-w-lg">
-                  <MapPin className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
-                  <input
-                    type="text"
-                    placeholder="Where?"
-                    readOnly
-                    value={searchData.location}
-                    className="outline-none bg-transparent text-xs lg:text-sm w-20 cursor-pointer"
-                  />
-                  <div className="hidden md:block border-l h-4 border-gray-300"></div>
-                  <Calendar className="hidden md:block w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
-                  <input
-                    type="text"
-                    placeholder="When?"
-                    readOnly
-                    value={
-                      searchData.checkIn && searchData.checkOut
-                        ? `${new Date(searchData.checkIn).toLocaleDateString(
-                            "en-US",
-                            { month: "short", day: "numeric" }
-                          )} - ${new Date(
-                            searchData.checkOut
-                          ).toLocaleDateString("en-US", {
+            {/* Center - Nav Tabs (slide up when scrolled) - Hidden on mobile */}
+            <div
+              className={`hidden md:flex flex-1 items-center justify-center gap-1 lg:gap-3 transition-all duration-700 ease-in-out ${
+                isScrolled
+                  ? "-translate-y-24 opacity-0 pointer-events-none"
+                  : "translate-y-0 opacity-100 pointer-events-auto"
+              }`}
+            >
+              {guestTabs.map(({ id, label, icon: Icon, color }) => (
+                <button
+                  key={id}
+                  onClick={() => handleTabClick(id)}
+                  className={`nav-link-border group relative px-2 lg:px-4 py-2 lg:py-2.5 rounded-lg lg:rounded-xl transition-all duration-300 text-xs lg:text-sm ${
+                    activeFilter === id
+                      ? `nav-link-active bg-gradient-to-r ${color} text-white shadow-lg`
+                      : "text-slate-300 hover:text-white hover:bg-slate-800/50"
+                  }`}
+                >
+                  <div className="flex items-center gap-1 lg:gap-2">
+                    <Icon
+                      className={`w-4 lg:w-5 h-4 lg:h-5 transition-transform ${
+                        activeFilter === id
+                          ? "scale-110"
+                          : "group-hover:scale-110"
+                      }`}
+                    />
+                    <span className="hidden lg:inline font-medium">
+                      {label}
+                    </span>
+                    <span className="lg:hidden font-medium text-xs">
+                      {label.split("")[0]}
+                    </span>
+                  </div>
+                  {activeFilter === id && (
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-r ${color} rounded-lg lg:rounded-xl blur-xl opacity-30 -z-10`}
+                    ></div>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Compact Search Bar - Appears in center when scrolled */}
+            <div
+              onClick={handleSearchClick}
+              className={`hidden md:flex flex-1 items-center justify-center transition-all duration-700 ease-in-out cursor-pointer absolute inset-0 ${
+                isScrolled
+                  ? "translate-y-0 opacity-100 pointer-events-auto"
+                  : "-translate-y-24 opacity-0 pointer-events-none"
+              }`}
+            >
+              <div className="flex items-center bg-white rounded-full px-3 lg:px-4 py-1.5 lg:py-2 text-gray-700 shadow-md gap-1.5 lg:gap-2.5 hover:shadow-lg max-w-lg">
+                <MapPin className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Where?"
+                  readOnly
+                  value={searchData.location}
+                  className="outline-none bg-transparent text-xs lg:text-sm w-20 cursor-pointer"
+                />
+                <div className="hidden md:block border-l h-4 border-gray-300"></div>
+                <Calendar className="hidden md:block w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
+                <input
+                  type="text"
+                  placeholder="When?"
+                  readOnly
+                  value={
+                    searchData.checkIn && searchData.checkOut
+                      ? `${new Date(searchData.checkIn).toLocaleDateString(
+                          "en-US",
+                          { month: "short", day: "numeric" }
+                        )} - ${new Date(searchData.checkOut).toLocaleDateString(
+                          "en-US",
+                          {
                             month: "short",
                             day: "numeric",
-                          })}`
-                        : ""
-                    }
-                    className="hidden md:block outline-none bg-transparent text-xs lg:text-sm w-20 cursor-pointer"
-                  />
-                  <div className="hidden lg:block border-l h-4 border-gray-300"></div>
-                  {activeFilter === "services" ? (
-                    <>
-                      <Briefcase className="hidden lg:block w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
-                      <input
-                        type="text"
-                        placeholder="What type?"
-                        readOnly
-                        value={searchData.serviceType}
-                        className="hidden lg:block outline-none bg-transparent text-xs lg:text-sm w-16 cursor-pointer"
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <Users className="hidden lg:block w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
-                      <input
-                        type="text"
-                        placeholder="Who?"
-                        readOnly
-                        value={
-                          searchData.guests > 1
-                            ? `${searchData.guests} guests`
-                            : ""
-                        }
-                        className="hidden lg:block outline-none bg-transparent text-xs lg:text-sm w-16 cursor-pointer"
-                      />
-                    </>
-                  )}
-                  <div className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0">
-                    <Search className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
-                  </div>
+                          }
+                        )}`
+                      : ""
+                  }
+                  className="hidden md:block outline-none bg-transparent text-xs lg:text-sm w-20 cursor-pointer"
+                />
+                <div className="hidden lg:block border-l h-4 border-gray-300"></div>
+                {activeFilter === "services" ? (
+                  <>
+                    <Briefcase className="hidden lg:block w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
+                    <input
+                      type="text"
+                      placeholder="What type?"
+                      readOnly
+                      value={searchData.serviceType}
+                      className="hidden lg:block outline-none bg-transparent text-xs lg:text-sm w-16 cursor-pointer"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Users className="hidden lg:block w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500 flex-shrink-0" />
+                    <input
+                      type="text"
+                      placeholder="Who?"
+                      readOnly
+                      value={
+                        searchData.guests > 1
+                          ? `${searchData.guests} guests`
+                          : ""
+                      }
+                      className="hidden lg:block outline-none bg-transparent text-xs lg:text-sm w-16 cursor-pointer"
+                    />
+                  </>
+                )}
+                <div className="bg-indigo-600 text-white p-1.5 lg:p-2 rounded-full hover:bg-indigo-700 transition flex-shrink-0">
+                  <Search className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
                 </div>
               </div>
+            </div>
 
-              {/* Right Section - Profile */}
-              <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                {/* Mobile Search */}
+            {/* Right Section - Profile */}
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              {/* Mobile Search */}
+              <button
+                onClick={handleSearchClick}
+                className="lg:hidden p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200 hover:scale-110"
+              >
+                <Search className="w-5 h-5 text-slate-300" />
+              </button>
+
+              {/* Mobile Menu Hamburger */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="lg:hidden p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200 hover:scale-110"
+              >
+                <Menu className="w-5 h-5 text-slate-300" />
+              </button>
+
+              {/* Notifications Icon */}
+              <div className="relative">
                 <button
-                  onClick={handleSearchClick}
-                  className="lg:hidden p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200 hover:scale-110"
+                  type="button"
+                  onClick={() =>
+                    setNotificationDropdownOpen(!notificationDropdownOpen)
+                  }
+                  className="relative p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200 hover:scale-110 text-slate-300 hover:text-white"
+                  title="Notifications"
                 >
-                  <Search className="w-5 h-5 text-slate-300" />
+                  <Bell className="w-5 h-5" />
+                  {unreadNotificationsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold w-5 h-5 rounded-full flex items-center justify-center">
+                      {unreadNotificationsCount > 9
+                        ? "9+"
+                        : unreadNotificationsCount}
+                    </span>
+                  )}
                 </button>
 
-                {/* Mobile Menu Hamburger */}
-                <button
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="lg:hidden p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200 hover:scale-110"
-                >
-                  <Menu className="w-5 h-5 text-slate-300" />
-                </button>
-
-                {/* Notifications Icon */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setNotificationDropdownOpen(!notificationDropdownOpen)
-                    }
-                    className="relative p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200 hover:scale-110 text-slate-300 hover:text-white"
-                    title="Notifications"
-                  >
-                    <Bell className="w-5 h-5" />
-                    {unreadNotificationsCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold w-5 h-5 rounded-full flex items-center justify-center">
-                        {unreadNotificationsCount > 9
-                          ? "9+"
-                          : unreadNotificationsCount}
-                      </span>
-                    )}
-                  </button>
-
-                  {notificationDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-80 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 z-50 max-h-96 overflow-y-auto">
-                      {unreadNotificationsCount > 0 ? (
-                        <>
-                          <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-3 z-10">
-                            <p className="text-slate-300 font-medium">
-                              {unreadNotificationsCount} unread{" "}
-                              {unreadNotificationsCount === 1
-                                ? "notification"
-                                : "notifications"}
-                            </p>
-                          </div>
-                          <div className="p-2">
-                            {unreadNotifications.slice(0, 5).map((notification) => (
+                {notificationDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 z-50 max-h-96 overflow-y-auto">
+                    {unreadNotificationsCount > 0 ? (
+                      <>
+                        <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-3 z-10">
+                          <p className="text-slate-300 font-medium">
+                            {unreadNotificationsCount} unread{" "}
+                            {unreadNotificationsCount === 1
+                              ? "notification"
+                              : "notifications"}
+                          </p>
+                        </div>
+                        <div className="p-2">
+                          {unreadNotifications
+                            .slice(0, 5)
+                            .map((notification) => (
                               <Link
                                 key={notification.id}
                                 to={ROUTES.GUEST.NOTIFICATIONS}
-                                onClick={() => setNotificationDropdownOpen(false)}
+                                onClick={() =>
+                                  setNotificationDropdownOpen(false)
+                                }
                                 className="block p-3 mb-2 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors border border-slate-600"
                               >
                                 <div className="flex flex-col gap-1">
@@ -1844,157 +1849,157 @@ const GuestTabNavigation = ({
                                 </div>
                               </Link>
                             ))}
-                          </div>
-                          <Link
-                            to={ROUTES.GUEST.NOTIFICATIONS}
-                            className="block p-3 text-center border-t border-slate-700 text-indigo-400 hover:text-indigo-300 text-xs font-medium hover:bg-slate-700/30 transition-colors"
-                            onClick={() => setNotificationDropdownOpen(false)}
-                          >
-                            View all notifications →
-                          </Link>
-                        </>
-                      ) : (
-                        <p className="p-3 text-sm text-slate-400">
-                          No new notifications
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Profile Menu */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                    className="hidden lg:flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200"
-                  >
-                    {userData?.photoURL ? (
-                      <img
-                        src={userData.photoURL}
-                        alt="Profile"
-                        className="w-9 h-9 rounded-full object-cover border-2 border-slate-600 hover:border-indigo-500 transition-colors"
-                      />
-                    ) : (
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm font-semibold">
-                        {user?.fullName
-                          ? user.fullName
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .substring(0, 2)
-                              .toUpperCase()
-                          : "G"}
-                      </div>
-                    )}
-                    <span className="text-sm font-medium text-slate-200 hover:text-white whitespace-nowrap">
-                      Profile
-                    </span>
-                    {profileDropdownOpen ? (
-                      <ChevronUp className="w-4 h-4 text-slate-400" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
-                    )}
-                  </button>
-
-                  {/* Profile Dropdown */}
-                  {profileDropdownOpen && (
-                    <div className="absolute right-0 mt-3 w-72 bg-slate-800 backdrop-blur-xl text-slate-200 rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden z-50 transition-all duration-200">
-                      {/* User Info Header */}
-                      <div className="px-5 py-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-700/50">
-                        <p className="text-sm font-semibold text-white truncate">
-                          {user?.fullName || "Guest"}
-                        </p>
-                        <p className="text-xs text-slate-400 truncate">
-                          {user?.email || ""}
-                        </p>
-                      </div>
-
-                      {/* Profile Section */}
-                      <div className="border-b border-slate-700/50 my-1">
-                        <Link
-                          to={ROUTES.GUEST.PROFILE}
-                          className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
-                          onClick={() => setProfileDropdownOpen(false)}
-                        >
-                          <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                          My Profile
-                        </Link>
-
-                        <Link
-                          to={ROUTES.GUEST.FAVORITES}
-                          className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-pink-500/20 hover:to-pink-500/20 hover:text-pink-300"
-                          onClick={() => setProfileDropdownOpen(false)}
-                        >
-                          <Heart className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                          Favorites
-                        </Link>
-                      </div>
-
-                      {/* Bookings & Messages */}
-                      <div className="border-b border-slate-700/50 my-1">
-                        <Link
-                          to={ROUTES.GUEST.MY_BOOKINGS}
-                          className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-cyan-500/20 hover:text-cyan-300"
-                          onClick={() => setProfileDropdownOpen(false)}
-                        >
-                          <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                          My Bookings
-                        </Link>
-
-                        <Link
-                          to={ROUTES.GUEST.MESSAGES}
-                          className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
-                          onClick={() => setProfileDropdownOpen(false)}
-                        >
-                          <div className="relative">
-                            <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
-                            {unreadMessagesCount > 0 && (
-                              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                                {unreadMessagesCount > 9
-                                  ? "9+"
-                                  : unreadMessagesCount}
-                              </span>
-                            )}
-                          </div>
-                          Messages
-                        </Link>
-
+                        </div>
                         <Link
                           to={ROUTES.GUEST.NOTIFICATIONS}
-                          className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
-                          onClick={() => setProfileDropdownOpen(false)}
+                          className="block p-3 text-center border-t border-slate-700 text-indigo-400 hover:text-indigo-300 text-xs font-medium hover:bg-slate-700/30 transition-colors"
+                          onClick={() => setNotificationDropdownOpen(false)}
                         >
-                          <Bell className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                          Notifications
+                          View all notifications →
                         </Link>
-                      </div>
+                      </>
+                    ) : (
+                      <p className="p-3 text-sm text-slate-400">
+                        No new notifications
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
 
-                      {/* Wallet */}
-                      <div className="border-b border-slate-700/50 my-1">
-                        <Link
-                          to={ROUTES.GUEST.E_WALLET}
-                          className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
-                          onClick={() => setProfileDropdownOpen(false)}
-                        >
-                          <LucideWallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                          E-Wallet
-                        </Link>
-                      </div>
-
-                      <button
-                        className="w-full flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item text-left hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-500/20 hover:text-red-300"
-                        onClick={handleLogout}
-                      >
-                        <LogOut className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
-                        Logout
-                      </button>
+              {/* Profile Menu */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className="hidden lg:flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200"
+                >
+                  {userData?.photoURL ? (
+                    <img
+                      src={userData.photoURL}
+                      alt="Profile"
+                      className="w-9 h-9 rounded-full object-cover border-2 border-slate-600 hover:border-indigo-500 transition-colors"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm font-semibold">
+                      {user?.fullName
+                        ? user.fullName
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .substring(0, 2)
+                            .toUpperCase()
+                        : "G"}
                     </div>
                   )}
-                </div>
+                  <span className="text-sm font-medium text-slate-200 hover:text-white whitespace-nowrap">
+                    Profile
+                  </span>
+                  {profileDropdownOpen ? (
+                    <ChevronUp className="w-4 h-4 text-slate-400" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                  )}
+                </button>
+
+                {/* Profile Dropdown */}
+                {profileDropdownOpen && (
+                  <div className="absolute right-0 mt-3 w-72 bg-slate-800 backdrop-blur-xl text-slate-200 rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden z-50 transition-all duration-200">
+                    {/* User Info Header */}
+                    <div className="px-5 py-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-700/50">
+                      <p className="text-sm font-semibold text-white truncate">
+                        {user?.fullName || "Guest"}
+                      </p>
+                      <p className="text-xs text-slate-400 truncate">
+                        {user?.email || ""}
+                      </p>
+                    </div>
+
+                    {/* Profile Section */}
+                    <div className="border-b border-slate-700/50 my-1">
+                      <Link
+                        to={ROUTES.GUEST.PROFILE}
+                        className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-500/20 hover:text-blue-300"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <User className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                        My Profile
+                      </Link>
+
+                      <Link
+                        to={ROUTES.GUEST.FAVORITES}
+                        className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-pink-500/20 hover:to-pink-500/20 hover:text-pink-300"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <Heart className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                        Favorites
+                      </Link>
+                    </div>
+
+                    {/* Bookings & Messages */}
+                    <div className="border-b border-slate-700/50 my-1">
+                      <Link
+                        to={ROUTES.GUEST.MY_BOOKINGS}
+                        className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-cyan-500/20 hover:text-cyan-300"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <Calendar className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                        My Bookings
+                      </Link>
+
+                      <Link
+                        to={ROUTES.GUEST.MESSAGES}
+                        className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-purple-500/20 hover:text-purple-300"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <div className="relative">
+                          <MessageSquare className="w-5 h-5 group-hover/item:scale-110 transition-transform" />
+                          {unreadMessagesCount > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                              {unreadMessagesCount > 9
+                                ? "9+"
+                                : unreadMessagesCount}
+                            </span>
+                          )}
+                        </div>
+                        Messages
+                      </Link>
+
+                      <Link
+                        to={ROUTES.GUEST.NOTIFICATIONS}
+                        className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <Bell className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                        Notifications
+                      </Link>
+                    </div>
+
+                    {/* Wallet */}
+                    <div className="border-b border-slate-700/50 my-1">
+                      <Link
+                        to={ROUTES.GUEST.E_WALLET}
+                        className="flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-yellow-500/20 hover:text-yellow-300"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <LucideWallet className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                        E-Wallet
+                      </Link>
+                    </div>
+
+                    <button
+                      className="w-full flex items-center gap-3 px-5 py-3.5 text-sm transition-all duration-200 group/item text-left hover:bg-gradient-to-r hover:from-red-500/20 hover:to-red-500/20 hover:text-red-300"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="w-5 h-5 group-hover/item:scale-110 transition-transform" />{" "}
+                      Logout
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
+        </div>
 
         {/* Mobile Tab Navigation - Only on mobile */}
         <div
@@ -2127,10 +2132,7 @@ const GuestTabNavigation = ({
             </button>
 
             {/* Expanded Content */}
-            <form
-              onSubmit={handleSearchSubmit}
-              className="space-y-5"
-            >
+            <form onSubmit={handleSearchSubmit} className="space-y-5">
               {/* Compact Grid Layout */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Where */}
@@ -2231,7 +2233,11 @@ const GuestTabNavigation = ({
                         )}`
                       : "Click to select dates"}
                   </span>
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showDateRangePicker ? 'rotate-180' : ''}`} />
+                  <ChevronDown
+                    className={`w-4 h-4 text-slate-400 transition-transform ${
+                      showDateRangePicker ? "rotate-180" : ""
+                    }`}
+                  />
                 </button>
 
                 {/* Modern Inline Date Picker */}
@@ -2243,7 +2249,7 @@ const GuestTabNavigation = ({
                     transition={{ duration: 0.3 }}
                     className="mt-3 p-4 bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-700/50 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl"
                   >
-                      <style>{`
+                    <style>{`
   /* Modern Compact Calendar - Lighter Dark Theme */
                           .rdrCalendarWrapper {
                             background: linear-gradient(135deg, rgba(51, 65, 85, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%) !important;
@@ -2632,21 +2638,21 @@ const GuestTabNavigation = ({
                           }
                         `}</style>
 
-                      <DateRange
-                        ranges={dateRange}
-                        onChange={handleDateRangeChange}
-                        rangeColors={["#6366f1"]}
-                        showMonthAndYearPickers={true}
-                        staticRanges={[]}
-                        inputRanges={[]}
-                        editableDateInputs={true}
-                        moveRangeOnFirstSelection={false}
-                        months={responsiveConfig.months}
-                        direction={responsiveConfig.direction}
-                      />
-                    </motion.div>
-                  )}
-                </div>
+                    <DateRange
+                      ranges={dateRange}
+                      onChange={handleDateRangeChange}
+                      rangeColors={["#6366f1"]}
+                      showMonthAndYearPickers={true}
+                      staticRanges={[]}
+                      inputRanges={[]}
+                      editableDateInputs={true}
+                      moveRangeOnFirstSelection={false}
+                      months={responsiveConfig.months}
+                      direction={responsiveConfig.direction}
+                    />
+                  </motion.div>
+                )}
+              </div>
 
               {/* Modern Search Button */}
               <button
@@ -2833,177 +2839,187 @@ const HostSimpleNavBar = ({
   }, []);
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 text-white transition-all duration-300 ${
-      isScrolled ? "py-3 bg-transparent" : "shadow-lg border-b border-white/20 bg-slate-900/70 backdrop-blur-[20px]"
-    }`}>
-      <div className={`mx-auto transition-all duration-300 ${
-        isScrolled ? "max-w-7xl px-3 sm:px-4" : "max-w-full px-2 sm:px-4"
-      }`}>
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 text-white transition-all duration-300 ${
+        isScrolled
+          ? "py-3 bg-transparent"
+          : "shadow-lg border-b border-white/20 bg-slate-900/70 backdrop-blur-[20px]"
+      }`}
+    >
+      <div
+        className={`mx-auto transition-all duration-300 ${
+          isScrolled ? "max-w-7xl px-3 sm:px-4" : "max-w-full px-2 sm:px-4"
+        }`}
+      >
         {/* Card Wrapper - Mobile and Desktop when scrolled */}
-        <div className={`transition-all duration-300 ${
-          isScrolled
-            ? "bg-slate-900/70 backdrop-blur-[20px] shadow-2xl border border-white/20 rounded-2xl px-4 sm:px-6 py-3"
-            : "py-3"
-        }`}>
+        <div
+          className={`transition-all duration-300 ${
+            isScrolled
+              ? "bg-slate-900/70 backdrop-blur-[20px] shadow-2xl border border-white/20 rounded-2xl px-4 sm:px-6 py-3"
+              : "py-3"
+          }`}
+        >
           <div className="flex items-center justify-between h-14">
-          {/* Left - Back Button and Logo */}
-          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0 pl-2">
-            <button
-              onClick={() => navigate(ROUTES.HOST.DASHBOARD)}
-              className="p-2 hover:bg-slate-700/50 rounded-lg transition-all duration-200"
-              title="Back to dashboard"
-            >
-              <ArrowLeft className="w-5 h-5 text-slate-300 hover:text-white" />
-            </button>
-            <Link
-              to={ROUTES.HOST.DASHBOARD}
-              className="flex items-center cursor-pointer"
-            >
-              <img
-                src="/bookingNestLogoFInal.png"
-                alt="BookingNest"
-                className="h-20 w-auto hidden sm:block"
-              />
-            </Link>
-          </div>
-
-          {/* Right - Profile Menu */}
-          <div className="relative">
-            <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200"
-            >
-              {userData?.photoURL ? (
+            {/* Left - Back Button and Logo */}
+            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0 pl-2">
+              <button
+                onClick={() => navigate(ROUTES.HOST.DASHBOARD)}
+                className="p-2 hover:bg-slate-700/50 rounded-lg transition-all duration-200"
+                title="Back to dashboard"
+              >
+                <ArrowLeft className="w-5 h-5 text-slate-300 hover:text-white" />
+              </button>
+              <Link
+                to={ROUTES.HOST.DASHBOARD}
+                className="flex items-center cursor-pointer"
+              >
                 <img
-                  src={userData.photoURL}
-                  alt="Profile"
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-slate-600 hover:border-indigo-500 transition-colors"
+                  src="/bookingNestLogoFInal.png"
+                  alt="BookingNest"
+                  className="sm:w-24 sm:h-24 lg:w-22 lg:h-22 hover:scale-105 transition-transform relative top-1.5 left-4"
                 />
-              ) : (
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs sm:text-sm font-semibold">
-                  {user?.fullName
-                    ? user.fullName
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .substring(0, 2)
-                        .toUpperCase()
-                    : "H"}
+              </Link>
+            </div>
+
+            {/* Right - Profile Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200"
+              >
+                {userData?.photoURL ? (
+                  <img
+                    src={userData.photoURL}
+                    alt="Profile"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-slate-600 hover:border-indigo-500 transition-colors"
+                  />
+                ) : (
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs sm:text-sm font-semibold">
+                    {user?.fullName
+                      ? user.fullName
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .substring(0, 2)
+                          .toUpperCase()
+                      : "H"}
+                  </div>
+                )}
+                <span className="text-xs sm:text-sm font-medium text-slate-200 hover:text-white whitespace-nowrap hidden sm:inline">
+                  Profile
+                </span>
+              </button>
+
+              {/* Profile Dropdown */}
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-3 w-56 bg-slate-800 backdrop-blur-xl text-slate-200 rounded-xl shadow-xl border border-slate-700/30 overflow-hidden z-50 transition-all duration-200">
+                  {/* User Info Header */}
+                  <div className="px-4 py-3 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-700/30">
+                    <p className="text-sm font-semibold text-white truncate">
+                      {user?.fullName || "Host"}
+                    </p>
+                    <p className="text-xs text-slate-400 truncate">
+                      {user?.email || ""}
+                    </p>
+                  </div>
+
+                  {/* Menu Items */}
+                  <div className="divide-y divide-slate-700/30">
+                    <Link
+                      to={ROUTES.HOST.PROFILE}
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-blue-500/15 hover:text-blue-300"
+                    >
+                      <User className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
+                      My Profile
+                    </Link>
+
+                    <Link
+                      to={ROUTES.HOST.DASHBOARD}
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-indigo-500/15 hover:text-indigo-300"
+                    >
+                      <BarChart3 className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
+                      Dashboard
+                    </Link>
+
+                    <Link
+                      to={ROUTES.HOST.STAYS}
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-cyan-500/15 hover:text-cyan-300"
+                    >
+                      <Home className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
+                      My Stays
+                    </Link>
+
+                    <Link
+                      to={ROUTES.HOST.EXPERIENCES}
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-purple-500/15 hover:text-purple-300"
+                    >
+                      <Calendar className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
+                      My Experiences
+                    </Link>
+
+                    <Link
+                      to={ROUTES.HOST.SERVICES}
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-green-500/15 hover:text-green-300"
+                    >
+                      <Briefcase className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
+                      My Services
+                    </Link>
+
+                    <Link
+                      to={ROUTES.HOST.E_WALLET}
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-yellow-500/15 hover:text-yellow-300"
+                    >
+                      <Wallet className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
+                      E-wallet
+                    </Link>
+
+                    <Link
+                      to={ROUTES.HOST.MESSAGES}
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-purple-500/15 hover:text-purple-300"
+                    >
+                      <div className="relative">
+                        <MessageSquare className="w-4 h-4 group-hover/item:scale-110 transition-transform" />
+                        {unreadMessagesCount > 0 && (
+                          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                            {unreadMessagesCount > 9
+                              ? "9+"
+                              : unreadMessagesCount}
+                          </span>
+                        )}
+                      </div>
+                      Messages
+                    </Link>
+
+                    <Link
+                      to={ROUTES.HOST.DRAFTS}
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-orange-500/15 hover:text-orange-300"
+                    >
+                      <FileEdit className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
+                      Drafts
+                    </Link>
+
+                    <button
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item text-left hover:bg-red-500/15 hover:text-red-300"
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        handleLogout();
+                      }}
+                    >
+                      <LogOut className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
+                      Logout
+                    </button>
+                  </div>
                 </div>
               )}
-              <span className="text-xs sm:text-sm font-medium text-slate-200 hover:text-white whitespace-nowrap hidden sm:inline">
-                Profile
-              </span>
-            </button>
-
-            {/* Profile Dropdown */}
-            {dropdownOpen && (
-              <div className="absolute right-0 mt-3 w-56 bg-slate-800 backdrop-blur-xl text-slate-200 rounded-xl shadow-xl border border-slate-700/30 overflow-hidden z-50 transition-all duration-200">
-                {/* User Info Header */}
-                <div className="px-4 py-3 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-700/30">
-                  <p className="text-sm font-semibold text-white truncate">
-                    {user?.fullName || "Host"}
-                  </p>
-                  <p className="text-xs text-slate-400 truncate">
-                    {user?.email || ""}
-                  </p>
-                </div>
-
-                {/* Menu Items */}
-                <div className="divide-y divide-slate-700/30">
-                  <Link
-                    to={ROUTES.HOST.PROFILE}
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-blue-500/15 hover:text-blue-300"
-                  >
-                    <User className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
-                    My Profile
-                  </Link>
-
-                  <Link
-                    to={ROUTES.HOST.DASHBOARD}
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-indigo-500/15 hover:text-indigo-300"
-                  >
-                    <BarChart3 className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
-                    Dashboard
-                  </Link>
-
-                  <Link
-                    to={ROUTES.HOST.STAYS}
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-cyan-500/15 hover:text-cyan-300"
-                  >
-                    <Home className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
-                    My Stays
-                  </Link>
-
-                  <Link
-                    to={ROUTES.HOST.EXPERIENCES}
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-purple-500/15 hover:text-purple-300"
-                  >
-                    <Calendar className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
-                    My Experiences
-                  </Link>
-
-                  <Link
-                    to={ROUTES.HOST.SERVICES}
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-green-500/15 hover:text-green-300"
-                  >
-                    <Briefcase className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
-                    My Services
-                  </Link>
-
-                  <Link
-                    to={ROUTES.HOST.E_WALLET}
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-yellow-500/15 hover:text-yellow-300"
-                  >
-                    <Wallet className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
-                    E-wallet
-                  </Link>
-
-                  <Link
-                    to={ROUTES.HOST.MESSAGES}
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-purple-500/15 hover:text-purple-300"
-                  >
-                    <div className="relative">
-                      <MessageSquare className="w-4 h-4 group-hover/item:scale-110 transition-transform" />
-                      {unreadMessagesCount > 0 && (
-                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                          {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
-                        </span>
-                      )}
-                    </div>
-                    Messages
-                  </Link>
-
-                  <Link
-                    to={ROUTES.HOST.DRAFTS}
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item hover:bg-orange-500/15 hover:text-orange-300"
-                  >
-                    <FileEdit className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
-                    Drafts
-                  </Link>
-
-                  <button
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group/item text-left hover:bg-red-500/15 hover:text-red-300"
-                    onClick={() => {
-                      setDropdownOpen(false);
-                      handleLogout();
-                    }}
-                  >
-                    <LogOut className="w-4 h-4 group-hover/item:scale-110 transition-transform" />{" "}
-                    Logout
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
           </div>
         </div>
       </div>
@@ -3717,73 +3733,81 @@ export default function NavigationBar({
           isHost && isScrolled ? "py-3" : "py-3 lg:py-4"
         } ${getNavbarBg()}`}
       >
-        <div className={`mx-auto transition-all duration-300 ${
-          isHost && isScrolled ? "max-w-7xl px-3 sm:px-4" : "max-w-7xl px-4 sm:px-6 lg:px-8"
-        }`}>
-          {/* Card Wrapper for Host - Mobile and Desktop when scrolled */}
-          <div className={`transition-all duration-300 ${
+        <div
+          className={`mx-auto transition-all duration-300 ${
             isHost && isScrolled
-              ? "bg-slate-900/70 backdrop-blur-[20px] shadow-2xl border border-white/20 rounded-2xl px-4 sm:px-6 py-3"
-              : ""
-          }`}>
-            <div className={`flex items-center justify-between h-14 lg:h-20 gap-x-4 lg:gap-x-12 ${
-              isHost && isScrolled ? "lg:h-16" : ""
-            }`}>
-            {/* Logo */}
-            <Logo />
-
-            {/* Center: Guest Search or Host Nav */}
-            {user ? (
-              isGuest ? (
-                <GuestSearchBar />
-              ) : isHost ? (
-                <HostNavLinks location={location} />
-              ) : null
-            ) : null}
-
-            {/* Right: Auth / Profile (Desktop) */}
-            <div className="hidden xl:flex items-center gap-4 lg:gap-6">
-              {!user ? (
-                <PublicAuthDropdown
-                  isScrolled={isScrolled}
-                  dropdownOpen={dropdownOpen}
-                  setDropdownOpen={setDropdownOpen}
-                />
-              ) : isGuest ? (
-                <GuestUserActions
-                  notificationDropdownOpen={notificationDropdownOpen}
-                  setNotificationDropdownOpen={setNotificationDropdownOpen}
-                  profileDropdownOpen={profileDropdownOpen}
-                  setProfileDropdownOpen={setProfileDropdownOpen}
-                  userData={userData}
-                  user={user}
-                  handleLogout={handleLogout}
-                  unreadNotificationsCount={unreadNotificationsCount}
-                  unreadMessagesCount={unreadMessagesCount}
-                />
-              ) : isHost ? (
-                <HostUserActions
-                  profileDropdownOpen={profileDropdownOpen}
-                  setProfileDropdownOpen={setProfileDropdownOpen}
-                  userData={userData}
-                  handleLogout={handleLogout}
-                  unreadNotificationsCount={unreadNotificationsCount}
-                  unreadMessagesCount={unreadMessagesCount}
-                />
-              ) : null}
-            </div>
-
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="xl:hidden text-white"
+              ? "max-w-7xl px-3 sm:px-4"
+              : "max-w-7xl px-4 sm:px-6 lg:px-8"
+          }`}
+        >
+          {/* Card Wrapper for Host - Mobile and Desktop when scrolled */}
+          <div
+            className={`transition-all duration-300 ${
+              isHost && isScrolled
+                ? "bg-slate-900/70 backdrop-blur-[20px] shadow-2xl border border-white/20 rounded-2xl px-4 sm:px-6 py-3"
+                : ""
+            }`}
+          >
+            <div
+              className={`flex items-center justify-between h-14 lg:h-20 gap-x-4 lg:gap-x-12 ${
+                isHost && isScrolled ? "lg:h-16" : ""
+              }`}
             >
-              {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
+              {/* Logo */}
+              <Logo />
+
+              {/* Center: Guest Search or Host Nav */}
+              {user ? (
+                isGuest ? (
+                  <GuestSearchBar />
+                ) : isHost ? (
+                  <HostNavLinks location={location} />
+                ) : null
+              ) : null}
+
+              {/* Right: Auth / Profile (Desktop) */}
+              <div className="hidden xl:flex items-center gap-4 lg:gap-6">
+                {!user ? (
+                  <PublicAuthDropdown
+                    isScrolled={isScrolled}
+                    dropdownOpen={dropdownOpen}
+                    setDropdownOpen={setDropdownOpen}
+                  />
+                ) : isGuest ? (
+                  <GuestUserActions
+                    notificationDropdownOpen={notificationDropdownOpen}
+                    setNotificationDropdownOpen={setNotificationDropdownOpen}
+                    profileDropdownOpen={profileDropdownOpen}
+                    setProfileDropdownOpen={setProfileDropdownOpen}
+                    userData={userData}
+                    user={user}
+                    handleLogout={handleLogout}
+                    unreadNotificationsCount={unreadNotificationsCount}
+                    unreadMessagesCount={unreadMessagesCount}
+                  />
+                ) : isHost ? (
+                  <HostUserActions
+                    profileDropdownOpen={profileDropdownOpen}
+                    setProfileDropdownOpen={setProfileDropdownOpen}
+                    userData={userData}
+                    handleLogout={handleLogout}
+                    unreadNotificationsCount={unreadNotificationsCount}
+                    unreadMessagesCount={unreadMessagesCount}
+                  />
+                ) : null}
+              </div>
+
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="xl:hidden text-white"
+              >
+                {mobileMenuOpen ? (
+                  <X className="w-6 h-6" />
+                ) : (
+                  <Menu className="w-6 h-6" />
+                )}
+              </button>
             </div>
           </div>
         </div>

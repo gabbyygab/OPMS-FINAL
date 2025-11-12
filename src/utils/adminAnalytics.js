@@ -578,7 +578,8 @@ export const getHostPerformance = async (
   reviews
 ) => {
   const hostListings = listings.filter((l) => l.hostId === hostId);
-  const hostBookings = bookings.filter((b) => b.hostId === hostId);
+  // Use host_id (snake_case) as it's stored in bookings
+  const hostBookings = bookings.filter((b) => b.host_id === hostId || b.hostId === hostId);
   const confirmedBookings = hostBookings.filter(
     (b) => b.status === "confirmed" || b.status === "completed"
   );
@@ -588,6 +589,7 @@ export const getHostPerformance = async (
     (b) => b.status === "completed"
   );
 
+  // totalAmount is already the net amount host receives (base price)
   const totalEarnings = completedBookings.reduce((sum, booking) => {
     return sum + (booking.totalAmount || 0);
   }, 0);

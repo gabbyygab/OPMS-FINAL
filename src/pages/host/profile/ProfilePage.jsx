@@ -474,7 +474,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <NavigationBar user={user} userData={userData} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8 mt-[70px]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8 pt-[90px]">
         {/* Mobile Tabs - Horizontal Scroll */}
         <div className="lg:hidden mb-6 flex gap-2 overflow-x-auto pb-4">
           {[
@@ -621,7 +621,7 @@ export default function ProfilePage() {
                         name="fullName"
                         value={formData.fullName}
                         onChange={handleChange}
-                        className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
+                        className="w-full bg-[#1e293b] border border-indigo-500/20 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:border-indigo-500/40 transition"
                       />
                     </div>
 
@@ -635,7 +635,7 @@ export default function ProfilePage() {
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
+                        className="w-full bg-[#1e293b] border border-indigo-500/20 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:border-indigo-500/40 transition"
                       />
                     </div>
 
@@ -649,7 +649,7 @@ export default function ProfilePage() {
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
+                        className="w-full bg-[#1e293b] border border-indigo-500/20 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:border-indigo-500/40 transition"
                       />
                     </div>
 
@@ -663,7 +663,7 @@ export default function ProfilePage() {
                         name="address"
                         value={formData.address}
                         onChange={handleChange}
-                        className="w-full bg-slate-700/50 border border-indigo-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-slate-700 transition"
+                        className="w-full bg-[#1e293b] border border-indigo-500/20 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:border-indigo-500/40 transition"
                       />
                     </div>
                   </div>
@@ -717,7 +717,7 @@ export default function ProfilePage() {
                           <input
                             type="password"
                             id="password"
-                            className="w-full px-4 py-3 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
+                            className="w-full px-4 py-3 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
                             placeholder="Enter current password"
                             onChange={(e) => setCurrentPassword(e.target.value)}
                           />
@@ -729,7 +729,7 @@ export default function ProfilePage() {
                           <input
                             type="password"
                             id="newPassword"
-                            className="w-full px-4 py-3 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
+                            className="w-full px-4 py-3 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
                             placeholder="Enter new password"
                             onChange={(e) => setNewPassword(e.target.value)}
                           />
@@ -741,7 +741,7 @@ export default function ProfilePage() {
                           <input
                             type="password"
                             id="confirmPassword"
-                            className="w-full px-4 py-3 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
+                            className="w-full px-4 py-3 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
                             placeholder="Confirm new password"
                             onChange={(e) => setConfirmPassword(e.target.value)}
                           />
@@ -1050,7 +1050,7 @@ export default function ProfilePage() {
                             value={wishlistItem}
                             onChange={(e) => setWishlistItem(e.target.value)}
                             placeholder="e.g., 3 bedroom apartment"
-                            className="w-full px-4 py-3 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
+                            className="w-full px-4 py-3 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
                           />
                         </div>
 
@@ -1065,7 +1065,7 @@ export default function ProfilePage() {
                             }
                             placeholder="e.g., Near public transport, WiFi required..."
                             rows={3}
-                            className="w-full px-4 py-3 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition resize-none"
+                            className="w-full px-4 py-3 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition resize-none"
                           />
                         </div>
                       </div>
@@ -1279,7 +1279,7 @@ export default function ProfilePage() {
                               })
                             }
                             placeholder="e.g., SUMMER20"
-                            className="w-full px-4 py-2.5 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
+                            className="w-full px-4 py-2.5 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
                           />
                         </div>
 
@@ -1298,7 +1298,7 @@ export default function ProfilePage() {
                                 })
                               }
                               placeholder="e.g., 20"
-                              className="w-full px-4 py-2.5 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
+                              className="w-full px-4 py-2.5 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
                             />
                           </div>
 
@@ -1314,7 +1314,7 @@ export default function ProfilePage() {
                                   type: e.target.value,
                                 })
                               }
-                              className="w-full px-4 py-2.5 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
+                              className="w-full px-4 py-2.5 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
                             >
                               <option value="percentage">Percentage</option>
                               <option value="fixed">Fixed</option>
@@ -1335,7 +1335,7 @@ export default function ProfilePage() {
                                 expiryDate: e.target.value,
                               })
                             }
-                            className="w-full px-4 py-2.5 bg-slate-700/50 border border-indigo-500/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-700 transition"
+                            className="w-full px-4 py-2.5 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
                           />
                         </div>
                       </div>

@@ -334,6 +334,27 @@ export default function ServiceFees() {
                     </div>
                   )}
                 </div>
+
+                {/* Revenue from this listing type */}
+                <div className="bg-slate-800/50 rounded-xl p-4">
+                  <p className="text-xs text-slate-400 mb-2">Revenue Collected</p>
+                  <div className="text-xl font-bold text-emerald-400">
+                    ₱{item.monthlyRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">This month</p>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-800/50 rounded-xl p-3">
+                    <p className="text-xs text-slate-400 mb-1">Active Hosts</p>
+                    <p className="text-lg font-bold text-white">{item.totalHosts}</p>
+                  </div>
+                  <div className="bg-slate-800/50 rounded-xl p-3">
+                    <p className="text-xs text-slate-400 mb-1">Bookings</p>
+                    <p className="text-lg font-bold text-white">{item.bookings}</p>
+                  </div>
+                </div>
               </div>
             </div>
           );

@@ -142,6 +142,9 @@ export const approveRefund = async (bookingId, hostId) => {
     const serviceFeeAmount = bookingData.serviceFee || (baseRefundAmount * 0.05);
     const totalGuestRefund = baseRefundAmount + serviceFeeAmount;
 
+    // Get listing type for tracking
+    const listingType = bookingData.listing?.type || bookingData.type || "stays";
+
     // Update guest wallet (add full refund including service fee)
     await updateDoc(guestWalletRef, {
       balance: guestWalletData.balance + totalGuestRefund,
@@ -185,6 +188,7 @@ export const approveRefund = async (bookingId, hostId) => {
       user_id: bookingData.guest_id,
       wallet_id: guestWalletRef.id,
       bookingId: bookingId,
+      listingType: listingType,
       description: `Refund for booking (₱${baseRefundAmount.toFixed(2)} + ₱${serviceFeeAmount.toFixed(2)} service fee)`,
     });
 
@@ -197,6 +201,7 @@ export const approveRefund = async (bookingId, hostId) => {
       user_id: hostId,
       wallet_id: hostWalletRef.id,
       bookingId: bookingId,
+      listingType: listingType,
       description: `Refund paid to guest for booking`,
     });
 
@@ -210,6 +215,7 @@ export const approveRefund = async (bookingId, hostId) => {
         user_id: "platform_admin",
         wallet_id: platformWalletRef.id,
         bookingId: bookingId,
+        listingType: listingType,
         description: `Service fee refunded to guest`,
       });
     }

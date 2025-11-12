@@ -302,8 +302,8 @@ export async function getMonthlyRevenueBreakdown() {
         continue;
       }
 
-      // Get listing type from booking data
-      let listingType = bookingTypeMap.get(transaction.bookingId) || "stays";
+      // Get listing type from transaction (preferred) or fallback to booking data
+      let listingType = transaction.listingType || bookingTypeMap.get(transaction.bookingId) || "stays";
 
       if (!breakdown[listingType]) continue;
 

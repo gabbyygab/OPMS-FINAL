@@ -133,14 +133,10 @@ export const generateFinancialReportData = async (dateRange) => {
           serviceFeeRevenue += amount;
           totalTransactions++;
 
-          // Extract listing type from description
-          const description = transaction.description || "";
-          if (description.includes("(stays)")) {
-            revenueByType.stays += amount;
-          } else if (description.includes("(experiences)")) {
-            revenueByType.experiences += amount;
-          } else if (description.includes("(services)")) {
-            revenueByType.services += amount;
+          // Use listingType field directly from transaction
+          const listingType = transaction.listingType;
+          if (listingType && listingType in revenueByType) {
+            revenueByType[listingType] += amount;
           }
         }
 
@@ -208,13 +204,14 @@ export const generateBookingsReportData = async (dateRange) => {
   const statusBreakdown = getBookingStatusBreakdown(filteredBookings);
 
   const totalBookings = filteredBookings.length;
-  const confirmedBookings = statusBreakdown.confirmed + statusBreakdown.completed;
+  const confirmedBookings = statusBreakdown.confirmed;
+  const completedBookings = statusBreakdown.completed;
   const cancelledBookings = statusBreakdown.rejected;
   const refundedBookings = statusBreakdown.refunded;
   const pendingBookings = statusBreakdown.pending;
 
   const completionRate =
-    totalBookings > 0 ? (confirmedBookings / totalBookings) * 100 : 0;
+    totalBookings > 0 ? ((confirmedBookings + completedBookings) / totalBookings) * 100 : 0;
 
   // Bookings by type
   const bookingsByType = {
@@ -235,6 +232,7 @@ export const generateBookingsReportData = async (dateRange) => {
   return {
     totalBookings,
     confirmedBookings,
+    completedBookings,
     cancelledBookings,
     refundedBookings,
     pendingBookings,
@@ -265,11 +263,13 @@ export const generateHostPerformanceReportData = async (dateRange) => {
   // Calculate performance for each host
   const hostPerformanceData = await Promise.all(
     hosts.map(async (host) => {
-      const hostBookings = filteredBookings.filter((b) => b.hostId === host.id);
+      // Use host_id (snake_case) as it's stored in bookings
+      const hostBookings = filteredBookings.filter((b) => b.host_id === host.id || b.hostId === host.id);
       const confirmedBookings = hostBookings.filter(
         (b) => b.status === "confirmed" || b.status === "completed"
       );
 
+      // totalAmount is already the net amount host receives (base price)
       const totalEarnings = confirmedBookings.reduce(
         (sum, b) => sum + (b.totalAmount || 0),
         0
@@ -309,8 +309,9 @@ export const generateHostPerformanceReportData = async (dateRange) => {
     .sort((a, b) => b.totalEarnings - a.totalEarnings)
     .slice(0, 10);
 
+  // Active hosts are those with confirmed or completed bookings (earnings > 0)
   const totalActiveHosts = hostPerformanceData.filter(
-    (h) => h.totalBookings > 0
+    (h) => h.confirmedBookings > 0
   ).length;
 
   const totalHostEarnings = hostPerformanceData.reduce(

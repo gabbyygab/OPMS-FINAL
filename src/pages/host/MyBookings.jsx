@@ -480,6 +480,9 @@ export default function HostMyBookings() {
         status: "completed",
         user_id: bookingToAction.guest_id,
         wallet_id: guestWalletDoc.id,
+        bookingId: bookingToAction.id,
+        listingType: listingType,
+        description: `Booking payment for ${bookingToAction.listing?.title || 'listing'}`,
       });
 
       // Create notification for guest about payment deduction
@@ -497,16 +500,16 @@ export default function HostMyBookings() {
         createdAt: serverTimestamp(),
       });
 
-      // Update host wallet (add the full payment, then deduct service fee separately)
+      // Update host wallet (add the full payment - service fee will be deducted on completion)
       // listingType was already calculated above
       if (!hostWalletSnap.empty) {
         const hostWalletDoc = hostWalletSnap.docs[0];
         const hostWalletData = hostWalletDoc.data();
 
         // Host receives the full payment amount (including service fee)
-        // Service fee will be deducted as a separate transaction
+        // Service fee will be deducted when booking is marked as completed
         await updateDoc(doc(db, "wallets", hostWalletDoc.id), {
-          balance: hostWalletData.balance + guestPaymentAmount - serviceFeeAmount,
+          balance: hostWalletData.balance + guestPaymentAmount,
           total_cash_in:
             (hostWalletData.total_cash_in || 0) + guestPaymentAmount,
         });
@@ -522,30 +525,6 @@ export default function HostMyBookings() {
           description: `Booking payment from ${bookingToAction.guest?.fullName || 'guest'}`,
           bookingId: bookingToAction.id,
           listingType: listingType,
-        });
-
-        // Create host transaction for service fee deduction
-        await addDoc(collection(db, "transactions"), {
-          amount: -serviceFeeAmount,
-          created_at: serverTimestamp(),
-          type: "service_fee",
-          status: "completed",
-          user_id: userData.id,
-          wallet_id: hostWalletDoc.id,
-          description: `Service fee (${((serviceFeeAmount / guestPaymentAmount) * 100).toFixed(1)}%) deducted from booking`,
-          bookingId: bookingToAction.id,
-          listingType: listingType,
-        });
-
-        // Create platform revenue transaction (for admin tracking of service fees collected)
-        await addDoc(collection(db, "platformRevenue"), {
-          amount: serviceFeeAmount,
-          created_at: serverTimestamp(),
-          type: "service_fee",
-          listingType: listingType,
-          bookingId: bookingToAction.id,
-          hostId: userData.id,
-          guestId: bookingToAction.guest_id,
         });
       }
 
@@ -732,6 +711,61 @@ export default function HostMyBookings() {
     try {
       setIsProcessing(true);
       const loadingToast = toast.loading("Marking booking as completed...");
+
+      // Get listing type for service fee calculation
+      const listingType = bookingToAction.listing?.type || bookingToAction.type || "stays";
+      const totalAmount = bookingToAction.totalAmount || 0;
+
+      // Calculate service fee
+      let serviceFeeAmount = 0;
+      try {
+        const feePercentage = await getServiceFeeForType(listingType);
+        serviceFeeAmount = totalAmount * (feePercentage / 100);
+      } catch (error) {
+        console.warn("Could not fetch service fee, using default 5%", error);
+        serviceFeeAmount = totalAmount * 0.05; // Fallback to 5%
+      }
+
+      // Deduct service fee from host wallet
+      const hostWalletQuery = query(
+        collection(db, "wallets"),
+        where("user_id", "==", userData.id)
+      );
+      const hostWalletSnap = await getDocs(hostWalletQuery);
+
+      if (!hostWalletSnap.empty) {
+        const hostWalletDoc = hostWalletSnap.docs[0];
+        const hostWalletData = hostWalletDoc.data();
+
+        // Deduct service fee from host wallet
+        await updateDoc(doc(db, "wallets", hostWalletDoc.id), {
+          balance: hostWalletData.balance - serviceFeeAmount,
+        });
+
+        // Create host transaction for service fee deduction
+        await addDoc(collection(db, "transactions"), {
+          amount: -serviceFeeAmount,
+          created_at: serverTimestamp(),
+          type: "service_fee",
+          status: "completed",
+          user_id: userData.id,
+          wallet_id: hostWalletDoc.id,
+          description: `Service fee (${((serviceFeeAmount / (totalAmount + serviceFeeAmount)) * 100).toFixed(1)}%) deducted from booking`,
+          bookingId: bookingToAction.id,
+          listingType: listingType,
+        });
+
+        // Create platform revenue transaction (for admin tracking of service fees collected)
+        await addDoc(collection(db, "platformRevenue"), {
+          amount: serviceFeeAmount,
+          created_at: serverTimestamp(),
+          type: "service_fee",
+          listingType: listingType,
+          bookingId: bookingToAction.id,
+          hostId: userData.id,
+          guestId: bookingToAction.guest_id,
+        });
+      }
 
       // Update booking status to completed
       await updateDoc(doc(db, "bookings", bookingToAction.id), {

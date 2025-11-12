@@ -207,6 +207,7 @@ export default function ExperienceDetailPage() {
       // Create booking with pending status
       // Payment will be processed only when host confirms the booking
       const bookingData = {
+        type: "experiences",
         listing_id: listing_id,
         guest_id: user.uid,
         host_id: experienceData.hostId,
