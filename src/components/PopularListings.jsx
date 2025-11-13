@@ -64,6 +64,11 @@ export default function PopularListings() {
                 bookingCount: bookingCounts[listingId],
               };
 
+              // Skip listing if its status is inactive
+              if (listingData.status === "inactive") {
+                continue;
+              }
+
               // Check if the host is deactivated
               const hostId = listingData.hostId;
               if (hostId) {

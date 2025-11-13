@@ -287,6 +287,11 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                           ...listingSnap.data(),
                         };
 
+                        // Skip listing if its status is inactive
+                        if (listing.status === "inactive") {
+                          return null;
+                        }
+
                         // Check if the host is deactivated
                         const hostId = listing.hostId;
                         if (hostId) {
@@ -349,7 +354,7 @@ export default function BookingsSection({ userData, isFavoritePage }) {
 
       // 1️⃣ Fetch all listings
       const listingRef = collection(db, "listings");
-      const listingQuery = query(listingRef, where("isDraft", "==", false));
+      const listingQuery = query(listingRef, where("isDraft", "==", false), where("status", "!=", "inactive"));
 
       const fetchAndCombine = async (favDocIds) => {
         try {
@@ -360,6 +365,11 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                 id: docSnap.id,
                 ...docSnap.data(),
               };
+
+              // Skip listing if its status is inactive
+              if (listing.status === "inactive") {
+                return null;
+              }
 
               // Check if the host is deactivated
               const hostId = listing.hostId;
@@ -1096,76 +1106,75 @@ export default function BookingsSection({ userData, isFavoritePage }) {
         </main>
       </div>
       {selectedListing && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-          <div className="bg-slate-800/90 backdrop-blur-lg border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-3">
+          <div className="bg-slate-800/90 backdrop-blur-lg border border-slate-700 rounded-lg shadow-2xl w-full max-w-xs p-2.5 relative max-h-[75vh] overflow-y-auto">
             <button
               onClick={closeModal}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white hover:bg-slate-700 p-2 rounded-lg transition-all"
+              className="absolute top-2 right-2 text-slate-400 hover:text-white hover:bg-slate-700 p-0.5 rounded transition-all"
             >
-              <X className="w-5 h-5" />
+              <X className="w-3.5 h-3.5" />
             </button>
             <img
               src={selectedListing.photos?.[0] || null}
               alt={selectedListing.title}
-              className="w-full h-48 object-cover rounded-xl mb-4 border border-slate-700"
+              className="w-full h-24 object-cover rounded mb-1.5 border border-slate-700"
             />
-            <h2 className="text-2xl font-bold text-white">
+            <h2 className="text-xs font-bold text-white leading-tight">
               {selectedListing.title}
             </h2>
-            <div className="flex items-center text-slate-300 mt-2">
-              <MapPin className="w-4 h-4 mr-1.5 text-indigo-400" />
-              {selectedListing.location}
+            <div className="flex items-center text-slate-300 text-xs mt-0.5">
+              <MapPin className="w-2.5 h-2.5 mr-0.5 text-indigo-400 flex-shrink-0" />
+              <span className="line-clamp-1">{selectedListing.location}</span>
             </div>
-            <p className="text-2xl font-bold text-white mt-3">
+            <p className="text-sm font-bold text-white mt-1">
               ₱{selectedListing.price}
             </p>
-            <div className="flex items-center text-slate-400 text-sm mt-2">
-              <Users className="w-4 h-4 mr-1.5 text-amber-400" />
-              Max Guests: {selectedListing.numberOfGuests || 1}
+            <div className="flex items-center text-slate-400 text-xs mt-0.5">
+              <Users className="w-2.5 h-2.5 mr-0.5 text-amber-400 flex-shrink-0" />
+              {selectedListing.numberOfGuests || 1} guests
             </div>
-            <div className="text-slate-400 text-sm mt-2">
-              <div className="flex items-center mb-2">
-                <Calendar className="w-4 h-4 mr-1.5 text-emerald-400" />
-                <span className="font-medium">Available Dates</span>
+            <div className="text-slate-400 text-xs mt-1">
+              <div className="flex items-center mb-0.5">
+                <Calendar className="w-2.5 h-2.5 mr-0.5 text-emerald-400 flex-shrink-0" />
+                <span className="font-medium">Dates</span>
               </div>
               {(() => {
                 const dates = formatAvailability(selectedListing);
                 return dates.length > 0 ? (
-                  <div className="space-y-1 ml-5">
-                    {dates.map((date, idx) => (
-                      <div key={idx} className="text-slate-300 text-xs">
+                  <div className="space-y-0 ml-2.5 max-h-10 overflow-y-auto text-xs">
+                    {dates.slice(0, 2).map((date, idx) => (
+                      <div key={idx} className="text-slate-300 truncate">
                         • {date}
                       </div>
                     ))}
+                    {dates.length > 2 && <div className="text-slate-500 italic text-xs">+{dates.length - 2}</div>}
                   </div>
                 ) : (
-                  <div className="text-slate-500 text-xs ml-5">
-                    No availability
-                  </div>
+                  <div className="text-slate-500 ml-2.5">N/A</div>
                 );
               })()}
             </div>
-            <div className="flex flex-col gap-4 mt-6">
+            <div className="flex flex-col gap-1 mt-2">
               <div>
-                <label className="text-sm text-slate-300 font-medium block mb-2">
-                  Check-in Date
+                <label className="text-xs text-slate-300 font-medium block mb-0.5">
+                  Check-in
                 </label>
                 <input
                   type="date"
-                  className="w-full bg-slate-900/50 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="w-full bg-slate-900/50 border border-slate-600 rounded px-2 py-0.5 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent transition-all"
                 />
               </div>
               <div>
-                <label className="text-sm text-slate-300 font-medium block mb-2">
-                  Check-out Date
+                <label className="text-xs text-slate-300 font-medium block mb-0.5">
+                  Check-out
                 </label>
                 <input
                   type="date"
-                  className="w-full bg-slate-900/50 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="w-full bg-slate-900/50 border border-slate-600 rounded px-2 py-0.5 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent transition-all"
                 />
               </div>
             </div>
-            <button className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40">
+            <button className="w-full mt-2 bg-indigo-600 text-white py-1 rounded font-semibold text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20">
               Confirm Booking
             </button>
           </div>

@@ -17,6 +17,21 @@ import {
   ChevronRight,
 } from "lucide-react";
 import {
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+} from "recharts";
+import {
   getDashboardData,
   formatCurrency,
   formatPercentage,
@@ -34,6 +49,25 @@ export default function Dashboard() {
   const [recentBookingsPage, setRecentBookingsPage] = useState(1);
   const itemsPerPage = 5;
 
+  // Chart states
+  const [revenueTrendData, setRevenueTrendData] = useState([]);
+  const [bookingStatusData, setBookingStatusData] = useState([]);
+  const [revenueByTypeData, setRevenueByTypeData] = useState([]);
+  const [userDistributionData, setUserDistributionData] = useState([]);
+  const [listingDistributionData, setListingDistributionData] = useState([]);
+  const [revenueSourceData, setRevenueSourceData] = useState([]);
+
+  // Colors for charts
+  const COLORS = ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
+  const pieColors = {
+    confirmed: "#3b82f6",
+    pending: "#f59e0b",
+    completed: "#10b981",
+    rejected: "#ef4444",
+    refund_requested: "#f97316",
+    refunded: "#a855f7",
+  };
+
   // Fetch dashboard data on mount
   useEffect(() => {
     fetchDashboardData();
@@ -45,6 +79,92 @@ export default function Dashboard() {
       setError(null);
       const data = await getDashboardData();
       setDashboardData(data);
+
+      // Process chart data from fetched data
+      if (data?.stats) {
+        // Revenue Trends
+        if (data.stats.revenue?.trends) {
+          const trendData = data.stats.revenue.trends.map((trend) => ({
+            month: trend.month,
+            serviceFees: trend.revenue - (trend.listingUpgradeRevenue || 0),
+            listingUpgrades: trend.listingUpgradeRevenue || 0,
+            total: trend.revenue,
+          }));
+          setRevenueTrendData(trendData);
+        }
+
+        // Booking Status Breakdown
+        if (data.bookingStatusBreakdown) {
+          const statusData = Object.entries(data.bookingStatusBreakdown)
+            .filter(([_, count]) => count > 0)
+            .map(([status, count]) => ({
+              name:
+                status.charAt(0).toUpperCase() +
+                status.slice(1).replace("_", " "),
+              value: count,
+              status: status,
+            }));
+          setBookingStatusData(statusData);
+        }
+
+        // Revenue by Listing Type
+        if (data.stats.revenue?.byType) {
+          const typeData = Object.entries(data.stats.revenue.byType)
+            .filter(([_, revenue]) => revenue > 0)
+            .map(([type, revenue]) => ({
+              name: type.charAt(0).toUpperCase() + type.slice(1),
+              value: revenue,
+              type: type,
+            }));
+          setRevenueByTypeData(typeData);
+        }
+
+        // User Distribution (Hosts vs Guests)
+        if (data.stats.users) {
+          const userDist = [
+            {
+              name: "Hosts",
+              value: data.stats.users.totalHosts,
+            },
+            {
+              name: "Guests",
+              value: data.stats.users.totalGuests,
+            },
+          ];
+          setUserDistributionData(userDist);
+        }
+
+        // Listing Distribution by Type
+        if (data.stats.listings?.byType) {
+          const listingDist = Object.entries(data.stats.listings.byType)
+            .filter(([_, count]) => count > 0)
+            .map(([type, count]) => ({
+              name: type.charAt(0).toUpperCase() + type.slice(1),
+              value: count,
+              type: type,
+            }));
+          setListingDistributionData(listingDist);
+        }
+
+        // Revenue Source (Service Fees, Registration Fees, Listing Upgrades)
+        if (data.stats.revenue) {
+          const revenueSources = [
+            {
+              name: "Service Fees",
+              value: data.stats.revenue.serviceFeeRevenue || 0,
+            },
+            {
+              name: "Registration Fees",
+              value: data.stats.revenue.registrationFeeRevenue || 0,
+            },
+            {
+              name: "Listing Upgrades",
+              value: data.stats.revenue.listingUpgradeRevenue || 0,
+            },
+          ].filter((source) => source.value > 0);
+          setRevenueSourceData(revenueSources);
+        }
+      }
     } catch (err) {
       console.error("Error loading dashboard:", err);
       setError("Failed to load dashboard data. Please try again.");
@@ -105,10 +225,11 @@ export default function Dashboard() {
     },
     {
       title: "Total Revenue",
-      subtitle: "Service Fees + Listing Upgrades",
+      subtitle: "Service Fees + Registration Fees + Listing Upgrades",
       value: formatCurrency(stats.revenue.total),
       breakdown: {
         serviceFees: stats.revenue.serviceFeeRevenue || 0,
+        registrationFees: stats.revenue.registrationFeeRevenue || 0,
         listingUpgrades: stats.revenue.listingUpgradeRevenue || 0,
       },
       change: stats.revenue.trends.length > 1
@@ -294,6 +415,12 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <div className="flex justify-between text-xs">
+                    <span className="text-slate-500">Registration Fees:</span>
+                    <span className="text-orange-400 font-medium">
+                      {formatCurrency(stat.breakdown.registrationFees)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
                     <span className="text-slate-500">Listing Upgrades:</span>
                     <span className="text-indigo-400 font-medium">
                       {formatCurrency(stat.breakdown.listingUpgrades)}
@@ -304,6 +431,225 @@ export default function Dashboard() {
             </div>
           );
         })}
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Revenue Trends Chart */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <h2 className="text-xl font-bold text-white mb-6">Revenue Trends (6 Months)</h2>
+          {revenueTrendData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={revenueTrendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="month" stroke="#94a3b8" style={{ fontSize: "12px" }} />
+                <YAxis stroke="#94a3b8" style={{ fontSize: "12px" }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1e293b",
+                    border: "1px solid #475569",
+                    borderRadius: "8px",
+                  }}
+                  labelStyle={{ color: "#e2e8f0" }}
+                  formatter={(value) => formatCurrency(value)}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="serviceFees"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  dot={{ fill: "#10b981", r: 4 }}
+                  name="Service Fees"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="listingUpgrades"
+                  stroke="#6366f1"
+                  strokeWidth={2}
+                  dot={{ fill: "#6366f1", r: 4 }}
+                  name="Listing Upgrades"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-80 text-slate-400">
+              No revenue data available
+            </div>
+          )}
+        </div>
+
+        {/* Booking Status Breakdown */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <h2 className="text-xl font-bold text-white mb-6">Booking Status Breakdown</h2>
+          {bookingStatusData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={bookingStatusData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value }) => `${name}: ${value}`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {bookingStatusData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={pieColors[entry.status] || COLORS[index % COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1e293b",
+                    border: "1px solid #475569",
+                    borderRadius: "8px",
+                  }}
+                  labelStyle={{ color: "#e2e8f0" }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-80 text-slate-400">
+              No booking data available
+            </div>
+          )}
+        </div>
+
+        {/* Revenue by Listing Type */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <h2 className="text-xl font-bold text-white mb-6">Revenue by Listing Type</h2>
+          {revenueByTypeData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={revenueByTypeData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="name" stroke="#94a3b8" style={{ fontSize: "12px" }} />
+                <YAxis stroke="#94a3b8" style={{ fontSize: "12px" }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1e293b",
+                    border: "1px solid #475569",
+                    borderRadius: "8px",
+                  }}
+                  labelStyle={{ color: "#e2e8f0" }}
+                  formatter={(value) => formatCurrency(value)}
+                />
+                <Bar dataKey="value" fill="#8b5cf6" name="Revenue" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-80 text-slate-400">
+              No revenue data available
+            </div>
+          )}
+        </div>
+
+        {/* User Distribution */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <h2 className="text-xl font-bold text-white mb-6">User Distribution</h2>
+          {userDistributionData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={userDistributionData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value }) => `${name}: ${value}`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {userDistributionData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1e293b",
+                    border: "1px solid #475569",
+                    borderRadius: "8px",
+                  }}
+                  labelStyle={{ color: "#e2e8f0" }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-80 text-slate-400">
+              No user data available
+            </div>
+          )}
+        </div>
+
+        {/* Listing Distribution by Type */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <h2 className="text-xl font-bold text-white mb-6">Listings by Type</h2>
+          {listingDistributionData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={listingDistributionData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="name" stroke="#94a3b8" style={{ fontSize: "12px" }} />
+                <YAxis stroke="#94a3b8" style={{ fontSize: "12px" }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1e293b",
+                    border: "1px solid #475569",
+                    borderRadius: "8px",
+                  }}
+                  labelStyle={{ color: "#e2e8f0" }}
+                />
+                <Bar dataKey="value" fill="#06b6d4" name="Count" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-80 text-slate-400">
+              No listing data available
+            </div>
+          )}
+        </div>
+
+        {/* Revenue Source Distribution */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <h2 className="text-xl font-bold text-white mb-6">Revenue Sources</h2>
+          {revenueSourceData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={revenueSourceData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value }) =>
+                    `${name}: ${formatCurrency(value)}`
+                  }
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {revenueSourceData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1e293b",
+                    border: "1px solid #475569",
+                    borderRadius: "8px",
+                  }}
+                  labelStyle={{ color: "#e2e8f0" }}
+                  formatter={(value) => formatCurrency(value)}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-80 text-slate-400">
+              No revenue data available
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Top & Low Rated Sections */}

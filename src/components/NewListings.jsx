@@ -22,13 +22,18 @@ export default function NewListings() {
 
         const snapshot = await getDocs(q);
 
-        // Filter out listings from deactivated hosts
+        // Filter out listings from deactivated hosts and inactive listings
         const fetchedListings = await Promise.all(
           snapshot.docs.map(async (docSnap) => {
             const listing = {
               id: docSnap.id,
               ...docSnap.data(),
             };
+
+            // Skip listing if its status is inactive
+            if (listing.status === "inactive") {
+              return null;
+            }
 
             // Check if the host is deactivated
             const hostId = listing.hostId;

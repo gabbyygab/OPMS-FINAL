@@ -2869,7 +2869,7 @@ const HostSimpleNavBar = ({
               >
                 <ArrowLeft className="w-5 h-5 text-slate-300 hover:text-white" />
               </button>
-              <Link
+              {/* <Link
                 to={ROUTES.HOST.DASHBOARD}
                 className="flex items-center cursor-pointer"
               >
@@ -2878,7 +2878,7 @@ const HostSimpleNavBar = ({
                   alt="BookingNest"
                   className="sm:w-24 sm:h-24 lg:w-22 lg:h-22 hover:scale-105 transition-transform relative top-1.5 left-4"
                 />
-              </Link>
+              </Link> */}
             </div>
 
             {/* Right - Profile Menu */}
@@ -3049,7 +3049,7 @@ const GuestSimpleNavBar = ({
             >
               <ArrowLeft className="w-5 h-5 text-slate-300 hover:text-white" />
             </button>
-            <Link
+            {/* <Link
               to={ROUTES.GUEST.HOME}
               className="flex items-center cursor-pointer"
             >
@@ -3058,7 +3058,7 @@ const GuestSimpleNavBar = ({
                 alt="BookingNest"
                 className="w-10 h-10 sm:w-12 sm:h-12 hover:scale-105 transition-transform"
               />
-            </Link>
+            </Link> */}
           </div>
 
           {/* Right - Profile Menu */}

@@ -28,6 +28,21 @@ import {
   orderBy,
   limit,
 } from "firebase/firestore";
+import {
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+} from "recharts";
 
 import { sendOtpToUser } from "../utils/sendOtpToUser";
 import LoadingSpinner from "../loading/Loading";
@@ -52,9 +67,25 @@ export default function HostDashboard({ isVerified, user }) {
   const [recentMessages, setRecentMessages] = useState([]);
   const [bestListings, setBestListings] = useState([]);
   const [needsAttentionListings, setNeedsAttentionListings] = useState([]);
+  const [revenueTrendData, setRevenueTrendData] = useState([]);
+  const [bookingStatusData, setBookingStatusData] = useState([]);
+  const [revenueByTypeData, setRevenueByTypeData] = useState([]);
+  const [completedBookingCount, setCompletedBookingCount] = useState(0);
+  const [confirmedBookingCount, setConfirmedBookingCount] = useState(0);
   const { userData } = useAuth();
   const navigate = useNavigate();
   console.log(isVerified);
+
+  // Colors for charts
+  const COLORS = ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
+  const pieColors = {
+    confirmed: "#3b82f6",
+    pending: "#f59e0b",
+    completed: "#10b981",
+    rejected: "#ef4444",
+    refund_requested: "#f97316",
+    refunded: "#a855f7",
+  };
 
   const handleVerification = async () => {
     try {
@@ -343,6 +374,90 @@ export default function HostDashboard({ isVerified, user }) {
           .sort((a, b) => a.rating - b.rating)
           .slice(0, 5);
 
+        // Calculate Revenue Trend Data (last 7 days)
+        const currentDate = new Date();
+        const revenueTrend = [];
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date(currentDate);
+          date.setDate(date.getDate() - i);
+          const dateStr = date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          });
+
+          // Filter completed bookings for this day
+          const dayBookings = completedBookings.filter((b) => {
+            const bookingDate = b.createdAt?.toDate
+              ? b.createdAt.toDate()
+              : new Date(b.createdAt);
+            return (
+              bookingDate.toLocaleDateString() === date.toLocaleDateString()
+            );
+          });
+
+          const dayRevenue = dayBookings.reduce(
+            (sum, b) => sum + (Number(b.totalAmount) || 0),
+            0
+          );
+
+          revenueTrend.push({
+            date: dateStr,
+            revenue: dayRevenue,
+            bookings: dayBookings.length,
+          });
+        }
+        setRevenueTrendData(revenueTrend);
+
+        // Calculate Booking Status Breakdown
+        const statusCount = {
+          confirmed: confirmedBookings.length,
+          completed: completedBookings.length,
+          pending: bookingsWithDates.filter(
+            (b) => b.status === "pending"
+          ).length,
+          rejected: bookingsWithDates.filter(
+            (b) => b.status === "rejected"
+          ).length,
+          refund_requested: bookingsWithDates.filter(
+            (b) => b.status === "refund_requested"
+          ).length,
+          refunded: bookingsWithDates.filter(
+            (b) => b.status === "refunded"
+          ).length,
+        };
+
+        const bookingStatusBreakdown = Object.entries(statusCount)
+          .filter(([_, count]) => count > 0)
+          .map(([status, count]) => ({
+            name: status.charAt(0).toUpperCase() + status.slice(1).replace("_", " "),
+            value: count,
+            status: status,
+          }));
+        setBookingStatusData(bookingStatusBreakdown);
+
+        // Calculate Revenue by Listing Type
+        const revenueByType = {
+          stays: 0,
+          experiences: 0,
+          services: 0,
+        };
+
+        completedBookings.forEach((booking) => {
+          const listingType = booking.listing?.type || booking.type || "stays";
+          if (listingType in revenueByType) {
+            revenueByType[listingType] += Number(booking.totalAmount) || 0;
+          }
+        });
+
+        const revenueTypeData = Object.entries(revenueByType)
+          .filter(([_, revenue]) => revenue > 0)
+          .map(([type, revenue]) => ({
+            name: type.charAt(0).toUpperCase() + type.slice(1),
+            value: revenue,
+            type: type,
+          }));
+        setRevenueByTypeData(revenueTypeData);
+
         setStats({
           totalEarnings: Number(totalEarnings) || 0,
           earningsChange: 12.5,
@@ -359,6 +474,8 @@ export default function HostDashboard({ isVerified, user }) {
         setRecentMessages(messagesWithDetails);
         setBestListings(bestListingsData);
         setNeedsAttentionListings(needsAttentionData);
+        setCompletedBookingCount(completedBookings.length);
+        setConfirmedBookingCount(confirmedBookings.length);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -732,6 +849,153 @@ export default function HostDashboard({ isVerified, user }) {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 sm:mt-8 lg:mt-10">
+          {/* Revenue Trend Chart */}
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-slate-700 p-3 sm:p-4 lg:p-6 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 animate-fadeIn" style={{animationDelay: '250ms'}}>
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-2xl font-bold text-white mb-4 sm:mb-6">
+              Revenue Trend (Last 7 Days)
+            </h2>
+            {revenueTrendData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={revenueTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="date" stroke="#94a3b8" style={{ fontSize: "12px" }} />
+                  <YAxis stroke="#94a3b8" style={{ fontSize: "12px" }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1e293b",
+                      border: "1px solid #475569",
+                      borderRadius: "8px",
+                    }}
+                    labelStyle={{ color: "#e2e8f0" }}
+                    formatter={(value) => `₱${value.toLocaleString()}`}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#6366f1"
+                    strokeWidth={2}
+                    dot={{ fill: "#6366f1", r: 4 }}
+                    activeDot={{ r: 6 }}
+                    name="Revenue"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-80 text-slate-400">
+                No revenue data available
+              </div>
+            )}
+          </div>
+
+          {/* Booking Status Pie Chart */}
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-slate-700 p-3 sm:p-4 lg:p-6 hover:shadow-xl hover:shadow-blue-500/10 hover:border-slate-600 transition-all duration-300 animate-fadeIn" style={{animationDelay: '300ms'}}>
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-2xl font-bold text-white mb-4 sm:mb-6">
+              Booking Status Breakdown
+            </h2>
+            {bookingStatusData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={bookingStatusData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {bookingStatusData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={pieColors[entry.status] || COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1e293b",
+                      border: "1px solid #475569",
+                      borderRadius: "8px",
+                    }}
+                    labelStyle={{ color: "#e2e8f0" }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-80 text-slate-400">
+                No booking data available
+              </div>
+            )}
+          </div>
+
+          {/* Revenue by Listing Type */}
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-slate-700 p-3 sm:p-4 lg:p-6 hover:shadow-xl hover:shadow-emerald-500/10 hover:border-slate-600 transition-all duration-300 animate-fadeIn" style={{animationDelay: '350ms'}}>
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-2xl font-bold text-white mb-4 sm:mb-6">
+              Revenue by Listing Type
+            </h2>
+            {revenueByTypeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={revenueByTypeData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="name" stroke="#94a3b8" style={{ fontSize: "12px" }} />
+                  <YAxis stroke="#94a3b8" style={{ fontSize: "12px" }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1e293b",
+                      border: "1px solid #475569",
+                      borderRadius: "8px",
+                    }}
+                    labelStyle={{ color: "#e2e8f0" }}
+                    formatter={(value) => `₱${value.toLocaleString()}`}
+                  />
+                  <Bar dataKey="value" fill="#10b981" name="Revenue" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-80 text-slate-400">
+                No revenue data available
+              </div>
+            )}
+          </div>
+
+          {/* Summary Stats Card */}
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-slate-700 p-3 sm:p-4 lg:p-6 hover:shadow-xl hover:shadow-purple-500/10 hover:border-slate-600 transition-all duration-300 animate-fadeIn" style={{animationDelay: '400ms'}}>
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-2xl font-bold text-white mb-4 sm:mb-6">
+              Analytics Summary
+            </h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                <span className="text-slate-300">Total Completed Bookings</span>
+                <span className="text-xl font-bold text-emerald-400">
+                  {completedBookingCount}
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                <span className="text-slate-300">Total Confirmed Bookings</span>
+                <span className="text-xl font-bold text-blue-400">
+                  {confirmedBookingCount}
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                <span className="text-slate-300">Average Revenue per Booking</span>
+                <span className="text-xl font-bold text-indigo-400">
+                  ₱{completedBookingCount > 0 ? Math.round(stats.totalEarnings / completedBookingCount).toLocaleString() : 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                <span className="text-slate-300">Listing Types with Revenue</span>
+                <span className="text-xl font-bold text-purple-400">
+                  {revenueByTypeData.length || 0}
+                </span>
+              </div>
             </div>
           </div>
         </div>

@@ -62,11 +62,11 @@ export default function ServiceFees() {
       setFees(currentFees);
       setOriginalFees(currentFees);
 
-      // Load total service fee revenue from transactions (includes new host fees)
+      // Load total service fee revenue from transactions (service_fee type only)
       const totalRevenue = await getTotalServiceFeeRevenue();
       setTotalServiceFeeRevenue(totalRevenue);
 
-      // Load new host fees revenue separately
+      // Load new host fees revenue separately (new_host_fees type only)
       const hostFeesRevenue = await getNewHostFeesRevenue();
       setNewHostFeesRevenue(hostFeesRevenue);
 
@@ -234,12 +234,12 @@ export default function ServiceFees() {
               Total Platform Revenue
             </p>
             <h2 className="text-4xl font-bold text-white mb-4">
-              ₱{totalServiceFeeRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₱{(totalServiceFeeRevenue + newHostFeesRevenue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </h2>
             <div className="flex items-center gap-4 text-indigo-100 mb-3">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
-                <span className="text-sm">All-time platform revenue</span>
+                <span className="text-sm">All-time platform revenue from fees</span>
               </div>
             </div>
 
@@ -248,9 +248,9 @@ export default function ServiceFees() {
               <div>
                 <p className="text-xs text-indigo-200 mb-1">Service Fees (Bookings):</p>
                 <p className="text-lg font-semibold text-white">
-                  ₱{(totalServiceFeeRevenue - newHostFeesRevenue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₱{totalServiceFeeRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
-                <p className="text-xs text-indigo-200 mt-1">{totalBookings} bookings this month</p>
+                <p className="text-xs text-indigo-200 mt-1">All-time from confirmed bookings</p>
               </div>
               <div>
                 <p className="text-xs text-indigo-200 mb-1">Host Registration Fees:</p>

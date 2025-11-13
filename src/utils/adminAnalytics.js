@@ -8,7 +8,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "../firebase/firebase";
-import { getTotalServiceFeeRevenue } from "./platformSettingsUtils";
+import { getTotalServiceFeeRevenue, getNewHostFeesRevenue } from "./platformSettingsUtils";
 
 /**
  * Admin Analytics Utility
@@ -138,14 +138,15 @@ export const calculateListingUpgradeRevenue = async () => {
 };
 
 /**
- * Calculate total revenue from service fee transactions
- * Reads actual service fees collected from transactions collection
+ * Calculate total revenue from all sources
+ * Includes service fees, registration fees, and listing upgrades
  */
 export const calculateTotalRevenue = async () => {
   try {
     const serviceFeeRevenue = await getTotalServiceFeeRevenue();
+    const registrationFeeRevenue = await getNewHostFeesRevenue();
     const listingUpgradeRevenue = await calculateListingUpgradeRevenue();
-    const totalRevenue = serviceFeeRevenue + listingUpgradeRevenue;
+    const totalRevenue = serviceFeeRevenue + registrationFeeRevenue + listingUpgradeRevenue;
     return totalRevenue;
   } catch (error) {
     console.error("Error calculating total revenue:", error);
@@ -171,19 +172,9 @@ export const calculateRevenueByType = async () => {
     for (const docSnap of querySnapshot.docs) {
       const transaction = docSnap.data();
 
-      // Handle service_fee transactions
+      // Handle service_fee transactions - use listingType field directly
       if (transaction.type === "service_fee") {
-        // Extract listing type from description
-        const description = transaction.description || "";
-        let listingType = null;
-
-        if (description.includes("(stays)")) {
-          listingType = "stays";
-        } else if (description.includes("(experiences)")) {
-          listingType = "experiences";
-        } else if (description.includes("(services)")) {
-          listingType = "services";
-        }
+        const listingType = transaction.listingType;
 
         if (listingType && listingType in revenueByType) {
           const serviceFee = Math.abs(transaction.amount || 0);
@@ -782,6 +773,7 @@ export const getDashboardData = async () => {
     const revenueTrends = await getRevenueTrends(6);
     const listingUpgradeStats = await getListingUpgradeStats();
     const serviceFeeRevenue = await getTotalServiceFeeRevenue();
+    const registrationFeeRevenue = await getNewHostFeesRevenue();
     const listingUpgradeRevenue = await calculateListingUpgradeRevenue();
 
     return {
@@ -792,6 +784,7 @@ export const getDashboardData = async () => {
         revenue: {
           total: totalRevenue,
           serviceFeeRevenue,
+          registrationFeeRevenue,
           listingUpgradeRevenue,
           byType: revenueByType,
           trends: revenueTrends,
