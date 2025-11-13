@@ -307,200 +307,221 @@ export default function NotificationsPage() {
 
   return (
     <>
-      <NavigationBar user={user} userData={userData} />
-      <div className="min-h-screen bg-slate-900 pt-24 pb-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Notifications
-            </h1>
-            <p className="text-slate-400">
-              You have {unreadCount} unread notification
-              {unreadCount !== 1 ? "s" : ""}
-            </p>
-          </div>
+      <NavigationBar
+        user={user}
+        userData={userData}
+        forceSimpleNavBar={true}
+      />
+      <main className="min-h-screen bg-slate-950 text-slate-100">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-[96px] pb-16 space-y-10">
+          <section className="bg-slate-900/80 border border-slate-800/80 rounded-3xl shadow-2xl backdrop-blur-xl p-6 sm:p-8 space-y-6">
+            <div className="flex flex-wrap items-start justify-between gap-6">
+              <div>
+                <p className="text-xs uppercase tracking-[0.35rem] text-indigo-300/70 mb-2">
+                  Notification Center
+                </p>
+                <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight">
+                  Notifications
+                </h1>
+                <p className="text-sm text-slate-400 mt-2">
+                  You have{" "}
+                  <span className="font-semibold text-indigo-300">
+                    {unreadCount}
+                  </span>{" "}
+                  unread notification{unreadCount !== 1 ? "s" : ""}. Stay up to
+                  date with booking changes, guest messages, and platform
+                  updates.
+                </p>
+              </div>
 
-          {/* Actions Bar */}
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4 w-full sm:w-auto">
-              <input
-                type="checkbox"
-                checked={
-                  filteredNotifications.length > 0 &&
-                  selectedNotifications.length === filteredNotifications.length
-                }
-                onChange={toggleSelectAll}
-                className="w-5 h-5 rounded cursor-pointer"
-              />
-              <span className="text-sm text-slate-300">
-                {selectedNotifications.length} selected
-              </span>
+              <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllAsRead}
+                    className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-xl border border-indigo-500/40 text-indigo-200 hover:bg-indigo-500/10 transition"
+                  >
+                    <Check className="w-4 h-4" />
+                    Mark all as read
+                  </button>
+                )}
+
+                {selectedNotifications.length > 0 && (
+                  <button
+                    onClick={deleteSelected}
+                    className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-xl bg-red-600/80 text-white hover:bg-red-600 transition shadow-lg shadow-red-600/25"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete selected
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllAsRead}
-                  className="text-sm px-4 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap"
-                >
-                  Mark all as read
-                </button>
-              )}
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <label className="inline-flex items-center gap-3 text-sm font-medium text-slate-300 bg-slate-900/60 border border-slate-700/60 rounded-2xl px-4 py-3 w-full sm:w-auto">
+                  <input
+                    type="checkbox"
+                    checked={
+                      filteredNotifications.length > 0 &&
+                      selectedNotifications.length ===
+                        filteredNotifications.length
+                    }
+                    onChange={toggleSelectAll}
+                    className="w-5 h-5 rounded cursor-pointer accent-indigo-500"
+                  />
+                  <span>
+                    {selectedNotifications.length} selected
+                  </span>
+                </label>
 
-              {selectedNotifications.length > 0 && (
-                <button
-                  onClick={deleteSelected}
-                  className="text-sm px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition flex items-center gap-2 whitespace-nowrap"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Filter Tabs */}
-          <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-            {[
-              "all",
-              "booking",
-              "booking_confirmed",
-              "booking_rejected",
-              "review",
-              "message",
-              "payment",
-              "alert",
-            ].map((type) => (
-              <button
-                key={type}
-                onClick={() => {
-                  setFilterType(type);
-                  setSelectedNotifications([]);
-                }}
-                className={`px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${
-                  filterType === type
-                    ? "bg-indigo-600 text-white"
-                    : "bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700"
-                }`}
-              >
-                {type === "booking_confirmed"
-                  ? "Confirmed"
-                  : type === "booking_rejected"
-                  ? "Rejected"
-                  : type.charAt(0).toUpperCase() + type.slice(1)}
-              </button>
-            ))}
-          </div>
-
-          {/* Notifications List */}
-          {filteredNotifications.length === 0 ? (
-            <div className="bg-slate-800 rounded-lg border border-slate-700 p-12 text-center">
-              <Bell className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">
-                No notifications
-              </h3>
-              <p className="text-slate-400">
-                {filterType === "all"
-                  ? "You're all caught up!"
-                  : `No ${filterType} notifications`}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredNotifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`bg-slate-800 rounded-lg border border-slate-700 p-4 transition hover:border-slate-600 ${
-                    !notification.isRead
-                      ? "border-indigo-500 bg-slate-800/50"
-                      : ""
-                  }`}
-                >
-                  <div className="flex items-start gap-4">
-                    {/* Checkbox */}
-                    <input
-                      type="checkbox"
-                      checked={selectedNotifications.includes(notification.id)}
-                      onChange={() => toggleSelect(notification.id)}
-                      className="w-5 h-5 rounded cursor-pointer mt-1 flex-shrink-0"
-                    />
-
-                    {/* Avatar or Icon */}
-                    <div className="flex-shrink-0">
-                      {notification.avatar ? (
-                        <img
-                          src={notification.avatar}
-                          alt="User"
-                          className="w-12 h-12 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center">
-                          {getNotificationIcon(notification.type)}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Content - Clickable area */}
-                    <div
+                <div className="flex flex-wrap gap-2 -mx-1 sm:ml-auto overflow-x-auto">
+                  {[
+                    "all",
+                    "booking",
+                    "booking_confirmed",
+                    "booking_rejected",
+                    "review",
+                    "message",
+                    "payment",
+                    "alert",
+                  ].map((type) => (
+                    <button
+                      key={type}
                       onClick={() => {
-                        if (typeof notification.onClick === "function") {
-                          notification.onClick();
-                        } else if (notification.actionUrl) {
-                          navigate(notification.actionUrl);
-                        }
-                        markAsRead(notification.id);
+                        setFilterType(type);
+                        setSelectedNotifications([]);
                       }}
-                      className="flex-1 min-w-0 cursor-pointer hover:opacity-80 transition"
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap border ${
+                        filterType === type
+                          ? "bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-600/25"
+                          : "bg-slate-900/60 text-slate-300 border-slate-700 hover:bg-slate-800"
+                      }`}
                     >
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <h3 className="font-semibold text-white">
-                          {notification.title}
-                        </h3>
-                        {!notification.isRead && (
-                          <span className="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0 mt-2"></span>
-                        )}
-                      </div>
-                      <p className="text-slate-300 text-sm mb-2">
-                        {notification.message}
-                      </p>
-                      <span className="text-xs text-slate-500">
-                        {notification.timestamp}
-                      </span>
-                    </div>
+                      {type === "booking_confirmed"
+                        ? "Confirmed"
+                        : type === "booking_rejected"
+                        ? "Rejected"
+                        : type.charAt(0).toUpperCase() + type.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {!notification.isRead && (
+          <section className="bg-slate-900/60 border border-slate-800/80 rounded-3xl shadow-xl overflow-hidden">
+            {filteredNotifications.length === 0 ? (
+              <div className="px-8 py-16 text-center">
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-slate-800/70">
+                  <Bell className="w-8 h-8 text-slate-500" />
+                </div>
+                <h3 className="text-2xl font-semibold text-white mb-2">
+                  No notifications
+                </h3>
+                <p className="text-slate-400 max-w-sm mx-auto">
+                  {filterType === "all"
+                    ? "You're all caught up! We'll let you know when something new arrives."
+                    : `No ${filterType.replace("_", " ")} notifications right now.`}
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-800/80">
+                {filteredNotifications.map((notification) => (
+                  <article
+                    key={notification.id}
+                    className={`px-5 sm:px-6 py-5 transition bg-gradient-to-r from-slate-900/40 to-transparent hover:from-slate-900/60 ${
+                      !notification.isRead
+                        ? "bg-slate-900/70"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
+                      <input
+                        type="checkbox"
+                        checked={selectedNotifications.includes(notification.id)}
+                        onChange={() => toggleSelect(notification.id)}
+                        className="w-5 h-5 mt-1 sm:mt-2 rounded cursor-pointer accent-indigo-500"
+                      />
+
+                      <div className="flex items-start gap-4 sm:gap-5 flex-1">
+                        <div className="flex-shrink-0">
+                          {notification.avatar ? (
+                            <img
+                              src={notification.avatar}
+                              alt="User"
+                              className="w-12 h-12 rounded-full object-cover border border-slate-700/60"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700/60">
+                              {getNotificationIcon(notification.type)}
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            if (typeof notification.onClick === "function") {
+                              notification.onClick();
+                            } else if (notification.actionUrl) {
+                              navigate(notification.actionUrl);
+                            }
+                            markAsRead(notification.id);
+                          }}
+                          className="flex-1 text-left"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <h3 className="text-base sm:text-lg font-semibold text-white">
+                              {notification.title}
+                            </h3>
+                            <span className="text-xs text-slate-500">
+                              {notification.timestamp}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm text-slate-300 leading-relaxed">
+                            {notification.message}
+                          </p>
+                          {!notification.isRead && (
+                            <span className="inline-flex items-center gap-2 mt-3 text-xs font-medium uppercase tracking-wide text-indigo-300">
+                              <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
+                              New
+                            </span>
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        {!notification.isRead && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markAsRead(notification.id);
+                            }}
+                            className="p-2 rounded-xl bg-slate-900/60 border border-slate-700/60 text-slate-300 hover:text-white hover:border-indigo-500 transition"
+                            title="Mark as read"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            markAsRead(notification.id);
+                            deleteNotification(notification.id);
                           }}
-                          className="p-2 rounded-lg hover:bg-slate-700 transition text-slate-400 hover:text-slate-200"
-                          title="Mark as read"
+                          className="p-2 rounded-xl bg-slate-900/60 border border-slate-700/60 text-slate-400 hover:text-red-300 hover:border-red-400 transition"
+                          title="Delete notification"
                         >
-                          <Check className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
-                      )}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteNotification(notification.id);
-                        }}
-                        className="p-2 rounded-lg hover:bg-red-600/20 transition text-slate-400 hover:text-red-400"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
-      </div>
+      </main>
       {showReviewModal && (
         <ReviewModal
           showModal={showReviewModal}

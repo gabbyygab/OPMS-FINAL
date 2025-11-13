@@ -84,6 +84,24 @@ const animatedBorderStyle = `
   }
 `;
 
+const getTimestampValue = (value) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  if (typeof value === "object") {
+    if (typeof value.toMillis === "function") return value.toMillis();
+    if (typeof value.seconds === "number") {
+      const nanoseconds =
+        typeof value.nanoseconds === "number" ? value.nanoseconds : 0;
+      return value.seconds * 1000 + nanoseconds / 1e6;
+    }
+  }
+  return null;
+};
+
 // ========== SUB-COMPONENTS ==========
 
 // Messages Link with Unread Badge Component
@@ -312,6 +330,7 @@ const GuestUserActions = ({
   user,
   handleLogout,
   unreadNotificationsCount,
+  unreadNotifications,
   unreadMessagesCount,
 }) => (
   <>
@@ -341,7 +360,7 @@ const GuestUserActions = ({
       </button>
 
       {notificationDropdownOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 z-50 max-h-96 overflow-y-auto">
+        <div className="absolute right-0 mt-2 w-80 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 z-50">
           {unreadNotificationsCount > 0 ? (
             <>
               <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-3 z-10">
@@ -353,7 +372,7 @@ const GuestUserActions = ({
                 </p>
               </div>
               <div className="p-2">
-                {unreadNotifications.slice(0, 5).map((notification) => (
+                {unreadNotifications.slice(0, 3).map((notification) => (
                   <Link
                     key={notification.id}
                     to={ROUTES.GUEST.NOTIFICATIONS}
@@ -398,7 +417,10 @@ const GuestUserActions = ({
     <div className="relative">
       <button
         type="button"
-        onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+        onClick={() => {
+          setProfileDropdownOpen(!profileDropdownOpen);
+          setNotificationDropdownOpen(false);
+        }}
         className="flex items-center gap-2 text-slate-200 hover:text-white transition-colors"
       >
         {/* Profile Circle */}
@@ -500,11 +522,14 @@ const GuestUserActions = ({
 
 // Host User Actions Component
 const HostUserActions = ({
+  notificationDropdownOpen,
+  setNotificationDropdownOpen,
   profileDropdownOpen,
   setProfileDropdownOpen,
   userData,
   handleLogout,
   unreadNotificationsCount,
+  unreadNotifications,
   unreadMessagesCount,
 }) => (
   <div className="hidden lg:flex items-center gap-4">
@@ -524,17 +549,83 @@ const HostUserActions = ({
       </Link>
     </div>
 
-    <Link
-      to={ROUTES.HOST.NOTIFICATIONS}
-      className="relative text-slate-200 hover:text-white transition-colors flex items-center gap-2"
-    >
-      <Bell className="w-5 h-5" />
-      {unreadNotificationsCount > 0 && (
-        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-semibold w-4 h-4 rounded-full flex items-center justify-center">
-          {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
-        </span>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => {
+          const nextState = !notificationDropdownOpen;
+          setNotificationDropdownOpen(nextState);
+          if (nextState) {
+            setProfileDropdownOpen(false);
+          }
+        }}
+        className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-slate-700 transition text-slate-200 hover:text-white"
+        aria-label="Notifications"
+      >
+        <Bell className="w-5 h-5 transition" />
+        {unreadNotificationsCount > 0 && (
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-semibold w-4 h-4 rounded-full flex items-center justify-center">
+            {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+          </span>
+        )}
+      </button>
+
+      {notificationDropdownOpen && (
+        <div className="absolute right-0 mt-2 w-80 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 z-50">
+          {unreadNotificationsCount > 0 ? (
+            <>
+              <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-3 z-10">
+                <p className="text-slate-300 font-medium">
+                  {unreadNotificationsCount} unread{" "}
+                  {unreadNotificationsCount === 1
+                    ? "notification"
+                    : "notifications"}
+                </p>
+              </div>
+              <div className="p-2">
+                {(unreadNotifications || []).slice(0, 3).map((notification) => {
+                  const createdAtValue = getTimestampValue(
+                    notification.createdAt
+                  );
+
+                  return (
+                    <Link
+                      key={notification.id}
+                      to={ROUTES.HOST.NOTIFICATIONS}
+                      onClick={() => setNotificationDropdownOpen(false)}
+                      className="block p-3 mb-2 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors border border-slate-600"
+                    >
+                      <div className="flex flex-col gap-1">
+                        <p className="text-xs font-semibold text-yellow-400">
+                          {notification.title}
+                        </p>
+                        <p className="text-xs text-slate-300 line-clamp-2">
+                          {notification.message}
+                        </p>
+                        {createdAtValue !== null && (
+                          <p className="text-xs text-slate-500 mt-1">
+                            {new Date(createdAtValue).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+              <Link
+                to={ROUTES.HOST.NOTIFICATIONS}
+                className="block p-3 text-center border-t border-slate-700 text-yellow-400 hover:text-yellow-300 text-xs font-medium hover:bg-slate-700/30 transition-colors"
+                onClick={() => setNotificationDropdownOpen(false)}
+              >
+                View all notifications →
+              </Link>
+            </>
+          ) : (
+            <p className="p-3 text-sm text-slate-400">No new notifications</p>
+          )}
+        </div>
       )}
-    </Link>
+    </div>
 
     <div className="relative">
       <button
@@ -1808,7 +1899,7 @@ const GuestTabNavigation = ({
                 </button>
 
                 {notificationDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 z-50 max-h-96 overflow-y-auto">
+                  <div className="absolute right-0 mt-2 w-80 bg-slate-800 text-slate-200 rounded-lg shadow-lg border border-slate-700 z-50">
                     {unreadNotificationsCount > 0 ? (
                       <>
                         <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-3 z-10">
@@ -1821,7 +1912,7 @@ const GuestTabNavigation = ({
                         </div>
                         <div className="p-2">
                           {unreadNotifications
-                            .slice(0, 5)
+                            .slice(0, 3)
                             .map((notification) => (
                               <Link
                                 key={notification.id}
@@ -2846,22 +2937,18 @@ const HostSimpleNavBar = ({
           : "shadow-lg border-b border-white/20 bg-slate-900/70 backdrop-blur-[20px]"
       }`}
     >
-      <div
-        className={`mx-auto transition-all duration-300 ${
-          isScrolled ? "max-w-7xl px-3 sm:px-4" : "max-w-full px-2 sm:px-4"
-        }`}
-      >
+      <div className="w-full px-6 sm:px-8 lg:px-12">
         {/* Card Wrapper - Mobile and Desktop when scrolled */}
         <div
-          className={`transition-all duration-300 ${
+          className={`transition-all duration-300 w-full ${
             isScrolled
-              ? "bg-slate-900/70 backdrop-blur-[20px] shadow-2xl border border-white/20 rounded-2xl px-4 sm:px-6 py-3"
+              ? "bg-slate-900/70 backdrop-blur-[20px] shadow-2xl border border-white/20 rounded-2xl px-6 sm:px-8 lg:px-12 py-3"
               : "py-3"
           }`}
         >
-          <div className="flex items-center justify-between h-14">
+          <div className="flex items-center justify-between h-14 w-full">
             {/* Left - Back Button and Logo */}
-            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0 pl-2">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <button
                 onClick={() => navigate(ROUTES.HOST.DASHBOARD)}
                 className="p-2 hover:bg-slate-700/50 rounded-lg transition-all duration-200"
@@ -3038,8 +3125,8 @@ const GuestSimpleNavBar = ({
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 text-white shadow-lg border-b border-slate-700 bg-slate-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-        <div className="flex items-center justify-between h-14">
+      <div className="w-full px-6 sm:px-8 lg:px-12 py-3">
+        <div className="flex items-center justify-between h-14 w-full">
           {/* Left - Back Button and Logo */}
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             <button
@@ -3192,6 +3279,7 @@ export default function NavigationBar({
   const [notificationDropdownOpen, setNotificationDropdownOpen] =
     useState(false);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState([]);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
   const navigate = useNavigate();
@@ -3242,46 +3330,74 @@ export default function NavigationBar({
   useEffect(() => {
     if (!userData?.id) {
       setUnreadNotificationsCount(0);
+      setUnreadNotifications([]);
       return;
     }
 
-    // Query using new userId field (supports both hosts and guests)
-    const q = query(
-      collection(db, "notifications"),
+    setUnreadNotifications([]);
+    setUnreadNotificationsCount(0);
+
+    const notificationsCollection = collection(db, "notifications");
+    let latestNewNotifications = [];
+    let latestLegacyNotifications = [];
+
+    const mergeAndSetNotifications = () => {
+      const combinedMap = new Map();
+      [...latestNewNotifications, ...latestLegacyNotifications].forEach(
+        (notification) => {
+          if (notification?.id) {
+            combinedMap.set(notification.id, notification);
+          }
+        }
+      );
+
+      const mergedNotifications = Array.from(combinedMap.values()).sort(
+        (a, b) =>
+          (getTimestampValue(b?.createdAt) ?? 0) -
+          (getTimestampValue(a?.createdAt) ?? 0)
+      );
+
+      setUnreadNotifications(mergedNotifications);
+      setUnreadNotificationsCount(mergedNotifications.length);
+    };
+
+    const newQuery = query(
+      notificationsCollection,
       where("userId", "==", userData.id),
       where("isRead", "==", false)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setUnreadNotificationsCount(snapshot.size);
+    const unsubscribeNew = onSnapshot(newQuery, (snapshot) => {
+      latestNewNotifications = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      mergeAndSetNotifications();
     });
 
-    // Also fetch old notifications with host_id/guest_id for backwards compatibility
-    let unsubscribeOld;
+    let unsubscribeLegacy;
     try {
-      const oldWhereField = userData.role === "host" ? "host_id" : "guest_id";
-      const qOld = query(
-        collection(db, "notifications"),
-        where(oldWhereField, "==", userData.id),
+      const legacyField = userData.role === "host" ? "host_id" : "guest_id";
+      const legacyQuery = query(
+        notificationsCollection,
+        where(legacyField, "==", userData.id),
         where("isRead", "==", false)
       );
 
-      unsubscribeOld = onSnapshot(qOld, (snapshot) => {
-        // Only update if we have old notifications and new query hasn't set a count
-        setUnreadNotificationsCount((prev) => {
-          const newCount = snapshot.size;
-          // Use the max count from both queries to avoid double-counting
-          return Math.max(prev, newCount);
-        });
+      unsubscribeLegacy = onSnapshot(legacyQuery, (snapshot) => {
+        latestLegacyNotifications = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        mergeAndSetNotifications();
       });
     } catch (error) {
-      // If old query fails (index doesn't exist), just use new query result
       console.log("Old notification format not available");
     }
 
     return () => {
-      unsubscribe();
-      if (unsubscribeOld) unsubscribeOld();
+      unsubscribeNew();
+      if (unsubscribeLegacy) unsubscribeLegacy();
     };
   }, [userData?.id, userData?.role]);
 
@@ -3783,15 +3899,19 @@ export default function NavigationBar({
                     user={user}
                     handleLogout={handleLogout}
                     unreadNotificationsCount={unreadNotificationsCount}
+                    unreadNotifications={unreadNotifications}
                     unreadMessagesCount={unreadMessagesCount}
                   />
                 ) : isHost ? (
                   <HostUserActions
+                    notificationDropdownOpen={notificationDropdownOpen}
+                    setNotificationDropdownOpen={setNotificationDropdownOpen}
                     profileDropdownOpen={profileDropdownOpen}
                     setProfileDropdownOpen={setProfileDropdownOpen}
                     userData={userData}
                     handleLogout={handleLogout}
                     unreadNotificationsCount={unreadNotificationsCount}
+                    unreadNotifications={unreadNotifications}
                     unreadMessagesCount={unreadMessagesCount}
                   />
                 ) : null}
