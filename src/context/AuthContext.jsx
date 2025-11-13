@@ -1,10 +1,9 @@
 // src/context/AuthContext.jsx
 import { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../firebase/firebase";
-
-import { onSnapshot } from "firebase/firestore";
+import { toast } from "react-toastify";
 
 const AuthContext = createContext();
 
@@ -26,9 +25,27 @@ export const AuthProvider = ({ children }) => {
         const userRef = doc(db, "users", currentUser.uid);
 
         // 👇 Real-time listener for this user's Firestore doc
-        const unsubscribeUser = onSnapshot(userRef, (userSnap) => {
+        const unsubscribeUser = onSnapshot(userRef, async (userSnap) => {
           if (userSnap.exists()) {
             const data = userSnap.data();
+
+            // Check if user has been deactivated
+            if (data.status === "deactivated") {
+              // Sign out the user immediately
+              toast.error("Your account has been deactivated by an administrator. Please contact support for more information.");
+
+              try {
+                await signOut(auth);
+                // User will be redirected to landing page by the auth state change
+                setUserData(null);
+                setIsVerified(false);
+                setLoading(false);
+              } catch (error) {
+                console.error("Error signing out deactivated user:", error);
+              }
+              return;
+            }
+
             setUserData(data);
             setIsVerified(data.isVerified ?? false);
           } else {

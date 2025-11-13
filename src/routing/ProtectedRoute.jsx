@@ -13,6 +13,11 @@ export function ProtectedRoute({ user, userData, allowedRole, redirectTo = "/" }
     return <Navigate to="/" replace />;
   }
 
+  // Redirect to home if user is deactivated
+  if (userData?.status === "deactivated") {
+    return <Navigate to="/" replace />;
+  }
+
   // Redirect to appropriate page if role doesn't match
   if (userData?.role !== allowedRole) {
     return <Navigate to={redirectTo || `/${userData?.role || ""}`} replace />;
@@ -48,7 +53,8 @@ export function PublicRoute({ user, userData }) {
  * @param {ReactNode} children - Component to render if not authenticated
  */
 export function RoleBasedRedirect({ user, userData, children }) {
-  if (user && userData?.role) {
+  // Don't redirect deactivated users, let them see landing page
+  if (user && userData?.role && userData?.status !== "deactivated") {
     const redirectPath = userData.role === "admin"
       ? "/admin/dashboard"
       : `/${userData.role}`;

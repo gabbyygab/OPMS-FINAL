@@ -44,7 +44,7 @@ export default function Reports() {
       description: "Revenue, fees, and transaction data",
       icon: DollarSign,
       color: "emerald",
-      fields: ["Total Revenue", "Service Fees", "Transactions", "Refunds"],
+      fields: ["Total Revenue", "Service Fees", "Host Registration", "Refunds"],
     },
     {
       id: "bookings",
@@ -304,16 +304,32 @@ export default function Reports() {
                       </div>
                       <div>
                         <p className="text-xs text-slate-400 mb-1">
+                          Host Registration
+                        </p>
+                        <p className="text-lg font-bold text-indigo-400">
+                          {formatCurrency(reportPreview.hostRegistrationFees || 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">
                           Transactions
                         </p>
                         <p className="text-lg font-bold text-white">
                           {reportPreview.transactions || 0}
                         </p>
                       </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mb-6">
                       <div>
                         <p className="text-xs text-slate-400 mb-1">Refunds</p>
                         <p className="text-lg font-bold text-amber-400">
                           {formatCurrency(reportPreview.refunds || 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Gross Revenue</p>
+                        <p className="text-lg font-bold text-cyan-400">
+                          {formatCurrency(reportPreview.grossRevenue || 0)}
                         </p>
                       </div>
                     </div>

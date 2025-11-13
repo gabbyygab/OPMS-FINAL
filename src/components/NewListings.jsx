@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Star, MapPin } from "lucide-react";
 import { db } from "../firebase/firebase";
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { collection, query, orderBy, limit, getDocs, doc, getDoc } from "firebase/firestore";
 
 export default function NewListings() {
   const [listings, setListings] = useState([]);
@@ -21,12 +21,37 @@ export default function NewListings() {
         );
 
         const snapshot = await getDocs(q);
-        const fetchedListings = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
 
-        setListings(fetchedListings);
+        // Filter out listings from deactivated hosts
+        const fetchedListings = await Promise.all(
+          snapshot.docs.map(async (docSnap) => {
+            const listing = {
+              id: docSnap.id,
+              ...docSnap.data(),
+            };
+
+            // Check if the host is deactivated
+            const hostId = listing.hostId;
+            if (hostId) {
+              try {
+                const hostRef = doc(db, "users", hostId);
+                const hostSnap = await getDoc(hostRef);
+
+                // Skip listing if host is deactivated or doesn't exist
+                if (!hostSnap.exists() || hostSnap.data().status === "deactivated") {
+                  return null;
+                }
+              } catch (error) {
+                console.error("Error checking host status:", error);
+                return null;
+              }
+            }
+
+            return listing;
+          })
+        );
+
+        setListings(fetchedListings.filter((listing) => listing !== null));
       } catch (error) {
         console.error("Error fetching new listings:", error);
       } finally {

@@ -107,6 +107,7 @@ export const generateFinancialReportData = async (dateRange) => {
     const transactionsSnapshot = await getDocs(transactionsRef);
 
     let serviceFeeRevenue = 0;
+    let hostRegistrationFees = 0;
     let refundedServiceFees = 0;
     let totalTransactions = 0;
 
@@ -140,6 +141,13 @@ export const generateFinancialReportData = async (dateRange) => {
           }
         }
 
+        // Host registration fee transactions (revenue)
+        if (transaction.type === "new_host_fees") {
+          const amount = Math.abs(transaction.amount || 0);
+          hostRegistrationFees += amount;
+          totalTransactions++;
+        }
+
         // Refund transactions (negative revenue)
         if (transaction.type === "refund" && transaction.description?.includes("service fee")) {
           refundedServiceFees += Math.abs(transaction.amount || 0);
@@ -157,13 +165,15 @@ export const generateFinancialReportData = async (dateRange) => {
       0
     );
 
-    // Net revenue after refunds
-    const netRevenue = serviceFeeRevenue - refundedServiceFees;
+    // Calculate total platform revenue and net revenue
+    const grossRevenue = serviceFeeRevenue + hostRegistrationFees;
+    const netRevenue = grossRevenue - refundedServiceFees;
 
     return {
       totalRevenue: netRevenue,
-      grossRevenue: serviceFeeRevenue,
+      grossRevenue: grossRevenue,
       serviceFees: serviceFeeRevenue,
+      hostRegistrationFees: hostRegistrationFees,
       refunds: totalRefundAmount,
       refundedFees: refundedServiceFees,
       transactions: totalTransactions,
@@ -177,6 +187,7 @@ export const generateFinancialReportData = async (dateRange) => {
       totalRevenue: 0,
       grossRevenue: 0,
       serviceFees: 0,
+      hostRegistrationFees: 0,
       refunds: 0,
       refundedFees: 0,
       transactions: 0,

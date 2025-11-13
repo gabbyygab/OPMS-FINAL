@@ -280,13 +280,30 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                       const favData = favDoc.data();
                       const listingRef = doc(db, "listings", favData.listing_id);
                       const listingSnap = await getDoc(listingRef);
-          
+
                       if (listingSnap.exists()) {
                         const listing = {
                           id: listingSnap.id,
                           ...listingSnap.data(),
                         };
-          
+
+                        // Check if the host is deactivated
+                        const hostId = listing.hostId;
+                        if (hostId) {
+                          try {
+                            const hostRef = doc(db, "users", hostId);
+                            const hostSnap = await getDoc(hostRef);
+
+                            // Skip listing if host is deactivated or doesn't exist
+                            if (!hostSnap.exists() || hostSnap.data().status === "deactivated") {
+                              return null;
+                            }
+                          } catch (error) {
+                            console.error("Error checking host status:", error);
+                            return null;
+                          }
+                        }
+
                         // Fetch reviews for this listing
                         const reviewsRef = collection(db, "reviews");
                         const reviewQuery = query(
@@ -295,14 +312,14 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                         );
                         const reviewSnap = await getDocs(reviewQuery);
                         const reviewCount = reviewSnap.size;
-          
+
                         let totalRating = 0;
                         reviewSnap.docs.forEach((doc) => {
                           totalRating += doc.data().rating;
                         });
                         const averageRating =
                           reviewCount > 0 ? (totalRating / reviewCount).toFixed(1) : 0;
-          
+
                         return {
                           ...listing,
                           rating: averageRating,
@@ -338,11 +355,28 @@ export default function BookingsSection({ userData, isFavoritePage }) {
         try {
           const listingsSnap = await getDocs(listingQuery);
           const listingsData = await Promise.all(
-            listingsSnap.docs.map(async (doc) => {
+            listingsSnap.docs.map(async (docSnap) => {
               const listing = {
-                id: doc.id,
-                ...doc.data(),
+                id: docSnap.id,
+                ...docSnap.data(),
               };
+
+              // Check if the host is deactivated
+              const hostId = listing.hostId;
+              if (hostId) {
+                try {
+                  const hostRef = doc(db, "users", hostId);
+                  const hostSnap = await getDoc(hostRef);
+
+                  // Skip listing if host is deactivated or doesn't exist
+                  if (!hostSnap.exists() || hostSnap.data().status === "deactivated") {
+                    return null;
+                  }
+                } catch (error) {
+                  console.error("Error checking host status:", error);
+                  return null;
+                }
+              }
 
               // Fetch reviews for this listing
               const reviewsRef = collection(db, "reviews");
@@ -366,7 +400,7 @@ export default function BookingsSection({ userData, isFavoritePage }) {
                 reviewCount: reviewCount,
               };
             })
-          );
+          ).then(results => results.filter(listing => listing !== null));
 
           // Combine listings with favorite status based on current favorites
           const listingsWithFavs = listingsData.map((listing) => ({

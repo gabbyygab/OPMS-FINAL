@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import {
   signInWithEmailAndPassword,
   signInWithPopup,
-  fetchSignInMethodsForEmail,
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { toast } from "react-toastify";
@@ -26,17 +25,15 @@ export default function SignInModal() {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
 
+    if (!email || !password) {
+      toast.error("Please enter both email and password.", {
+        position: "top-right",
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
-
-      // Check if email exists first
-      const methods = await fetchSignInMethodsForEmail(auth, email);
-      if (methods.length === 0) {
-        toast.error("Email doesn't exist. Please sign up first.", {
-          position: "top-right",
-        });
-        return;
-      }
 
       // Sign in with email and password
       const userCred = await signInWithEmailAndPassword(auth, email, password);
@@ -47,13 +44,23 @@ export default function SignInModal() {
       const userSnap = await getDoc(userRef);
 
       if (!userSnap.exists()) {
-        toast.error("User data not found. Please sign up first.", {
+        toast.error("User data not found. Please contact support.", {
           position: "top-right",
         });
+        await auth.signOut();
         return;
       }
 
       const userData = userSnap.data();
+
+      // Check if user account is deactivated
+      if (userData.status === "deactivated") {
+        toast.error("Your account has been deactivated. Please contact support for assistance.", {
+          position: "top-right",
+        });
+        await auth.signOut();
+        return;
+      }
 
       // Show success toast and close modal immediately
       toast.success("Successfully signed in!", { position: "top-right" });
@@ -64,8 +71,28 @@ export default function SignInModal() {
         navigate(`/${userData.role || "guest"}`);
       }, 100);
     } catch (error) {
-      toast.error(error.message, { position: "top-right" });
       console.error("Sign in error:", error);
+
+      // Handle specific Firebase auth errors
+      let errorMessage = "Failed to sign in. Please try again.";
+
+      if (error.code === "auth/invalid-email") {
+        errorMessage = "Invalid email address format.";
+      } else if (error.code === "auth/user-disabled") {
+        errorMessage = "This account has been disabled.";
+      } else if (error.code === "auth/user-not-found") {
+        errorMessage = "No account found with this email. Please sign up first.";
+      } else if (error.code === "auth/wrong-password") {
+        errorMessage = "Incorrect password. Please try again.";
+      } else if (error.code === "auth/invalid-credential") {
+        errorMessage = "Invalid email or password. Please check your credentials.";
+      } else if (error.code === "auth/too-many-requests") {
+        errorMessage = "Too many failed attempts. Please try again later.";
+      } else if (error.code === "auth/network-request-failed") {
+        errorMessage = "Network error. Please check your connection.";
+      }
+
+      toast.error(errorMessage, { position: "top-right" });
     } finally {
       setIsLoading(false);
     }
@@ -94,6 +121,15 @@ export default function SignInModal() {
       }
 
       const userData = userSnap.data();
+
+      // Check if user account is deactivated
+      if (userData.status === "deactivated") {
+        toast.error("Your account has been deactivated. Please contact support for assistance.", {
+          position: "top-right",
+        });
+        await auth.signOut();
+        return;
+      }
 
       // Show success toast and close modal immediately
       toast.success("Successfully signed in!", { position: "top-right" });

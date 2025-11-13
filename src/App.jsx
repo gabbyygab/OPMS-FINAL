@@ -53,6 +53,7 @@ import {
   ServiceFees,
   Reports,
   Payments,
+  UserManagement,
 } from "./pages/admin";
 import DraftsPage from "./pages/host/DraftsPage";
 import SeedData from "./pages/admin/SeedData";
@@ -272,6 +273,7 @@ function App() {
             <Route path="service-fees" element={<ServiceFees />} />
             <Route path="reports" element={<Reports />} />
             <Route path="payments" element={<Payments />} />
+            <Route path="users" element={<UserManagement />} />
             <Route path="seed-data" element={<SeedData />} />
             <Route index element={<Navigate to="dashboard" replace />} />
           </Route>

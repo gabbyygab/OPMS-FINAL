@@ -64,6 +64,23 @@ export default function PopularListings() {
                 bookingCount: bookingCounts[listingId],
               };
 
+              // Check if the host is deactivated
+              const hostId = listingData.hostId;
+              if (hostId) {
+                try {
+                  const hostRef = doc(db, "users", hostId);
+                  const hostSnap = await getDoc(hostRef);
+
+                  // Skip listing if host is deactivated or doesn't exist
+                  if (!hostSnap.exists() || hostSnap.data().status === "deactivated") {
+                    continue;
+                  }
+                } catch (error) {
+                  console.error("Error checking host status:", error);
+                  continue;
+                }
+              }
+
               // Only add if we haven't seen this listing before
               if (!seenIds.has(listingData.id)) {
                 fetchedListings.push(listingData);

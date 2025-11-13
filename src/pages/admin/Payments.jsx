@@ -22,7 +22,7 @@ export default function Payments() {
   const [transactions, setTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [filterType, setFilterType] = useState("all"); // "all", "service_fee", "listing_limit_upgrade"
+  const [filterType, setFilterType] = useState("all"); // "all", "service_fee", "listing_limit_upgrade", "new_host_fees"
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
 
@@ -33,6 +33,7 @@ export default function Payments() {
     totalRevenue: 0,
     serviceFeeRevenue: 0,
     listingUpgradeRevenue: 0,
+    newHostFeesRevenue: 0,
     totalTransactions: 0,
   });
 
@@ -52,7 +53,8 @@ export default function Payments() {
         .filter(
           (transaction) =>
             transaction.type === "service_fee" ||
-            transaction.type === "listing_limit_upgrade"
+            transaction.type === "listing_limit_upgrade" ||
+            transaction.type === "new_host_fees"
         );
 
       setTransactions(transactionData);
@@ -68,6 +70,7 @@ export default function Payments() {
     const listingUpgrades = data.filter(
       (t) => t.type === "listing_limit_upgrade"
     );
+    const newHostFees = data.filter((t) => t.type === "new_host_fees");
 
     const serviceFeeRevenue = serviceFees.reduce(
       (sum, t) => sum + Math.abs(t.amount || 0),
@@ -77,11 +80,16 @@ export default function Payments() {
       (sum, t) => sum + Math.abs(t.amount || 0),
       0
     );
+    const newHostFeesRevenue = newHostFees.reduce(
+      (sum, t) => sum + Math.abs(t.amount || 0),
+      0
+    );
 
     setStats({
-      totalRevenue: serviceFeeRevenue + listingUpgradeRevenue,
+      totalRevenue: serviceFeeRevenue + listingUpgradeRevenue + newHostFeesRevenue,
       serviceFeeRevenue,
       listingUpgradeRevenue,
+      newHostFeesRevenue,
       totalTransactions: data.length,
     });
   };
@@ -119,17 +127,26 @@ export default function Payments() {
           <DollarSign className="w-5 h-5 text-emerald-400" />
         </div>
       );
-    } else {
+    } else if (type === "listing_limit_upgrade") {
       return (
         <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
           <ArrowUpCircle className="w-5 h-5 text-purple-400" />
+        </div>
+      );
+    } else {
+      return (
+        <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
+          <TrendingUp className="w-5 h-5 text-amber-400" />
         </div>
       );
     }
   };
 
   const getTransactionLabel = (type) => {
-    return type === "service_fee" ? "Service Fee" : "Listing Upgrade";
+    if (type === "service_fee") return "Service Fee";
+    if (type === "listing_limit_upgrade") return "Listing Upgrade";
+    if (type === "new_host_fees") return "Host Registration Fee";
+    return type;
   };
 
   const exportToCSV = () => {
@@ -189,7 +206,7 @@ export default function Payments() {
             Payment Transactions
           </h1>
           <p className="text-slate-400">
-            Service fees and listing upgrade revenue
+            Service fees, listing upgrades, and host registration revenue
           </p>
         </div>
         <button
@@ -202,7 +219,7 @@ export default function Payments() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
           <div className="flex items-center justify-between mb-3">
             <p className="text-slate-400 text-sm font-medium">Total Revenue</p>
@@ -243,6 +260,20 @@ export default function Payments() {
 
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
           <div className="flex items-center justify-between mb-3">
+            <p className="text-slate-400 text-sm font-medium">
+              Host Registration
+            </p>
+            <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-amber-400" />
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-white">
+            ₱{stats.newHostFeesRevenue.toFixed(2)}
+          </p>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-3">
             <p className="text-slate-400 text-sm font-medium">Transactions</p>
             <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
               <Calendar className="w-5 h-5 text-blue-400" />
@@ -278,6 +309,7 @@ export default function Payments() {
                 <option value="all">All Transactions</option>
                 <option value="service_fee">Service Fees</option>
                 <option value="listing_limit_upgrade">Listing Upgrades</option>
+                <option value="new_host_fees">Host Registration Fees</option>
               </select>
             </div>
           </div>

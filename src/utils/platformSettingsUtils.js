@@ -215,8 +215,8 @@ export async function getHostServiceFeeStats() {
 }
 
 /**
- * Get total revenue from all service fee transactions
- * @returns {Promise<number>} Total service fee revenue
+ * Get total revenue from all service fee transactions and new host fees
+ * @returns {Promise<number>} Total service fee revenue including new host fees
  */
 export async function getTotalServiceFeeRevenue() {
   try {
@@ -229,17 +229,47 @@ export async function getTotalServiceFeeRevenue() {
     for (const docSnap of querySnapshot.docs) {
       const transaction = docSnap.data();
 
-      // Only count service_fee transactions
-      if (transaction.type !== "service_fee") continue;
+      // Count service_fee and new_host_fees transactions
+      if (transaction.type !== "service_fee" && transaction.type !== "new_host_fees") continue;
 
-      // Service fee is stored as negative, convert to positive
-      const serviceFee = Math.abs(transaction.amount || 0);
-      totalRevenue += serviceFee;
+      // Service fee and host fees are stored as negative, convert to positive
+      const amount = Math.abs(transaction.amount || 0);
+      totalRevenue += amount;
     }
 
     return totalRevenue;
   } catch (error) {
     console.error("Error getting total service fee revenue:", error);
+    return 0;
+  }
+}
+
+/**
+ * Get total revenue from new host fees
+ * @returns {Promise<number>} Total new host fees revenue
+ */
+export async function getNewHostFeesRevenue() {
+  try {
+    const transactionsRef = collection(db, "transactions");
+    const q = query(transactionsRef);
+    const querySnapshot = await getDocs(q);
+
+    let totalRevenue = 0;
+
+    for (const docSnap of querySnapshot.docs) {
+      const transaction = docSnap.data();
+
+      // Only count new_host_fees transactions
+      if (transaction.type !== "new_host_fees") continue;
+
+      // Host fees are stored as negative, convert to positive
+      const amount = Math.abs(transaction.amount || 0);
+      totalRevenue += amount;
+    }
+
+    return totalRevenue;
+  } catch (error) {
+    console.error("Error getting new host fees revenue:", error);
     return 0;
   }
 }

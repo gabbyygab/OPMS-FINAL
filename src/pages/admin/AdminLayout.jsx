@@ -13,7 +13,7 @@ import {
   X,
   LogOut,
   ChevronLeft,
-  User,
+  Users,
 } from "lucide-react";
 
 export default function AdminLayout({ user, userData }) {
@@ -57,6 +57,12 @@ export default function AdminLayout({ user, userData }) {
       icon: CreditCard,
       path: "/admin/payments",
       description: "Revenue & Transactions",
+    },
+    {
+      name: "User Management",
+      icon: Users,
+      path: "/admin/users",
+      description: "Manage Users & Accounts",
     },
   ];
 

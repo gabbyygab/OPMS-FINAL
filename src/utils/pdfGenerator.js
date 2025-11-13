@@ -227,8 +227,8 @@ export const generateFinancialReportPDF = async (data) => {
         columns: [
           createMetricCard("Total Revenue", formatCurrency(data.totalRevenue)),
           createMetricCard(
-            "Service Fees Collected",
-            formatCurrency(data.serviceFees)
+            "Gross Revenue",
+            formatCurrency(data.grossRevenue)
           ),
           createMetricCard("Transactions", data.transactions.toString()),
         ],
@@ -236,16 +236,16 @@ export const generateFinancialReportPDF = async (data) => {
       {
         columns: [
           createMetricCard(
-            "Gross Revenue",
-            formatCurrency(data.grossRevenue)
+            "Service Fees",
+            formatCurrency(data.serviceFees)
           ),
           createMetricCard(
-            "Refunded Amount",
+            "Host Registration Fees",
+            formatCurrency(data.hostRegistrationFees || 0)
+          ),
+          createMetricCard(
+            "Refunds",
             formatCurrency(data.refunds)
-          ),
-          createMetricCard(
-            "Refunded Fees",
-            formatCurrency(data.refundedFees)
           ),
         ],
       },

@@ -22,6 +22,7 @@ import {
   getHostServiceFeeStats,
   getMonthlyRevenueBreakdown,
   getTotalServiceFeeRevenue,
+  getNewHostFeesRevenue,
 } from "../../utils/platformSettingsUtils";
 
 export default function ServiceFees() {
@@ -45,6 +46,7 @@ export default function ServiceFees() {
     services: { revenue: 0, hosts: 0, bookings: 0 },
   });
   const [totalServiceFeeRevenue, setTotalServiceFeeRevenue] = useState(0);
+  const [newHostFeesRevenue, setNewHostFeesRevenue] = useState(0);
 
   // Load service fees and statistics on mount
   useEffect(() => {
@@ -60,9 +62,13 @@ export default function ServiceFees() {
       setFees(currentFees);
       setOriginalFees(currentFees);
 
-      // Load total service fee revenue from transactions
+      // Load total service fee revenue from transactions (includes new host fees)
       const totalRevenue = await getTotalServiceFeeRevenue();
       setTotalServiceFeeRevenue(totalRevenue);
+
+      // Load new host fees revenue separately
+      const hostFeesRevenue = await getNewHostFeesRevenue();
+      setNewHostFeesRevenue(hostFeesRevenue);
 
       // Load monthly revenue breakdown
       const revenueData = await getMonthlyRevenueBreakdown();
@@ -223,28 +229,46 @@ export default function ServiceFees() {
       {/* Total Revenue Card */}
       <div className="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl p-8 shadow-lg shadow-indigo-500/20">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="w-full">
             <p className="text-indigo-100 text-sm font-medium mb-2">
-              Total Revenue from Service Fees
+              Total Platform Revenue
             </p>
             <h2 className="text-4xl font-bold text-white mb-4">
               ₱{totalServiceFeeRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </h2>
-            <div className="flex items-center gap-4 text-indigo-100">
+            <div className="flex items-center gap-4 text-indigo-100 mb-3">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
-                <span className="text-sm">All-time service fee revenue</span>
+                <span className="text-sm">All-time platform revenue</span>
               </div>
             </div>
+
+            {/* Revenue Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 pt-3 border-t border-indigo-400/20">
+              <div>
+                <p className="text-xs text-indigo-200 mb-1">Service Fees (Bookings):</p>
+                <p className="text-lg font-semibold text-white">
+                  ₱{(totalServiceFeeRevenue - newHostFeesRevenue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-indigo-200 mt-1">{totalBookings} bookings this month</p>
+              </div>
+              <div>
+                <p className="text-xs text-indigo-200 mb-1">Host Registration Fees:</p>
+                <p className="text-lg font-semibold text-white">
+                  ₱{newHostFeesRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-indigo-200 mt-1">All-time host registrations</p>
+              </div>
+            </div>
+
             <div className="mt-3 pt-3 border-t border-indigo-400/20">
-              <p className="text-xs text-indigo-200 mb-1">This Month:</p>
+              <p className="text-xs text-indigo-200 mb-1">This Month (Service Fees):</p>
               <p className="text-lg font-semibold text-white">
                 ₱{totalMonthlyRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              <p className="text-xs text-indigo-200 mt-1">{totalBookings} bookings this month</p>
             </div>
           </div>
-          <div className="hidden md:block">
+          <div className="hidden lg:block ml-4">
             <div className="w-32 h-32 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm">
               <DollarSign className="w-16 h-16 text-white" />
             </div>
