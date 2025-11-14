@@ -1,0 +1,186 @@
+/* Dark Theme for React Date Range Picker */
+.date-range-picker-dark .rdrCalendarWrapper {
+  background: transparent;
+  color: #ffffff;
+}
+
+.date-range-picker-dark .rdrMonthAndYearWrapper {
+  background: #1e293b;
+  padding: 10px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.date-range-picker-dark .rdrMonthAndYearPickers select {
+  background: #334155;
+  color: #ffffff;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-weight: 500;
+}
+
+.date-range-picker-dark .rdrMonthAndYearPickers select:hover {
+  background: #475569;
+}
+
+.date-range-picker-dark .rdrNextPrevButton {
+  background: #334155;
+  border-radius: 8px;
+  margin: 0 4px;
+}
+
+.date-range-picker-dark .rdrNextPrevButton:hover {
+  background: #475569;
+}
+
+.date-range-picker-dark .rdrNextPrevButton i {
+  border-color: transparent #94a3b8 transparent transparent;
+}
+
+.date-range-picker-dark .rdrPprevButton i {
+  border-color: transparent transparent transparent #94a3b8;
+}
+
+.date-range-picker-dark .rdrMonths {
+  gap: 10px;
+}
+
+.date-range-picker-dark .rdrMonth {
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid #334155;
+}
+
+.date-range-picker-dark .rdrWeekDays {
+  margin-bottom: 5px;
+}
+
+.date-range-picker-dark .rdrWeekDay {
+  color: #94a3b8;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.date-range-picker-dark .rdrDays {
+  background: transparent;
+}
+
+.date-range-picker-dark .rdrDay {
+  color: #ffffff;
+}
+
+.date-range-picker-dark .rdrDayNumber span {
+  color: #e2e8f0;
+}
+
+.date-range-picker-dark .rdrDayPassive .rdrDayNumber span {
+  color: #475569;
+}
+
+.date-range-picker-dark .rdrDayToday .rdrDayNumber span {
+  color: #6366f1;
+  font-weight: 700;
+}
+
+.date-range-picker-dark .rdrDayToday .rdrDayNumber span::after {
+  background: #6366f1;
+  bottom: 2px;
+}
+
+.date-range-picker-dark .rdrDay:not(.rdrDayPassive) .rdrInRange ~ .rdrDayNumber span,
+.date-range-picker-dark .rdrDay:not(.rdrDayPassive) .rdrStartEdge ~ .rdrDayNumber span,
+.date-range-picker-dark .rdrDay:not(.rdrDayPassive) .rdrEndEdge ~ .rdrDayNumber span,
+.date-range-picker-dark .rdrDay:not(.rdrDayPassive) .rdrSelected ~ .rdrDayNumber span {
+  color: #ffffff;
+}
+
+.date-range-picker-dark .rdrDayStartPreview,
+.date-range-picker-dark .rdrDayInPreview,
+.date-range-picker-dark .rdrDayEndPreview {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.date-range-picker-dark .rdrDayHovered {
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 8px;
+}
+
+.date-range-picker-dark .rdrDayStartOfMonth .rdrInRange,
+.date-range-picker-dark .rdrDayStartOfMonth .rdrEndEdge,
+.date-range-picker-dark .rdrDayStartOfWeek .rdrInRange,
+.date-range-picker-dark .rdrDayStartOfWeek .rdrEndEdge {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.date-range-picker-dark .rdrDayEndOfMonth .rdrInRange,
+.date-range-picker-dark .rdrDayEndOfMonth .rdrStartEdge,
+.date-range-picker-dark .rdrDayEndOfWeek .rdrInRange,
+.date-range-picker-dark .rdrDayEndOfWeek .rdrStartEdge {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.date-range-picker-dark .rdrStartEdge,
+.date-range-picker-dark .rdrEndEdge {
+  border-radius: 8px;
+}
+
+.date-range-picker-dark .rdrInRange {
+  background: rgba(99, 102, 241, 0.15);
+}
+
+.date-range-picker-dark .rdrDayDisabled {
+  background-color: transparent;
+}
+
+.date-range-picker-dark .rdrDayDisabled .rdrDayNumber span {
+  color: #334155;
+}
+
+.date-range-picker-dark .rdrSelected,
+.date-range-picker-dark .rdrStartEdge,
+.date-range-picker-dark .rdrEndEdge {
+  background: #6366f1 !important;
+}
+
+.date-range-picker-dark .rdrDayNumber {
+  font-weight: 500;
+}
+
+/* Make the date picker responsive */
+@media (max-width: 768px) {
+  .date-range-picker-dark .rdrCalendarWrapper {
+    font-size: 12px;
+  }
+
+  .date-range-picker-dark .rdrMonth {
+    padding: 10px;
+  }
+
+  .date-range-picker-dark .rdrMonths.rdrMonthsHorizontal {
+    flex-direction: column;
+  }
+}
+
+/* Custom scrollbar for month/year selects */
+.date-range-picker-dark .rdrMonthAndYearPickers select::-webkit-scrollbar {
+  width: 8px;
+}
+
+.date-range-picker-dark .rdrMonthAndYearPickers select::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.date-range-picker-dark .rdrMonthAndYearPickers select::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+.date-range-picker-dark .rdrMonthAndYearPickers select::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+

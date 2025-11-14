@@ -30,39 +30,19 @@ export default function PaymentMethods() {
       avgProcessingTime: "2.3s",
       logo: "💳",
       color: "indigo",
+      description: "External payment processor for wallet funding"
     },
     {
       id: 2,
-      name: "Stripe",
-      status: "active",
-      transactionsToday: 89,
-      totalVolume: 28950,
-      successRate: 99.1,
-      avgProcessingTime: "1.8s",
-      logo: "💰",
-      color: "violet",
-    },
-    {
-      id: 3,
-      name: "Credit Card",
+      name: "E-Wallet",
       status: "active",
       transactionsToday: 234,
       totalVolume: 67820,
-      successRate: 97.8,
-      avgProcessingTime: "3.1s",
-      logo: "💵",
+      successRate: 99.2,
+      avgProcessingTime: "0.5s",
+      logo: "💰",
       color: "emerald",
-    },
-    {
-      id: 4,
-      name: "Debit Card",
-      status: "active",
-      transactionsToday: 156,
-      totalVolume: 38490,
-      successRate: 98.2,
-      avgProcessingTime: "2.9s",
-      logo: "🏦",
-      color: "amber",
+      description: "Internal wallet system for all bookings"
     },
   ];
 
@@ -72,27 +52,27 @@ export default function PaymentMethods() {
       method: "PayPal",
       guest: "Alice Cooper",
       amount: 450.0,
-      fee: 13.5,
+      fee: 0,
       status: "completed",
       date: "2024-02-15 14:23",
-      type: "booking",
+      type: "wallet_funding",
     },
     {
       id: "TXN-2024-002",
-      method: "Credit Card",
+      method: "E-Wallet",
       guest: "Bob Martin",
       amount: 280.0,
-      fee: 8.4,
+      fee: 14.0,
       status: "completed",
       date: "2024-02-15 13:45",
       type: "booking",
     },
     {
       id: "TXN-2024-003",
-      method: "Stripe",
+      method: "E-Wallet",
       guest: "Carol White",
       amount: 120.0,
-      fee: 3.6,
+      fee: 6.0,
       status: "pending",
       date: "2024-02-15 12:10",
       type: "booking",
@@ -102,17 +82,17 @@ export default function PaymentMethods() {
       method: "PayPal",
       guest: "David Lee",
       amount: 95.0,
-      fee: 2.85,
-      status: "failed",
+      fee: 0,
+      status: "completed",
       date: "2024-02-15 11:30",
-      type: "booking",
+      type: "wallet_funding",
     },
     {
       id: "TXN-2024-005",
-      method: "Debit Card",
+      method: "E-Wallet",
       guest: "Eva Green",
       amount: 320.0,
-      fee: 9.6,
+      fee: 16.0,
       status: "completed",
       date: "2024-02-15 10:15",
       type: "refund",
@@ -123,47 +103,49 @@ export default function PaymentMethods() {
     {
       provider: "PayPal",
       apiKey: "pk_live_51J3K4L5M6N7O8P9Q0R1S2T3U4V5W6X7Y8Z9",
-
+      secretKey: "sk_live_**********************************",
       webhookUrl: "https://bookingnest.com/webhooks/paypal",
       testMode: false,
       color: "indigo",
+      description: "Used for funding guest e-wallets"
     },
     {
-      provider: "Stripe",
-      apiKey: "pk_live_Z9Y8X7W6V5U4T3S2R1Q0P9O8N7M6L5K4J3",
-
-      webhookUrl: "https://bookingnest.com/webhooks/stripe",
+      provider: "E-Wallet System",
+      apiKey: "internal_system_wallet_integration",
+      secretKey: "internal_**************************",
+      webhookUrl: "https://bookingnest.com/webhooks/wallet",
       testMode: false,
-      color: "violet",
+      color: "emerald",
+      description: "Internal balance management for bookings"
     },
   ];
 
   const stats = [
     {
       label: "Total Transactions",
-      value: "624",
+      value: "379",
       change: "+18%",
       icon: CreditCard,
       color: "indigo",
     },
     {
       label: "Total Volume",
-      value: "$180,540",
+      value: "₱113,100",
       change: "+24%",
       icon: DollarSign,
       color: "emerald",
     },
     {
       label: "Success Rate",
-      value: "98.4%",
+      value: "99.0%",
       change: "+2.1%",
       icon: CheckCircle,
       color: "violet",
     },
     {
       label: "Avg Processing",
-      value: "2.5s",
-      change: "-0.3s",
+      value: "1.4s",
+      change: "-0.5s",
       icon: Zap,
       color: "amber",
     },
@@ -210,7 +192,7 @@ export default function PaymentMethods() {
           Payment Methods Management
         </h1>
         <p className="text-slate-400">
-          Monitor and manage payment processing and methods
+          Monitor PayPal integration and E-Wallet system
         </p>
       </div>
 
@@ -270,8 +252,11 @@ export default function PaymentMethods() {
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold text-white mb-4">
-                  Payment Providers Performance
+                  Payment Systems Performance
                 </h3>
+                <p className="text-sm text-slate-400 mb-4">
+                  PayPal handles external funding, E-Wallet manages all booking transactions
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {paymentProviders.map((provider) => (
                     <div
@@ -282,9 +267,12 @@ export default function PaymentMethods() {
                         <div className="flex items-center gap-3">
                           <div className="text-3xl">{provider.logo}</div>
                           <div>
-                            <h4 className="text-lg font-semibold text-white">
-                              {provider.name}
-                            </h4>
+                            <div>
+                              <h4 className="text-lg font-semibold text-white">
+                                {provider.name}
+                              </h4>
+                              <p className="text-xs text-slate-400 mt-0.5">{provider.description}</p>
+                            </div>
                             <span
                               className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
                                 provider.status
@@ -313,7 +301,7 @@ export default function PaymentMethods() {
                             Total Volume
                           </p>
                           <p className="text-lg font-bold text-emerald-400">
-                            ${provider.totalVolume.toLocaleString()}
+                            ₱{provider.totalVolume.toLocaleString()}
                           </p>
                         </div>
                         <div className="bg-slate-900/50 rounded-lg p-3">
@@ -401,13 +389,13 @@ export default function PaymentMethods() {
                           {transaction.guest}
                         </td>
                         <td className="py-4 px-4 text-sm font-semibold text-white">
-                          ${transaction.amount.toFixed(2)}
+                          ₱{transaction.amount.toFixed(2)}
                         </td>
                         <td className="py-4 px-4 text-sm text-slate-400">
-                          ${transaction.fee.toFixed(2)}
+                          ₱{transaction.fee.toFixed(2)}
                         </td>
                         <td className="py-4 px-4 text-sm text-slate-300 capitalize">
-                          {transaction.type}
+                          {transaction.type.replace('_', ' ')}
                         </td>
                         <td className="py-4 px-4">
                           <span
@@ -432,15 +420,15 @@ export default function PaymentMethods() {
           {/* Configuration Tab */}
           {activeTab === "configuration" && (
             <div className="space-y-6">
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
-                <Shield className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-start gap-3">
+                <Shield className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm text-amber-300 font-medium mb-1">
-                    Security Notice
+                  <p className="text-sm text-blue-300 font-medium mb-1">
+                    Payment System Configuration
                   </p>
-                  <p className="text-xs text-amber-200/80">
-                    API keys and secrets are sensitive information. Never share
-                    them publicly or commit them to version control.
+                  <p className="text-xs text-blue-200/80">
+                    BookingNest uses a two-tier payment system: PayPal for external wallet funding (guests add money), 
+                    and an internal E-Wallet for all booking transactions. API keys are sensitive - never share them publicly.
                   </p>
                 </div>
               </div>

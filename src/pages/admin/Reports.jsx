@@ -14,7 +14,12 @@ import {
   Filter,
   Plus,
   Loader2,
+  X,
 } from "lucide-react";
+import { DateRange } from "react-date-range";
+import "react-date-range/dist/styles.css";
+import "react-date-range/dist/theme/default.css";
+import "./DateRangePicker.css";
 import {
   getDateRange,
   generateFinancialReportData,
@@ -36,6 +41,26 @@ export default function Reports() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportPreview, setReportPreview] = useState(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState(null);
+  const [customEndDate, setCustomEndDate] = useState(null);
+  const [dateRangeState, setDateRangeState] = useState([
+    {
+      startDate: new Date(),
+      endDate: new Date(),
+      key: "selection",
+    },
+  ]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Handle window resize for responsive date picker
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const reportTypes = [
     {
@@ -86,12 +111,20 @@ export default function Reports() {
   // Load report preview when report type or date range changes
   useEffect(() => {
     loadReportPreview();
-  }, [selectedReportType, dateRange]);
+  }, [selectedReportType, dateRange, customStartDate, customEndDate]);
 
   const loadReportPreview = async () => {
     setIsLoadingPreview(true);
     try {
-      const range = getDateRange(dateRange);
+      let range;
+      if (dateRange === "custom" && customStartDate && customEndDate) {
+        range = {
+          startDate: customStartDate,
+          endDate: customEndDate,
+        };
+      } else {
+        range = getDateRange(dateRange === "custom" ? "last30days" : dateRange);
+      }
       let preview = null;
 
       switch (selectedReportType) {
@@ -117,10 +150,64 @@ export default function Reports() {
     }
   };
 
+  const handleDateRangeChange = (value) => {
+    if (value === "custom") {
+      // Initialize with existing custom dates or default to current date
+      if (customStartDate && customEndDate) {
+        setDateRangeState([
+          {
+            startDate: customStartDate,
+            endDate: customEndDate,
+            key: "selection",
+          },
+        ]);
+      }
+      setShowDateModal(true);
+    } else {
+      setDateRange(value);
+    }
+  };
+
+  const handleApplyCustomDates = () => {
+    const { startDate, endDate } = dateRangeState[0];
+
+    if (!startDate || !endDate) {
+      alert("Please select both start and end dates");
+      return;
+    }
+
+    setCustomStartDate(startDate);
+    setCustomEndDate(endDate);
+    setDateRange("custom");
+    setShowDateModal(false);
+  };
+
+  const handleCancelCustomDates = () => {
+    setShowDateModal(false);
+    // Reset to previous custom dates or default
+    if (customStartDate && customEndDate) {
+      setDateRangeState([
+        {
+          startDate: customStartDate,
+          endDate: customEndDate,
+          key: "selection",
+        },
+      ]);
+    }
+  };
+
   const handleGenerateReport = async () => {
     setIsGenerating(true);
     try {
-      const range = getDateRange(dateRange);
+      let range;
+      if (dateRange === "custom" && customStartDate && customEndDate) {
+        range = {
+          startDate: customStartDate,
+          endDate: customEndDate,
+        };
+      } else {
+        range = getDateRange(dateRange === "custom" ? "last30days" : dateRange);
+      }
       let data = null;
 
       // Generate report data
@@ -244,12 +331,15 @@ export default function Reports() {
             </label>
             <select
               value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
+              onChange={(e) => handleDateRangeChange(e.target.value)}
               className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
             >
               {dateRangeOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
+                  {option.value === "custom" && customStartDate && customEndDate
+                    ? ` (${customStartDate.toLocaleDateString()} - ${customEndDate.toLocaleDateString()})`
+                    : ""}
                 </option>
               ))}
             </select>
@@ -651,6 +741,103 @@ export default function Reports() {
           </div>
         )}
       </div>
+
+      {/* Custom Date Range Modal */}
+      {showDateModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border-2 border-slate-700 rounded-2xl shadow-2xl max-w-3xl w-full animate-in fade-in zoom-in duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-500/20 rounded-lg">
+                  <Calendar className="w-5 h-5 text-indigo-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white">
+                  Select Custom Date Range
+                </h3>
+              </div>
+              <button
+                onClick={handleCancelCustomDates}
+                className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6 overflow-auto max-h-[70vh]">
+              {/* Date Range Picker */}
+              <div className="flex justify-center date-range-picker-dark overflow-x-auto">
+                <DateRange
+                  ranges={dateRangeState}
+                  onChange={(item) => setDateRangeState([item.selection])}
+                  moveRangeOnFirstSelection={false}
+                  months={isMobile ? 1 : 2}
+                  direction="horizontal"
+                  showDateDisplay={false}
+                  rangeColors={["#6366f1"]}
+                />
+              </div>
+
+              {/* Date Range Info */}
+              {dateRangeState[0].startDate && dateRangeState[0].endDate && (
+                <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="flex-1">
+                      <p className="text-slate-400 mb-1">Selected Range:</p>
+                      <p className="text-white font-semibold">
+                        {dateRangeState[0].startDate.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}{" "}
+                        -{" "}
+                        {dateRangeState[0].endDate.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-slate-400 mb-1">Duration:</p>
+                      <p className="text-indigo-400 font-bold">
+                        {Math.ceil(
+                          (dateRangeState[0].endDate - dateRangeState[0].startDate) /
+                            (1000 * 60 * 60 * 24) + 1
+                        )}{" "}
+                        days
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-700 bg-slate-800/50">
+              <button
+                onClick={handleCancelCustomDates}
+                className="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApplyCustomDates}
+                disabled={!dateRangeState[0].startDate || !dateRangeState[0].endDate}
+                className={`px-5 py-2.5 rounded-xl font-medium transition-all flex items-center gap-2 ${
+                  !dateRangeState[0].startDate || !dateRangeState[0].endDate
+                    ? "bg-slate-700 text-slate-500 cursor-not-allowed"
+                    : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20"
+                }`}
+              >
+                <CheckCircle className="w-4 h-4" />
+                Apply Date Range
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

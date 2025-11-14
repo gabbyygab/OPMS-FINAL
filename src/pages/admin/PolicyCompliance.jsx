@@ -33,28 +33,18 @@ export default function PolicyCompliance() {
     },
     serviceFees: [
       {
-        type: "Guest Booking",
+        type: "Booking Service Fee",
         fee: "5%",
         payer: "Guest",
         when: "Upon booking confirmation",
+        description: "Fixed platform fee charged on all bookings"
       },
       {
-        type: "Host Listing",
-        fee: "₱0",
-        payer: "None",
-        when: "Free unlimited listings",
-      },
-      {
-        type: "Host Withdrawal",
+        type: "E-Wallet Funding",
         fee: "0%",
         payer: "None",
-        when: "No fees",
-      },
-      {
-        type: "Wallet Refund",
-        fee: "0%",
-        payer: "None",
-        when: "No processing fee",
+        when: "No platform fees",
+        description: "PayPal standard rates apply"
       },
     ],
     guestPolicy: {
@@ -71,10 +61,11 @@ export default function PolicyCompliance() {
         "Timeline: 24-48 hours processing",
       ],
       eWalletFeatures: [
-        "Fund using PayPal",
-        "No additional fees for funding (PayPal rates apply)",
+        "Fund using PayPal integration",
+        "No platform fees for funding (PayPal standard rates apply)",
         "Used for all booking payments",
         "Full transaction history available",
+        "Instant balance updates",
       ],
     },
     hostPolicy: {
@@ -85,9 +76,10 @@ export default function PolicyCompliance() {
         "Can edit, deactivate, or delete anytime",
       ],
       commissionStructure: [
-        "5% service fee per confirmed booking",
-        "Fee PAID BY GUEST, not deducted from host",
+        "Fixed 5% service fee per confirmed booking",
+        "Fee PAID BY GUEST, not deducted from host earnings",
         "Example: ₱1,000 booking = Host receives ₱1,000, Guest pays ₱1,050",
+        "Same rate applies to all listing types (stays, experiences, services)",
       ],
       bookingManagement: [
         "Respond to requests within 24 hours",
@@ -102,7 +94,8 @@ export default function PolicyCompliance() {
     },
     paymentTerms: {
       currency: "Philippine Peso (₱)",
-      paymentMethods: "PayPal integration only",
+      paymentMethods: "E-Wallet (funded via PayPal)",
+      serviceFeeStructure: "Fixed 5% on all bookings",
       hostPayouts: "Bank transfer (via PayPal)",
       frequency: "Weekly or monthly (configurable)",
       processing: "3-5 business days",
@@ -291,6 +284,7 @@ export default function PolicyCompliance() {
             ul: [
               `Currency: ${policyContent.paymentTerms.currency}`,
               `Payment Methods: ${policyContent.paymentTerms.paymentMethods}`,
+              `Service Fee: ${policyContent.paymentTerms.serviceFeeStructure}`,
               `Host Payouts: ${policyContent.paymentTerms.hostPayouts}`,
               `Frequency: ${policyContent.paymentTerms.frequency}`,
               `Processing: ${policyContent.paymentTerms.processing}`,
@@ -432,7 +426,7 @@ export default function PolicyCompliance() {
           <h3 className="text-2xl font-bold text-white mb-1">
             {policyContent.serviceFees.length}
           </h3>
-          <p className="text-sm text-slate-400">Fee Structures</p>
+          <p className="text-sm text-slate-400">Payment Methods</p>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
@@ -519,8 +513,8 @@ export default function PolicyCompliance() {
                     <h4 className="font-semibold text-white">Guest Policy</h4>
                   </div>
                   <p className="text-sm text-slate-400">
-                    5% service fee on bookings, full refund rights, secure
-                    e-wallet payments
+                    Fixed 5% service fee on all bookings, full refund rights, secure
+                    e-wallet payments via PayPal
                   </p>
                 </div>
 
@@ -530,8 +524,8 @@ export default function PolicyCompliance() {
                     <h4 className="font-semibold text-white">Host Policy</h4>
                   </div>
                   <p className="text-sm text-slate-400">
-                    Unlimited free listings, no commission deduction, full
-                    control over bookings
+                    Unlimited free listings, fixed 5% guest service fee, no commission
+                    deduction from host earnings
                   </p>
                 </div>
 
@@ -541,8 +535,7 @@ export default function PolicyCompliance() {
                     <h4 className="font-semibold text-white">Payment Terms</h4>
                   </div>
                   <p className="text-sm text-slate-400">
-                    PayPal integration, weekly/monthly payouts, 3-5 day
-                    processing
+                    E-Wallet via PayPal, fixed 5% service fee, weekly/monthly payouts
                   </p>
                 </div>
               </div>
@@ -791,6 +784,12 @@ export default function PolicyCompliance() {
                       </p>
                       <p className="text-sm text-white font-medium">
                         {policyContent.paymentTerms.paymentMethods}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400 mb-1">Service Fee</p>
+                      <p className="text-sm text-white font-medium">
+                        {policyContent.paymentTerms.serviceFeeStructure}
                       </p>
                     </div>
                     <div>

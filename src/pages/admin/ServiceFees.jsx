@@ -26,16 +26,12 @@ import {
 } from "../../utils/platformSettingsUtils";
 
 export default function ServiceFees() {
-  const [isEditing, setIsEditing] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [fees, setFees] = useState({
-    stays: 5,
-    experiences: 5,
-    services: 5,
+    fixed: 5,
   });
   const [originalFees, setOriginalFees] = useState({
-    stays: 5,
-    experiences: 5,
-    services: 5,
+    fixed: 5,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -59,8 +55,10 @@ export default function ServiceFees() {
 
       // Load service fees
       const currentFees = await getServiceFees();
-      setFees(currentFees);
-      setOriginalFees(currentFees);
+      // Use a fixed fee structure - take the first available fee or default to 5%
+      const fixedFee = currentFees.stays || currentFees.experiences || currentFees.services || 5;
+      setFees({ fixed: fixedFee });
+      setOriginalFees({ fixed: fixedFee });
 
       // Load total service fee revenue from transactions (service_fee type only)
       const totalRevenue = await getTotalServiceFeeRevenue();
@@ -116,11 +114,14 @@ export default function ServiceFees() {
     }
   };
 
-  const feeBreakdown = [
+  const totalHosts = monthlyRevenue.stays.hosts + monthlyRevenue.experiences.hosts + monthlyRevenue.services.hosts;
+  const totalMonthlyRevenueCalc = monthlyRevenue.stays.revenue + monthlyRevenue.experiences.revenue + monthlyRevenue.services.revenue;
+  const totalBookingsCalc = monthlyRevenue.stays.bookings + monthlyRevenue.experiences.bookings + monthlyRevenue.services.bookings;
+
+  const categoryBreakdown = [
     {
       type: "Stays",
       icon: Home,
-      currentRate: fees.stays,
       totalHosts: monthlyRevenue.stays.hosts,
       monthlyRevenue: monthlyRevenue.stays.revenue,
       bookings: monthlyRevenue.stays.bookings,
@@ -129,7 +130,6 @@ export default function ServiceFees() {
     {
       type: "Experiences",
       icon: Calendar,
-      currentRate: fees.experiences,
       totalHosts: monthlyRevenue.experiences.hosts,
       monthlyRevenue: monthlyRevenue.experiences.revenue,
       bookings: monthlyRevenue.experiences.bookings,
@@ -138,7 +138,6 @@ export default function ServiceFees() {
     {
       type: "Services",
       icon: Briefcase,
-      currentRate: fees.services,
       totalHosts: monthlyRevenue.services.hosts,
       monthlyRevenue: monthlyRevenue.services.revenue,
       bookings: monthlyRevenue.services.bookings,
@@ -146,27 +145,30 @@ export default function ServiceFees() {
     },
   ];
 
-  const handleEdit = (type) => {
-    setIsEditing(type.toLowerCase());
+  const handleEdit = () => {
+    setIsEditing(true);
   };
 
   const handleSave = async () => {
     try {
       setSaving(true);
-      const type = isEditing;
 
       // Validate fee percentage
-      if (fees[type] < 0 || fees[type] > 100) {
+      if (fees.fixed < 0 || fees.fixed > 100) {
         toast.error("Fee percentage must be between 0 and 100");
         return;
       }
 
-      // Update in Firestore
-      await updateServiceFees({ [type]: fees[type] });
+      // Update all listing types with the same fixed fee
+      await updateServiceFees({ 
+        stays: fees.fixed,
+        experiences: fees.fixed,
+        services: fees.fixed
+      });
 
-      setOriginalFees({ ...originalFees, [type]: fees[type] });
-      setIsEditing(null);
-      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} service fee updated successfully!`);
+      setOriginalFees({ fixed: fees.fixed });
+      setIsEditing(false);
+      toast.success("Service fee updated successfully for all booking types!");
 
       // Reload data to reflect changes
       await loadData();
@@ -180,28 +182,18 @@ export default function ServiceFees() {
 
   const handleCancel = () => {
     // Revert to original fee
-    setFees({ ...fees, [isEditing]: originalFees[isEditing] });
-    setIsEditing(null);
+    setFees({ fixed: originalFees.fixed });
+    setIsEditing(false);
   };
 
-  const handleFeeChange = (type, value) => {
+  const handleFeeChange = (value) => {
     const numValue = parseFloat(value);
     if (!isNaN(numValue)) {
-      setFees({ ...fees, [type]: numValue });
+      setFees({ fixed: numValue });
     } else if (value === "" || value === ".") {
-      setFees({ ...fees, [type]: value });
+      setFees({ fixed: value });
     }
   };
-
-  const totalMonthlyRevenue = feeBreakdown.reduce(
-    (sum, item) => sum + item.monthlyRevenue,
-    0
-  );
-
-  const totalBookings = feeBreakdown.reduce(
-    (sum, item) => sum + item.bookings,
-    0
-  );
 
   if (loading) {
     return (
@@ -222,7 +214,7 @@ export default function ServiceFees() {
           Service Fee Management
         </h1>
         <p className="text-slate-400">
-          Manage service fees charged to hosts across different categories
+          Manage fixed service fee charged to guests on all bookings
         </p>
       </div>
 
@@ -264,7 +256,7 @@ export default function ServiceFees() {
             <div className="mt-3 pt-3 border-t border-indigo-400/20">
               <p className="text-xs text-indigo-200 mb-1">This Month (Service Fees):</p>
               <p className="text-lg font-semibold text-white">
-                ₱{totalMonthlyRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ₱{totalMonthlyRevenueCalc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
           </div>
@@ -276,113 +268,163 @@ export default function ServiceFees() {
         </div>
       </div>
 
-      {/* Fee Configuration Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {feeBreakdown.map((item) => {
-          const Icon = item.icon;
-          const type = item.type.toLowerCase();
-          const editing = isEditing === type;
-
-          return (
-            <div
-              key={item.type}
-              className="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition-all"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div
-                  className={`p-3 rounded-xl bg-${item.color}-500/10 text-${item.color}-400`}
-                >
-                  <Icon className="w-6 h-6" />
-                </div>
-                {!editing ? (
-                  <button
-                    onClick={() => handleEdit(item.type)}
-                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-                    title="Edit fee rate"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="p-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors disabled:opacity-50"
-                      title="Save changes"
-                    >
-                      {saving ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4" />
-                      )}
-                    </button>
-                    <button
-                      onClick={handleCancel}
-                      disabled={saving}
-                      className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
-                      title="Cancel"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <h3 className="text-lg font-semibold text-white mb-4">
-                {item.type}
-              </h3>
-
-              <div className="space-y-4">
-                {/* Fee Rate */}
-                <div className="bg-slate-800/50 rounded-xl p-4">
-                  <p className="text-xs text-slate-400 mb-2">Service Fee Rate</p>
-                  {editing ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        value={fees[type]}
-                        onChange={(e) => handleFeeChange(type, e.target.value)}
-                        className="w-20 px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-xl font-bold focus:outline-none focus:border-indigo-500"
-                        min="0"
-                        max="100"
-                        step="0.5"
-                      />
-                      <Percent className="w-5 h-5 text-slate-400" />
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1">
-                      <span className="text-2xl font-bold text-white">
-                        {item.currentRate}
-                      </span>
-                      <Percent className="w-5 h-5 text-slate-400" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Revenue from this listing type */}
-                <div className="bg-slate-800/50 rounded-xl p-4">
-                  <p className="text-xs text-slate-400 mb-2">Revenue Collected</p>
-                  <div className="text-xl font-bold text-emerald-400">
-                    ₱{item.monthlyRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">This month</p>
-                </div>
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-slate-800/50 rounded-xl p-3">
-                    <p className="text-xs text-slate-400 mb-1">Active Hosts</p>
-                    <p className="text-lg font-bold text-white">{item.totalHosts}</p>
-                  </div>
-                  <div className="bg-slate-800/50 rounded-xl p-3">
-                    <p className="text-xs text-slate-400 mb-1">Bookings</p>
-                    <p className="text-lg font-bold text-white">{item.bookings}</p>
-                  </div>
-                </div>
-              </div>
+      {/* Fixed Fee Configuration Card */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition-all">
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-xl bg-indigo-500/10 text-indigo-400">
+              <DollarSign className="w-8 h-8" />
             </div>
-          );
-        })}
+            <div>
+              <h3 className="text-2xl font-semibold text-white mb-1">
+                Fixed Service Fee
+              </h3>
+              <p className="text-sm text-slate-400">
+                Applied to all booking types (Stays, Experiences, Services)
+              </p>
+            </div>
+          </div>
+          {!isEditing ? (
+            <button
+              onClick={handleEdit}
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              title="Edit fee rate"
+            >
+              <Edit2 className="w-5 h-5" />
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-4 py-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                title="Save changes"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Save
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={saving}
+                className="px-4 py-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                title="Cancel"
+              >
+                <X className="w-5 h-5" />
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Fee Rate */}
+          <div className="bg-slate-800/50 rounded-xl p-5">
+            <p className="text-xs text-slate-400 mb-2">Service Fee Rate</p>
+            {isEditing ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={fees.fixed}
+                  onChange={(e) => handleFeeChange(e.target.value)}
+                  className="w-24 px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-2xl font-bold focus:outline-none focus:border-indigo-500"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                />
+                <Percent className="w-6 h-6 text-slate-400" />
+              </div>
+            ) : (
+              <div className="flex items-center gap-1">
+                <span className="text-3xl font-bold text-white">
+                  {fees.fixed}
+                </span>
+                <Percent className="w-6 h-6 text-slate-400" />
+              </div>
+            )}
+            <p className="text-xs text-slate-500 mt-2">Charged to guests</p>
+          </div>
+
+          {/* Total Revenue */}
+          <div className="bg-slate-800/50 rounded-xl p-5">
+            <p className="text-xs text-slate-400 mb-2">Monthly Revenue</p>
+            <div className="text-2xl font-bold text-emerald-400">
+              ₱{totalMonthlyRevenueCalc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <p className="text-xs text-slate-500 mt-2">This month</p>
+          </div>
+
+          {/* Total Hosts */}
+          <div className="bg-slate-800/50 rounded-xl p-5">
+            <p className="text-xs text-slate-400 mb-2">Total Active Hosts</p>
+            <div className="text-2xl font-bold text-white">{totalHosts}</div>
+            <p className="text-xs text-slate-500 mt-2">Across all categories</p>
+          </div>
+
+          {/* Total Bookings */}
+          <div className="bg-slate-800/50 rounded-xl p-5">
+            <p className="text-xs text-slate-400 mb-2">Total Bookings</p>
+            <div className="text-2xl font-bold text-white">{totalBookingsCalc}</div>
+            <p className="text-xs text-slate-500 mt-2">This month</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Category Revenue Breakdown */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+          <PieChart className="w-5 h-5 text-indigo-400" />
+          Revenue by Category
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {categoryBreakdown.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={item.type}
+                className="bg-slate-800/50 border border-slate-700 rounded-xl p-5 hover:border-slate-600 transition-colors"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div
+                    className={`p-3 rounded-xl bg-${item.color}-500/10 text-${item.color}-400`}
+                  >
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">
+                    {item.type}
+                  </h3>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-slate-400 mb-1">Revenue</p>
+                    <div className="text-xl font-bold text-emerald-400">
+                      ₱{item.monthlyRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-slate-400 mb-1">Hosts</p>
+                      <p className="text-lg font-bold text-white">{item.totalHosts}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400 mb-1">Bookings</p>
+                      <p className="text-lg font-bold text-white">{item.bookings}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Info Banner */}
@@ -390,12 +432,13 @@ export default function ServiceFees() {
         <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-sm text-blue-300 font-medium mb-1">
-            Fee Structure Information
+            Fixed Fee Structure Information
           </p>
           <p className="text-xs text-blue-200/80">
-            Service fees are paid by guests on top of the booking amount when a booking is confirmed.
-            The fee is calculated as a percentage of the booking amount and collected by the platform.
-            Hosts receive 100% of their listing price. Changes to fee rates will apply to new bookings only and will not affect existing or pending transactions.
+            A fixed service fee is applied to all bookings (Stays, Experiences, and Services). 
+            The fee is paid by guests on top of the booking amount when a booking is confirmed.
+            Hosts receive 100% of their listing price. Changes to the fee rate will apply to new bookings only 
+            and will not affect existing or pending transactions. Guests fund their e-wallets via PayPal.
           </p>
         </div>
       </div>
