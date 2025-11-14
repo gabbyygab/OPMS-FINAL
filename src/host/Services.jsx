@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import {
   Briefcase,
   Plus,
@@ -32,6 +33,8 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
+  Mail,
+  User,
 } from "lucide-react";
 import {
   MapContainer,
@@ -53,6 +56,7 @@ import {
   addDoc,
   serverTimestamp,
   getDocs,
+  getDoc,
   doc,
   query,
   where,
@@ -60,6 +64,10 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../firebase/firebase";
+import {
+  canCreateListing,
+  calculateUpgradeCost,
+} from "../utils/rewardsUtils";
 
 // Fix Leaflet default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -177,6 +185,13 @@ export default function HostMyServices() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
+  const [showWishlistModal, setShowWishlistModal] = useState(false);
+  const [wishlists, setWishlists] = useState([]);
+  const [isLoadingWishlists, setIsLoadingWishlists] = useState(false);
+  const [wishlistSearchTerm, setWishlistSearchTerm] = useState("");
+  const [wishlistPriorityFilter, setWishlistPriorityFilter] = useState("all");
+  const [wishlistCurrentPage, setWishlistCurrentPage] = useState(1);
+  const wishlistItemsPerPage = 10;
 
   const [formData, setFormData] = useState({
     title: "",
@@ -222,6 +237,65 @@ export default function HostMyServices() {
   const [marker, setMarker] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Fetch ALL wishlists from all guests
+  const fetchWishlists = async () => {
+    try {
+      setIsLoadingWishlists(true);
+      
+      const wishlistsRef = collection(db, "wishlists");
+      const querySnapshot = await getDocs(wishlistsRef);
+      
+      const wishlistData = [];
+      
+      for (const wishlistDoc of querySnapshot.docs) {
+        const wishlist = wishlistDoc.data();
+        
+        // Fetch user profile photo if available
+        let guestPhoto = "";
+        try {
+          const userRef = doc(db, "users", wishlist.userId);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            guestPhoto = userSnap.data().photoURL || "";
+          }
+        } catch (err) {
+          console.log("Could not fetch user photo:", err);
+        }
+        
+        wishlistData.push({
+          id: wishlistDoc.id,
+          guestName: wishlist.userName || "Unknown Guest",
+          guestEmail: wishlist.userEmail || "",
+          guestPhoto: guestPhoto,
+          description: wishlist.description || "",
+          item: wishlist.item || "",
+          priority: wishlist.priority || "medium",
+          addedAt: wishlist.createdAt,
+          userId: wishlist.userId || "",
+        });
+      }
+      
+      // Sort by priority (high first) then by date (newest first)
+      const sortedWishlists = wishlistData.sort((a, b) => {
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        const priorityDiff = (priorityOrder[b.priority] || 2) - (priorityOrder[a.priority] || 2);
+        
+        if (priorityDiff !== 0) return priorityDiff;
+        
+        const dateA = a.addedAt?.toDate?.() || new Date(0);
+        const dateB = b.addedAt?.toDate?.() || new Date(0);
+        return dateB - dateA;
+      });
+      
+      setWishlists(sortedWishlists);
+    } catch (error) {
+      console.error("Error fetching wishlists:", error);
+      toast.error("Failed to load wishlists");
+    } finally {
+      setIsLoadingWishlists(false);
+    }
+  };
 
   // Track mouse position for interactive gradient background
   useEffect(() => {
@@ -568,6 +642,25 @@ export default function HostMyServices() {
             `Please complete the following required fields:\n${missingFields.join(", ")}`,
             { autoClose: 8000 }
           );
+          return;
+        }
+      }
+
+      // Check listing limit for active (non-draft) listings
+      if (!isDraft) {
+        try {
+          const listingCheck = await canCreateListing(userData.id, "services", "host");
+          if (!listingCheck.canCreate) {
+            const upgradeCost = calculateUpgradeCost();
+            toast.error(
+              `You've reached your listing limit of ${listingCheck.limit} services. Upgrade to add more! Cost: ₱${upgradeCost.baseCost}`,
+              { autoClose: 5000 }
+            );
+            return;
+          }
+        } catch (error) {
+          console.error("Error checking listing limit:", error);
+          toast.warning("Could not verify listing limit. Please try again.");
           return;
         }
       }
@@ -1024,7 +1117,12 @@ export default function HostMyServices() {
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-32 lg:pt-40">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4 animate-fadeIn">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4"
+        >
           <div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
               My Services
@@ -1033,23 +1131,42 @@ export default function HostMyServices() {
               Manage your professional services
             </p>
           </div>
-          <button
-            onClick={() =>
-              handleActionWithVerification(() => setShowAddModal(true))
-            }
-            className="w-full md:w-auto mt-4 md:mt-0 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-6 py-3 rounded-xl hover:from-indigo-700 hover:to-indigo-600 transition-all duration-500 transform hover:scale-105 flex items-center justify-center gap-2 font-bold shadow-lg shadow-indigo-500/30 border border-indigo-400/30"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">Add New Service</span>
-            <span className="sm:hidden">Add Service</span>
-          </button>
-        </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                setShowWishlistModal(true);
+                fetchWishlists();
+              }}
+              className="relative w-full md:w-auto bg-slate-800/50 border border-indigo-500/30 text-indigo-300 px-6 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 flex items-center justify-center gap-2 font-bold shadow-lg"
+            >
+              <Heart className="w-5 h-5" />
+              <span className="hidden sm:inline">Suggestions</span>
+              {wishlists.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {wishlists.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() =>
+                handleActionWithVerification(() => setShowAddModal(true))
+              }
+              className="w-full md:w-auto mt-0 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-6 py-3 rounded-xl hover:from-indigo-700 hover:to-indigo-600 transition-all duration-500 transform hover:scale-105 flex items-center justify-center gap-2 font-bold shadow-lg shadow-indigo-500/30 border border-indigo-400/30"
+            >
+              <Plus className="w-5 h-5" />
+              <span className="hidden sm:inline">Add New Service</span>
+              <span className="sm:hidden">Add Service</span>
+            </button>
+          </div>
+        </motion.div>
 
         {/* Stats Cards - Enhanced with Glassmorphism and Animations */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-          <div
-            className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 p-5 sm:p-6 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 animate-fadeIn"
-            style={{ animationDelay: '0s' }}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 p-5 sm:p-6 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300"
           >
             <div className="flex items-center justify-between">
               <div>
@@ -1062,11 +1179,13 @@ export default function HostMyServices() {
                 <Briefcase className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-400" />
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div
-            className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 p-5 sm:p-6 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 animate-fadeIn"
-            style={{ animationDelay: '0.1s' }}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 p-5 sm:p-6 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300"
           >
             <div className="flex items-center justify-between">
               <div>
@@ -1079,11 +1198,13 @@ export default function HostMyServices() {
                 <Eye className="w-6 h-6 sm:w-7 sm:h-7 text-green-400" />
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div
-            className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 p-5 sm:p-6 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 animate-fadeIn"
-            style={{ animationDelay: '0.2s' }}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 p-5 sm:p-6 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300"
           >
             <div className="flex items-center justify-between">
               <div>
@@ -1099,11 +1220,13 @@ export default function HostMyServices() {
                 <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-orange-400" />
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div
-            className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 p-5 sm:p-6 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 animate-fadeIn"
-            style={{ animationDelay: '0.3s' }}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-700 p-5 sm:p-6 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300"
           >
             <div className="flex items-center justify-between">
               <div>
@@ -1119,11 +1242,16 @@ export default function HostMyServices() {
                 <DollarSign className="w-6 h-6 sm:w-7 sm:h-7 text-pink-400" />
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* Search and Filter - Enhanced with Glassmorphism */}
-        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl rounded-2xl shadow-xl shadow-indigo-500/10 p-4 sm:p-6 border border-indigo-500/30 mb-6 animate-fadeIn" style={{ animationDelay: '0.4s' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+          className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl rounded-2xl shadow-xl shadow-indigo-500/10 p-4 sm:p-6 border border-indigo-500/30 mb-6"
+        >
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-indigo-300/50" />
@@ -1160,7 +1288,7 @@ export default function HostMyServices() {
               </select>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Services Grid */}
         {isLoading ? (
@@ -1203,9 +1331,12 @@ export default function HostMyServices() {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {paginatedServices.map((service) => (
-                <div
+              {paginatedServices.map((service, index) => (
+                <motion.div
                   key={service.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.1 }}
                   className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-lg shadow-lg shadow-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm overflow-hidden hover:shadow-indigo-500/20 transition"
                 >
                   {/* Image */}
@@ -1344,7 +1475,7 @@ export default function HostMyServices() {
                       </button>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
 
@@ -1997,7 +2128,7 @@ export default function HostMyServices() {
             </div>
 
             {/* Footer - Mobile Responsive */}
-            <div className="sticky bottom-0 z-[999] bg-gradient-to-r from-slate-800/95 to-slate-900/95 backdrop-blur-xl border-t border-indigo-500/30 p-3 sm:p-4 md:p-6 flex flex-col sm:flex-row gap-2 sm:gap-3 animate-slideUp">
+            <div className="sticky bottom-0 z-[999] bg-gradient-to-r from-slate-800/95 to-slate-900/95 backdrop-blur-xl border-t border-indigo-500/30 p-3 sm:p-4 md:p-6 flex flex-col sm:flex-row gap-2 sm:gap-3 ">
               <button
                 onClick={() => {
                   setShowAddModal(false);
@@ -2636,7 +2767,7 @@ export default function HostMyServices() {
             </div>
 
             {/* Footer - Mobile Responsive */}
-            <div className="sticky bottom-0 z-[999] bg-gradient-to-r from-slate-800/95 to-slate-900/95 backdrop-blur-xl border-t border-indigo-500/30 p-3 sm:p-4 md:p-6 flex flex-col sm:flex-row gap-2 sm:gap-3 animate-slideUp">
+            <div className="sticky bottom-0 z-[999] bg-gradient-to-r from-slate-800/95 to-slate-900/95 backdrop-blur-xl border-t border-indigo-500/30 p-3 sm:p-4 md:p-6 flex flex-col sm:flex-row gap-2 sm:gap-3 ">
               <button
                 onClick={() => {
                   setShowEditModal(false);
@@ -2883,7 +3014,7 @@ export default function HostMyServices() {
               </span>
               ? This action cannot be undone.
             </p>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center animate-slideUp">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center ">
               <button
                 onClick={() => setShowDeleteModal(false)}
                 className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border border-indigo-500/30 text-indigo-300 rounded-xl hover:bg-slate-700/50 hover:border-indigo-500/50 transition-all duration-300 font-bold text-sm sm:text-base transform hover:scale-105"
@@ -2895,6 +3026,240 @@ export default function HostMyServices() {
                 className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-rose-600 to-rose-500 text-white rounded-xl hover:from-rose-700 hover:to-rose-600 transition-all duration-300 font-bold shadow-lg shadow-rose-500/30 border border-rose-400/30 text-sm sm:text-base transform hover:scale-105"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wishlist Modal */}
+      {showWishlistModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800/90 backdrop-blur-lg rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-indigo-500/30 shadow-2xl">
+            {/* Header */}
+            <div className="sticky top-0 bg-slate-800/90 backdrop-blur-lg border-b border-indigo-500/30 p-6 flex items-center justify-between z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-rose-500/20 rounded-full flex items-center justify-center border border-rose-500/50">
+                  <Heart className="w-5 h-5 text-rose-400" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-indigo-100">Guest Suggestions</h2>
+                  <p className="text-indigo-300/60 text-sm">What guests are looking for</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowWishlistModal(false)}
+                className="text-indigo-300/50 hover:text-indigo-300 transition"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6">
+              {/* Filters */}
+              <div className="mb-6 space-y-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                  {/* Search Bar */}
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-indigo-300/60" />
+                      <input
+                        type="text"
+                        placeholder="Search by guest name, email, or item..."
+                        value={wishlistSearchTerm}
+                        onChange={(e) => {
+                          setWishlistSearchTerm(e.target.value);
+                          setWishlistCurrentPage(1);
+                        }}
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-900/50 border border-indigo-500/30 rounded-lg text-white placeholder-indigo-300/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Priority Filter */}
+                  <div className="md:w-48">
+                    <select
+                      value={wishlistPriorityFilter}
+                      onChange={(e) => {
+                        setWishlistPriorityFilter(e.target.value);
+                        setWishlistCurrentPage(1);
+                      }}
+                      className="w-full px-4 py-2.5 bg-slate-900/50 border border-indigo-500/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      <option value="all">All Priorities</option>
+                      <option value="high">High Priority</option>
+                      <option value="medium">Medium Priority</option>
+                      <option value="low">Low Priority</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {isLoadingWishlists ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
+                  <p className="text-indigo-300/60">Loading suggestions...</p>
+                </div>
+              ) : (() => {
+                // Filter wishlists
+                const filteredWishlists = wishlists.filter((wishlist) => {
+                  const matchesSearch = 
+                    wishlist.guestName.toLowerCase().includes(wishlistSearchTerm.toLowerCase()) ||
+                    wishlist.guestEmail.toLowerCase().includes(wishlistSearchTerm.toLowerCase()) ||
+                    wishlist.item.toLowerCase().includes(wishlistSearchTerm.toLowerCase());
+                  
+                  const matchesPriority = 
+                    wishlistPriorityFilter === "all" || wishlist.priority === wishlistPriorityFilter;
+                  
+                  return matchesSearch && matchesPriority;
+                });
+
+                // Paginate
+                const totalPages = Math.ceil(filteredWishlists.length / wishlistItemsPerPage);
+                const startIndex = (wishlistCurrentPage - 1) * wishlistItemsPerPage;
+                const paginatedWishlists = filteredWishlists.slice(startIndex, startIndex + wishlistItemsPerPage);
+
+                return filteredWishlists.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Heart className="w-16 h-16 text-indigo-300/50 mb-4" />
+                    <h3 className="text-xl font-semibold text-indigo-100 mb-2">
+                      {wishlistSearchTerm || wishlistPriorityFilter !== "all" ? "No Matching Suggestions" : "No Suggestions Yet"}
+                    </h3>
+                    <p className="text-indigo-300/60 text-center">
+                      {wishlistSearchTerm || wishlistPriorityFilter !== "all" 
+                        ? "Try adjusting your filters" 
+                        : "No guest suggestions available yet."}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-4 text-sm text-indigo-300/60">
+                      Showing {startIndex + 1}-{Math.min(startIndex + wishlistItemsPerPage, filteredWishlists.length)} of {filteredWishlists.length} {filteredWishlists.length === 1 ? "suggestion" : "suggestions"}
+                    </div>
+                    
+                    <div className="space-y-4 mb-6">
+                      {paginatedWishlists.map((wishlist) => (
+                        <div
+                          key={wishlist.id}
+                          className="bg-slate-900/50 border border-indigo-500/20 rounded-xl p-4 hover:border-indigo-500/40 transition-all duration-300"
+                        >
+                          <div className="flex items-start gap-4">
+                            {/* Guest Photo */}
+                            <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 border-2 border-indigo-500/30">
+                              {wishlist.guestPhoto ? (
+                                <img
+                                  src={wishlist.guestPhoto}
+                                  alt={wishlist.guestName}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-indigo-500/20 flex items-center justify-center">
+                                  <User className="w-8 h-8 text-indigo-300/50" />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <div>
+                                  <h3 className="text-lg font-bold text-indigo-100">
+                                    {wishlist.guestName}
+                                  </h3>
+                                  {wishlist.guestEmail && (
+                                    <p className="text-sm text-indigo-300/60 flex items-center gap-1">
+                                      <Mail className="w-3 h-3" />
+                                      {wishlist.guestEmail}
+                                    </p>
+                                  )}
+                                </div>
+                                {wishlist.priority && (
+                                  <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                                    wishlist.priority === 'high' ? 'bg-red-500/20 text-red-300 border border-red-500/50' :
+                                    wishlist.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/50' :
+                                    'bg-green-500/20 text-green-300 border border-green-500/50'
+                                  }`}>
+                                    {wishlist.priority.toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <div className="bg-slate-800/50 rounded-lg p-3 mb-2 border border-indigo-500/20">
+                                <p className="text-sm font-semibold text-indigo-300 mb-1">Looking for:</p>
+                                <p className="text-white">{wishlist.item}</p>
+                              </div>
+
+                              {wishlist.description && (
+                                <div className="bg-slate-800/50 rounded-lg p-3 mb-2 border border-indigo-500/20">
+                                  <p className="text-sm font-semibold text-indigo-300 mb-1">Details:</p>
+                                  <p className="text-sm text-indigo-200">{wishlist.description}</p>
+                                </div>
+                              )}
+                              
+                              {wishlist.addedAt && (
+                                <p className="text-xs text-indigo-300/40">
+                                  Added on {wishlist.addedAt.toDate?.().toLocaleDateString("en-US", {
+                                    year: "numeric",
+                                    month: "long",
+                                    day: "numeric"
+                                  }) || "Unknown date"}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => setWishlistCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={wishlistCurrentPage === 1}
+                          className="px-4 py-2 bg-indigo-500/20 text-indigo-300 rounded-lg hover:bg-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-indigo-500/30"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        
+                        <div className="flex items-center gap-2">
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <button
+                              key={page}
+                              onClick={() => setWishlistCurrentPage(page)}
+                              className={`w-10 h-10 rounded-lg font-semibold transition-all ${
+                                wishlistCurrentPage === page
+                                  ? "bg-indigo-600 text-white border border-indigo-500"
+                                  : "bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/30"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          ))}
+                        </div>
+                        
+                        <button
+                          onClick={() => setWishlistCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={wishlistCurrentPage === totalPages}
+                          className="px-4 py-2 bg-indigo-500/20 text-indigo-300 rounded-lg hover:bg-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-indigo-500/30"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Footer */}
+            <div className="sticky bottom-0 bg-slate-800/90 backdrop-blur-lg border-t border-indigo-500/30 p-4 flex justify-end">
+              <button
+                onClick={() => setShowWishlistModal(false)}
+                className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-xl hover:from-indigo-700 hover:to-indigo-600 transition-all duration-300 font-bold shadow-lg shadow-indigo-500/30"
+              >
+                Close
               </button>
             </div>
           </div>

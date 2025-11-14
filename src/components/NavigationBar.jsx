@@ -596,7 +596,7 @@ const HostUserActions = ({
                       className="block p-3 mb-2 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors border border-slate-600"
                     >
                       <div className="flex flex-col gap-1">
-                        <p className="text-xs font-semibold text-yellow-400">
+                        <p className="text-xs font-semibold text-violet-400">
                           {notification.title}
                         </p>
                         <p className="text-xs text-slate-300 line-clamp-2">
@@ -614,14 +614,23 @@ const HostUserActions = ({
               </div>
               <Link
                 to={ROUTES.HOST.NOTIFICATIONS}
-                className="block p-3 text-center border-t border-slate-700 text-yellow-400 hover:text-yellow-300 text-xs font-medium hover:bg-slate-700/30 transition-colors"
+                className="block p-3 text-center border-t border-slate-700 text-violet-400 hover:text-violet-300 text-xs font-medium hover:bg-slate-700/30 transition-colors"
                 onClick={() => setNotificationDropdownOpen(false)}
               >
                 View all notifications →
               </Link>
             </>
           ) : (
-            <p className="p-3 text-sm text-slate-400">No new notifications</p>
+            <>
+              <p className="p-3 text-sm text-slate-400">No new notifications</p>
+              <Link
+                to={ROUTES.HOST.NOTIFICATIONS}
+                className="block p-3 text-center border-t border-slate-700 text-violet-400 hover:text-violet-300 text-xs font-medium hover:bg-slate-700/30 transition-colors"
+                onClick={() => setNotificationDropdownOpen(false)}
+              >
+                View all notifications →
+              </Link>
+            </>
           )}
         </div>
       )}

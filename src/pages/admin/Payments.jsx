@@ -15,8 +15,19 @@ import {
   File,
   Calendar,
   Filter,
+  CreditCard,
+  Wallet,
 } from "lucide-react";
 import ReceiptModal from "../../e-wallet/ReceiptModal";
+import pdfMake from "pdfmake/build/pdfmake";
+import * as pdfFonts from "pdfmake/build/vfs_fonts";
+
+// Initialize pdfMake with fonts (handle new pdfmake v0.2.x structure)
+if (pdfFonts.pdfMake && pdfFonts.pdfMake.vfs) {
+  pdfMake.vfs = pdfFonts.pdfMake.vfs;
+} else if (typeof pdfFonts === 'object' && Object.keys(pdfFonts).some(key => key.endsWith('.ttf'))) {
+  pdfMake.vfs = pdfFonts;
+}
 
 export default function Payments() {
   const [transactions, setTransactions] = useState([]);
@@ -149,52 +160,287 @@ export default function Payments() {
     return type;
   };
 
-  const exportToCSV = () => {
-    // Prepare CSV data
-    const headers = [
-      "Date",
-      "Time",
-      "Type",
-      "Amount",
-      "User ID",
-      "Booking ID",
-      "Listing Type",
-      "Description",
+  const exportToPDF = () => {
+    // Prepare table data
+    const tableBody = [
+      [
+        { text: "Date", style: "tableHeader", fillColor: "#334155" },
+        { text: "Time", style: "tableHeader", fillColor: "#334155" },
+        { text: "Type", style: "tableHeader", fillColor: "#334155" },
+        { text: "Amount (₱)", style: "tableHeader", fillColor: "#334155" },
+        { text: "Listing Type", style: "tableHeader", fillColor: "#334155" },
+        { text: "Description", style: "tableHeader", fillColor: "#334155" },
+      ],
     ];
 
-    const rows = filteredTransactions.map((transaction) => {
+    filteredTransactions.forEach((transaction) => {
       const date = transaction.created_at?.toDate
         ? new Date(transaction.created_at.toDate()).toLocaleDateString("en-PH")
-        : "";
+        : "—";
       const time = transaction.created_at?.toDate
-        ? new Date(transaction.created_at.toDate()).toLocaleTimeString("en-PH")
-        : "";
+        ? new Date(transaction.created_at.toDate()).toLocaleTimeString("en-PH", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "—";
       const type = getTransactionLabel(transaction.type);
       const amount = Math.abs(transaction.amount || 0).toFixed(2);
-      const userId = transaction.user_id || "";
-      const bookingId = transaction.bookingId || "";
-      const listingType = transaction.listingType || "";
-      const description = transaction.description || "";
+      const listingType = transaction.listingType || "—";
+      const description = transaction.description || "—";
 
-      return [date, time, type, amount, userId, bookingId, listingType, description];
+      tableBody.push([
+        { text: date, fontSize: 9 },
+        { text: time, fontSize: 9 },
+        { text: type, fontSize: 9 },
+        { text: amount, fontSize: 9, alignment: "right" },
+        { text: listingType, fontSize: 9 },
+        { text: description, fontSize: 8 },
+      ]);
     });
 
-    // Convert to CSV
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
-    ].join("\n");
+    // PDF Document Definition
+    const docDefinition = {
+      pageSize: "A4",
+      pageOrientation: "landscape",
+      pageMargins: [40, 80, 40, 60],
+      header: function (currentPage, pageCount) {
+        return {
+          columns: [
+            {
+              text: "BookingNest Payment Transactions Report",
+              style: "header",
+              margin: [40, 30, 0, 0],
+            },
+          ],
+        };
+      },
+      footer: function (currentPage, pageCount) {
+        return {
+          columns: [
+            {
+              text: `Generated on ${new Date().toLocaleDateString("en-PH", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })} at ${new Date().toLocaleTimeString("en-PH")}`,
+              alignment: "left",
+              fontSize: 8,
+              color: "#64748b",
+              margin: [40, 0, 0, 0],
+            },
+            {
+              text: `Page ${currentPage} of ${pageCount}`,
+              alignment: "right",
+              fontSize: 8,
+              color: "#64748b",
+              margin: [0, 0, 40, 0],
+            },
+          ],
+          margin: [0, 10, 0, 0],
+        };
+      },
+      content: [
+        {
+          text: "Payment Summary",
+          style: "subheader",
+          margin: [0, 0, 0, 15],
+        },
+        {
+          columns: [
+            {
+              width: "*",
+              stack: [
+                {
+                  text: "Total Revenue",
+                  style: "label",
+                },
+                {
+                  text: `₱${stats.totalRevenue.toFixed(2)}`,
+                  style: "value",
+                  color: "#10b981",
+                },
+              ],
+            },
+            {
+              width: "*",
+              stack: [
+                {
+                  text: "Service Fees",
+                  style: "label",
+                },
+                {
+                  text: `₱${stats.serviceFeeRevenue.toFixed(2)}`,
+                  style: "value",
+                },
+              ],
+            },
+            {
+              width: "*",
+              stack: [
+                {
+                  text: "Listing Upgrades",
+                  style: "label",
+                },
+                {
+                  text: `₱${stats.listingUpgradeRevenue.toFixed(2)}`,
+                  style: "value",
+                },
+              ],
+            },
+            {
+              width: "*",
+              stack: [
+                {
+                  text: "Host Registration",
+                  style: "label",
+                },
+                {
+                  text: `₱${stats.newHostFeesRevenue.toFixed(2)}`,
+                  style: "value",
+                },
+              ],
+            },
+            {
+              width: "*",
+              stack: [
+                {
+                  text: "Total Transactions",
+                  style: "label",
+                },
+                {
+                  text: `${stats.totalTransactions}`,
+                  style: "value",
+                },
+              ],
+            },
+          ],
+          margin: [0, 0, 0, 20],
+        },
+        {
+          canvas: [
+            {
+              type: "line",
+              x1: 0,
+              y1: 0,
+              x2: 755,
+              y2: 0,
+              lineWidth: 1,
+              lineColor: "#e2e8f0",
+            },
+          ],
+          margin: [0, 0, 0, 15],
+        },
+        {
+          text: "Payment Methods Accepted",
+          style: "subheader",
+          margin: [0, 0, 0, 10],
+        },
+        {
+          columns: [
+            {
+              width: "*",
+              text: "• PayPal",
+              fontSize: 10,
+              color: "#475569",
+            },
+            {
+              width: "*",
+              text: "• E-Wallet",
+              fontSize: 10,
+              color: "#475569",
+            },
+          ],
+          margin: [0, 0, 0, 20],
+        },
+        {
+          canvas: [
+            {
+              type: "line",
+              x1: 0,
+              y1: 0,
+              x2: 755,
+              y2: 0,
+              lineWidth: 1,
+              lineColor: "#e2e8f0",
+            },
+          ],
+          margin: [0, 0, 0, 15],
+        },
+        {
+          text: "Transaction Details",
+          style: "subheader",
+          margin: [0, 0, 0, 10],
+        },
+        {
+          table: {
+            headerRows: 1,
+            widths: ["auto", "auto", "*", "auto", "auto", "*"],
+            body: tableBody,
+          },
+          layout: {
+            fillColor: function (rowIndex) {
+              return rowIndex === 0 ? "#334155" : rowIndex % 2 === 0 ? "#f8fafc" : null;
+            },
+            hLineWidth: function (i, node) {
+              return i === 0 || i === 1 || i === node.table.body.length ? 1 : 0.5;
+            },
+            vLineWidth: function () {
+              return 0;
+            },
+            hLineColor: function () {
+              return "#e2e8f0";
+            },
+            paddingLeft: function () {
+              return 8;
+            },
+            paddingRight: function () {
+              return 8;
+            },
+            paddingTop: function () {
+              return 6;
+            },
+            paddingBottom: function () {
+              return 6;
+            },
+          },
+        },
+      ],
+      styles: {
+        header: {
+          fontSize: 18,
+          bold: true,
+          color: "#0f172a",
+        },
+        subheader: {
+          fontSize: 14,
+          bold: true,
+          color: "#1e293b",
+        },
+        label: {
+          fontSize: 9,
+          color: "#64748b",
+          margin: [0, 0, 0, 5],
+        },
+        value: {
+          fontSize: 14,
+          bold: true,
+          color: "#0f172a",
+        },
+        tableHeader: {
+          bold: true,
+          fontSize: 10,
+          color: "#ffffff",
+        },
+      },
+      defaultStyle: {
+        font: "Roboto",
+      },
+    };
 
-    // Download
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `payment-transactions-${new Date().toISOString().split("T")[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    // Generate and download PDF
+    pdfMake.createPdf(docDefinition).download(
+      `payment-transactions-report-${new Date().toISOString().split("T")[0]}.pdf`
+    );
   };
 
   return (
@@ -210,11 +456,11 @@ export default function Payments() {
           </p>
         </div>
         <button
-          onClick={exportToCSV}
+          onClick={exportToPDF}
           className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors"
         >
           <Download className="w-5 h-5" />
-          Export CSV
+          Export PDF Report
         </button>
       </div>
 
@@ -282,6 +528,36 @@ export default function Payments() {
           <p className="text-3xl font-bold text-white">
             {stats.totalTransactions}
           </p>
+        </div>
+      </div>
+
+      {/* Payment Methods Section */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <CreditCard className="w-6 h-6 text-indigo-400" />
+          <h2 className="text-xl font-bold text-white">
+            Accepted Payment Methods
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+            <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+              <CreditCard className="w-6 h-6 text-blue-400" />
+            </div>
+            <div>
+              <p className="text-white font-semibold">PayPal</p>
+              <p className="text-slate-400 text-sm">Secure online payment processing</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+            <div className="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center">
+              <Wallet className="w-6 h-6 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-white font-semibold">E-Wallet</p>
+              <p className="text-slate-400 text-sm">BookingNest digital wallet balance</p>
+            </div>
+          </div>
         </div>
       </div>
 

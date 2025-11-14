@@ -37,6 +37,10 @@ import { uploadToCloudinary } from "../../cloudinary/uploadFunction";
 import { DateRange } from "react-date-range";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
+import {
+  canCreateListing,
+  calculateUpgradeCost,
+} from "../../utils/rewardsUtils";
 
 export default function DraftsPage() {
   const [drafts, setDrafts] = useState([]);
@@ -155,6 +159,27 @@ export default function DraftsPage() {
   // Handle Publish Draft
   const handlePublishDraft = async () => {
     if (!selectedDraft) return;
+
+    // Check listing limit before publishing
+    try {
+      const listingCheck = await canCreateListing(
+        userData.id,
+        selectedDraft.type,
+        "host"
+      );
+      if (!listingCheck.canCreate) {
+        const upgradeCost = calculateUpgradeCost();
+        toast.error(
+          `You've reached your listing limit of ${listingCheck.limit} ${selectedDraft.type}. Upgrade to add more! Cost: ₱${upgradeCost.baseCost}`,
+          { autoClose: 5000 }
+        );
+        return;
+      }
+    } catch (error) {
+      console.error("Error checking listing limit:", error);
+      toast.warning("Could not verify listing limit. Please try again.");
+      return;
+    }
 
     const loadingToast = toast.loading("Publishing draft...");
     try {
@@ -579,6 +604,29 @@ export default function DraftsPage() {
   // Handle Save Edited Draft
   const handleSaveEditedDraft = async (publish = false) => {
     if (!selectedDraft) return;
+
+    // Check listing limit before publishing
+    if (publish) {
+      try {
+        const listingCheck = await canCreateListing(
+          userData.id,
+          selectedDraft.type,
+          "host"
+        );
+        if (!listingCheck.canCreate) {
+          const upgradeCost = calculateUpgradeCost();
+          toast.error(
+            `You've reached your listing limit of ${listingCheck.limit} ${selectedDraft.type}. Upgrade to add more! Cost: ₱${upgradeCost.baseCost}`,
+            { autoClose: 5000 }
+          );
+          return;
+        }
+      } catch (error) {
+        console.error("Error checking listing limit:", error);
+        toast.warning("Could not verify listing limit. Please try again.");
+        return;
+      }
+    }
 
     const loadingToast = toast.loading(
       publish ? "Publishing draft..." : "Saving draft..."

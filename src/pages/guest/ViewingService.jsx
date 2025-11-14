@@ -43,6 +43,9 @@ import { sendOtpToUser } from "../../utils/sendOtpToUser";
 import { toast } from "react-toastify";
 import ServiceLocationMap from "../../components/ServiceLocationMap";
 import { motion } from "framer-motion";
+import { DateRange } from "react-date-range";
+import "react-date-range/dist/styles.css";
+import "react-date-range/dist/theme/default.css";
 
 const reviews = [
   {
@@ -78,7 +81,16 @@ export default function ServiceDetailPage() {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dateRange, setDateRange] = useState([
+    {
+      startDate: new Date(),
+      endDate: new Date(new Date().getTime() + 24 * 60 * 60 * 1000),
+      key: "selection",
+    },
+  ]);
   const [serviceType, setServiceType] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
   const [promoCode, setPromoCode] = useState("");
@@ -138,14 +150,55 @@ export default function ServiceDetailPage() {
     action();
   };
 
+  // Date picker helpers
+  const formatDateForDisplay = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const handleDateRangeChange = (ranges) => {
+    setDateRange([ranges.selection]);
+  };
+
+  const handleApplyDates = () => {
+    const start = dateRange[0].startDate;
+    const end = dateRange[0].endDate;
+
+    if (start >= end) {
+      toast.error("End date must be after start date.");
+      return;
+    }
+
+    // Helper to format date as YYYY-MM-DD in local timezone
+    const toYMD = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    setStartDate(toYMD(start));
+    setEndDate(toYMD(end));
+    setShowDatePicker(false);
+  };
+
   const handleConfirmBooking = async () => {
     if (!user) {
       toast.error("Please log in to book");
       return;
     }
 
-    if (!selectedDate) {
-      toast.error("Please select a date");
+    if (!startDate || !endDate) {
+      toast.error("Please select both start and end dates");
+      return;
+    }
+
+    if (new Date(endDate) < new Date(startDate)) {
+      toast.error("End date must be after start date");
       return;
     }
 
@@ -160,7 +213,8 @@ export default function ServiceDetailPage() {
         guest_id: user.uid,
         hostId: serviceData.hostId,
         guestName: user.displayName || "Guest",
-        selectedDate: selectedDate,
+        startDate: startDate,
+        endDate: endDate,
         serviceType: serviceType,
         additionalNotes: additionalNotes,
         baseAmount: basePrice,
@@ -184,7 +238,7 @@ export default function ServiceDetailPage() {
         title: "New Booking",
         message: `${user.displayName || "A guest"} has booked your ${
           serviceData.title
-        } for ${selectedDate}`,
+        } from ${startDate} to ${endDate}`,
         listingId: listing_id,
         bookingId: bookingRef.id,
         guestName: user.displayName || "A guest",
@@ -204,7 +258,6 @@ export default function ServiceDetailPage() {
         const bookingWithId = {
           ...bookingData,
           id: bookingRef.id,
-          selectedDate: selectedDate,
         };
 
         await sendBookingConfirmationEmail(
@@ -358,7 +411,19 @@ export default function ServiceDetailPage() {
           Array.isArray(data?.availableDates) &&
           data.availableDates.length > 0
         ) {
-          setSelectedDate(data.availableDates[0].startDate || "");
+          const firstStart = data.availableDates[0].startDate || "";
+          const firstEnd = data.availableDates[0].endDate || "";
+          setStartDate(firstStart);
+          setEndDate(firstEnd);
+          if (firstStart && firstEnd) {
+            setDateRange([
+              {
+                startDate: new Date(firstStart),
+                endDate: new Date(firstEnd),
+                key: "selection",
+              },
+            ]);
+          }
         }
         if (Array.isArray(data?.serviceTypes) && data.serviceTypes.length > 0) {
           setServiceType(data.serviceTypes[0]);
@@ -851,19 +916,41 @@ export default function ServiceDetailPage() {
               </div>
 
               <div className="space-y-4 mb-6">
-                <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
-                  <label className="text-xs font-medium text-slate-300 block mb-2">
+                <button
+                  onClick={() => {
+                    if (startDate && endDate) {
+                      setDateRange([
+                        {
+                          startDate: new Date(startDate),
+                          endDate: new Date(endDate),
+                          key: "selection",
+                        },
+                      ]);
+                    }
+                    setShowDatePicker(true);
+                  }}
+                  className="w-full border-2 border-slate-600 rounded-xl p-4 bg-gradient-to-br from-slate-700 to-slate-800 hover:border-indigo-500/50 transition-colors cursor-pointer text-left"
+                >
+                  <label className="text-xs font-semibold text-slate-400 block mb-3 uppercase tracking-wider">
                     <Calendar className="w-3 h-3 inline mr-1" />
-                    SELECT DATE
+                    Select Service Dates
                   </label>
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded bg-slate-600/50 text-white px-3 py-2 border border-slate-600 focus:border-indigo-500 transition-all"
-                  />
-                </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-slate-500 mb-1">Start Date</div>
+                      <div className="text-sm font-semibold text-white">
+                        {startDate ? formatDateForDisplay(startDate) : "Select date"}
+                      </div>
+                    </div>
+                    <div className="text-slate-400">→</div>
+                    <div className="text-right">
+                      <div className="text-xs text-slate-500 mb-1">End Date</div>
+                      <div className="text-sm font-semibold text-white">
+                        {endDate ? formatDateForDisplay(endDate) : "Select date"}
+                      </div>
+                    </div>
+                  </div>
+                </button>
 
                 <div className="border border-slate-600 rounded-lg p-3 bg-slate-700">
                   <label className="text-xs font-medium text-slate-300 block mb-1">
@@ -1133,9 +1220,15 @@ export default function ServiceDetailPage() {
                 <span className="font-medium text-white">{serviceType}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-400">Selected date</span>
+                <span className="text-slate-400">Start date</span>
                 <span className="font-medium text-white">
-                  {selectedDate || "Not selected"}
+                  {startDate || "Not selected"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-400">End date</span>
+                <span className="font-medium text-white">
+                  {endDate || "Not selected"}
                 </span>
               </div>
               {promoCode && (
@@ -1266,6 +1359,311 @@ export default function ServiceDetailPage() {
           <Briefcase className="w-5 h-5" />
           <span>Book Now</span>
         </motion.button>
+      )}
+
+      {/* Date Range Picker Modal */}
+      {showDatePicker && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col border border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto flex-1 p-5">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-indigo-400" />
+                  Select Service Dates
+                </h3>
+                <button
+                  onClick={() => setShowDatePicker(false)}
+                  className="text-indigo-400/60 hover:text-indigo-400 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Available Dates */}
+              {Array.isArray(serviceData.availableDates) &&
+                serviceData.availableDates.length > 0 && (
+                  <div className="mb-4 p-3 bg-slate-900/50 rounded-lg border border-green-500/30">
+                    <div className="text-xs font-semibold text-green-400 mb-2 flex items-center gap-1">
+                      <Check className="w-4 h-4" />
+                      Available Service Periods
+                    </div>
+                    <div className="space-y-1">
+                      {serviceData.availableDates.map((range, idx) => (
+                        <div key={idx} className="text-xs text-slate-300">
+                          <span className="text-green-400 font-medium">
+                            {new Date(range.startDate).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                              }
+                            )}
+                          </span>
+                          <span className="text-slate-500 mx-1">→</span>
+                          <span className="text-green-400 font-medium">
+                            {new Date(range.endDate).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Date Range Picker */}
+              <div className="mb-4 w-full flex justify-center">
+              <style>{`
+                .rdrCalendarWrapper {
+                  background-color: rgba(15, 23, 42, 0.8);
+                  border-radius: 12px;
+                  width: 100%;
+                  padding: 16px;
+                }
+                .rdrCalendarContainer {
+                  width: 100%;
+                }
+                .rdrMonth {
+                  width: 100%;
+                  padding: 0 10px;
+                }
+                .rdrMonths {
+                  width: 100%;
+                }
+                .rdrMonthAndYearWrapper {
+                  background-color: rgba(30, 41, 59, 0.5);
+                  border-radius: 8px;
+                  padding: 10px;
+                  margin-bottom: 12px;
+                  text-align: center;
+                  color: #a5b4fc;
+                  font-weight: 600;
+                  font-size: 14px;
+                }
+                .rdrMonthAndYearPickers button {
+                  color: #a5b4fc;
+                  padding: 2px 6px;
+                }
+                .rdrMonthAndYearPickers button:hover {
+                  background-color: rgba(79, 70, 229, 0.2);
+                }
+                .rdrDayNames {
+                  margin-bottom: 10px;
+                  display: grid;
+                  grid-template-columns: repeat(7, 1fr);
+                  gap: 3px;
+                }
+                .rdrDayName {
+                  color: #c7d2fe;
+                  font-size: 11px;
+                  font-weight: 600;
+                  text-align: center;
+                  padding: 6px 0;
+                }
+                .rdrDays {
+                  display: grid;
+                  grid-template-columns: repeat(7, 1fr);
+                  gap: 3px;
+                }
+                .rdrDayDisabled {
+                  background-color: transparent !important;
+                  cursor: not-allowed !important;
+                  opacity: 0.3 !important;
+                }
+                .rdrDayDisabled .rdrDayNumber span {
+                  color: #475569 !important;
+                  text-decoration: line-through !important;
+                }
+                .rdrDayPassive {
+                  opacity: 0.3 !important;
+                  pointer-events: none !important;
+                }
+                .rdrDay {
+                  height: 42px;
+                  display: flex !important;
+                  align-items: center !important;
+                  justify-content: center !important;
+                  border-radius: 6px;
+                  border: 1px solid transparent !important;
+                  cursor: pointer;
+                  position: relative;
+                  width: 100%;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                }
+                .rdrDayNumber {
+                  color: #cbd5e1;
+                  font-size: 13px;
+                  font-weight: 500;
+                  position: relative;
+                  z-index: 1;
+                  text-decoration: none !important;
+                  border: none !important;
+                  outline: none !important;
+                }
+                .rdrDayNumber span {
+                  color: #cbd5e1;
+                  text-decoration: none !important;
+                  border: none !important;
+                }
+                .rdrDayNumber::before,
+                .rdrDayNumber::after {
+                  content: none !important;
+                }
+                .rdrStartEdge {
+                  border-radius: 6px 0 0 6px !important;
+                  border: 1px solid #818cf8 !important;
+                  border-right: none !important;
+                  background-color: #6366f1 !important;
+                  width: 100% !important;
+                }
+                .rdrStartEdge::after {
+                  content: none !important;
+                }
+                .rdrEndEdge {
+                  border-radius: 0 6px 6px 0 !important;
+                  border: 1px solid #818cf8 !important;
+                  border-left: none !important;
+                  background-color: #6366f1 !important;
+                  width: 100% !important;
+                }
+                .rdrEndEdge::before {
+                  content: none !important;
+                }
+                .rdrDayStartPreview {
+                  background-color: #6366f1 !important;
+                  border-radius: 6px !important;
+                  border: 1px solid #818cf8 !important;
+                  width: 100% !important;
+                }
+                .rdrDayInPreview {
+                  background-color: rgba(99, 102, 241, 0.2) !important;
+                  border: none !important;
+                  width: 100% !important;
+                }
+                .rdrDayInPreview::before,
+                .rdrDayInPreview::after {
+                  content: none !important;
+                }
+                .rdrDayEndPreview {
+                  background-color: #6366f1 !important;
+                  border-radius: 6px !important;
+                  border: 1px solid #818cf8 !important;
+                  width: 100% !important;
+                }
+                .rdrDayInRange {
+                  background-color: rgba(99, 102, 241, 0.2) !important;
+                  border: none !important;
+                  width: 100% !important;
+                }
+                .rdrDayInRange::before,
+                .rdrDayInRange::after {
+                  content: none !important;
+                }
+                .rdrDayStartOfMonth,
+                .rdrDayEndOfMonth {
+                  background-color: transparent;
+                }
+                .rdrDaySelected {
+                  background-color: #6366f1 !important;
+                  color: #ffffff !important;
+                  border-radius: 6px !important;
+                  border: 1px solid #818cf8 !important;
+                }
+                .rdrDaySelected .rdrDayNumber {
+                  color: #ffffff !important;
+                }
+                .rdrDayStartOfWeek,
+                .rdrDayEndOfWeek {
+                  border-radius: 6px;
+                }
+                /* Scrollbar Styling */
+                div:has(> .DateRange)::-webkit-scrollbar {
+                  width: 8px;
+                }
+                div:has(> .DateRange)::-webkit-scrollbar-track {
+                  background-color: rgba(30, 41, 59, 0.5);
+                  border-radius: 10px;
+                }
+                div:has(> .DateRange)::-webkit-scrollbar-thumb {
+                  background: linear-gradient(180deg, #6366f1 0%, #818cf8 100%);
+                  border-radius: 10px;
+                  border: 2px solid rgba(30, 41, 59, 0.5);
+                }
+                div:has(> .DateRange)::-webkit-scrollbar-thumb:hover {
+                  background: linear-gradient(180deg, #818cf8 0%, #a5b4fc 100%);
+                }
+              `}</style>
+              <DateRange
+                editableDateInputs={false}
+                onChange={handleDateRangeChange}
+                moveRangeOnFirstSelection={false}
+                ranges={dateRange}
+                months={1}
+                direction="horizontal"
+                showMonthAndYearPickers={false}
+                minDate={new Date()}
+              />
+              </div>
+
+              {/* Selected dates summary */}
+              <div className="mb-4 p-3 bg-slate-900/50 rounded-lg border border-indigo-500/20">
+                <div className="flex items-center justify-between text-sm">
+                  <div>
+                    <div className="text-xs text-slate-400 mb-1">Start Date</div>
+                    <div className="text-sm font-semibold text-white">
+                      {dateRange[0].startDate.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </div>
+                  </div>
+                  <div className="text-slate-500">→</div>
+                  <div className="text-right">
+                    <div className="text-xs text-slate-400 mb-1">End Date</div>
+                    <div className="text-sm font-semibold text-white">
+                      {dateRange[0].endDate.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-xs text-slate-400 text-center mt-2">
+                  {Math.ceil(
+                    (dateRange[0].endDate - dateRange[0].startDate) /
+                      (1000 * 60 * 60 * 24)
+                  )}{" "}
+                  day(s)
+                </div>
+              </div>
+            </div>
+
+            {/* Sticky Footer with Buttons */}
+            <div className="sticky bottom-0 bg-gradient-to-br from-slate-800 to-slate-900 border-t border-slate-700/50 p-5 rounded-b-2xl">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowDatePicker(false)}
+                  className="flex-1 px-4 py-2 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 hover:border-indigo-500/50 transition font-medium text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleApplyDates}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition flex items-center justify-center gap-2 font-medium text-sm shadow-lg shadow-indigo-500/20"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Apply Dates
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </motion.div>
   );

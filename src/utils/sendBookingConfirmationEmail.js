@@ -45,6 +45,7 @@ export const sendBookingConfirmationEmail = async (
   guestData
 ) => {
   try {
+    // Use PRIMARY EmailJS service for booking confirmations
     const publicKey = import.meta.env.VITE_EMAIL_JS_PUBLIC_KEY?.trim();
     const serviceId = import.meta.env.VITE_EMAIL_JS_SERVICE_ID?.trim();
     const templateId =
@@ -55,7 +56,7 @@ export const sendBookingConfirmationEmail = async (
       return;
     }
 
-    // Initialize EmailJS
+    // Initialize EmailJS with PRIMARY service
     emailjs.init({
       publicKey: publicKey,
       blockHeadless: false,
@@ -135,101 +136,7 @@ export const sendBookingConfirmationEmail = async (
     console.log("✅ Booking confirmation email sent successfully");
   } catch (error) {
     console.error("❌ Error sending booking confirmation email:", error);
-
-    // Try fallback service (alternative credentials)
-    try {
-      const fallbackPublicKey =
-        import.meta.env.VITE_EMAIL_JS_ANOTHER_PUBLIC_KEY?.trim();
-      const fallbackServiceId =
-        import.meta.env.VITE_EMAIL_JS_ANOTHER_SERVICE_ID?.trim();
-      const fallbackTemplateId =
-        import.meta.env.VITE_BOOKING_EMAIL_JS_TEMPLATE_ID?.trim();
-
-      if (
-        fallbackPublicKey &&
-        fallbackServiceId &&
-        fallbackTemplateId
-      ) {
-        emailjs.init({
-          publicKey: fallbackPublicKey,
-          blockHeadless: false,
-        });
-
-        // Rebuild parameters for fallback
-        const bookingType = listingData?.type || booking.type || "booking";
-        let dateDisplay = "";
-        let numberOfNights = 0;
-
-        if (bookingType === "stays") {
-          const checkIn = new Date(booking.checkIn);
-          const checkOut = new Date(booking.checkOut);
-          dateDisplay = `${checkIn.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          })} - ${checkOut.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })}`;
-          numberOfNights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
-        } else if (
-          bookingType === "experiences" ||
-          bookingType === "services"
-        ) {
-          const selectedDate = new Date(booking.selectedDate || booking.selectedDateTime?.date);
-          dateDisplay = selectedDate.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          });
-          if (booking.selectedTime || booking.selectedDateTime?.time) {
-            dateDisplay += ` at ${booking.selectedTime || booking.selectedDateTime.time}`;
-          }
-        }
-
-        // Get platform service fee percentage for this listing type
-        const serviceFeePercentage = await getServiceFeeForType(bookingType);
-
-        // Get average rating from reviews
-        const fallbackListingRating = await getAverageListingRating(booking.listing_id);
-
-        const fallbackEmailParams = {
-          to_email: guestData.email,
-          guestName: guestData.fullName || guestData.displayName || "Guest",
-          listingTitle: listingData?.title || "Booking",
-          listingLocation: listingData?.location || "N/A",
-          listingRating: fallbackListingRating,
-          listingType:
-            bookingType.charAt(0).toUpperCase() +
-            bookingType.slice(1),
-          bookingId: booking.id || "N/A",
-          numberOfGuests: booking.guests || booking.numberOfGuests || 1,
-          basePrice: (booking.baseAmount || booking.totalAmount || 0).toFixed(2),
-          serviceFee: (booking.serviceFee || 0).toFixed(2),
-          serviceFeePercentage: serviceFeePercentage.toFixed(2),
-          totalAmount: (booking.grandTotal || booking.totalAmount || 0).toFixed(
-            2
-          ),
-          bookingType: bookingType,
-          dateDisplay: dateDisplay,
-          numberOfNights: numberOfNights,
-          dashboardLink: `${window.location.origin}/guest/my-bookings`,
-        };
-
-        await emailjs.send(
-          fallbackServiceId,
-          fallbackTemplateId,
-          fallbackEmailParams
-        );
-        console.log(
-          "✅ Booking confirmation email sent via fallback service successfully"
-        );
-      }
-    } catch (fallbackError) {
-      console.error(
-        "❌ Both primary and fallback email services failed:",
-        fallbackError
-      );
-    }
+    // Don't use fallback - the "another" service is reserved for cancellation emails only
+    throw error;
   }
 };

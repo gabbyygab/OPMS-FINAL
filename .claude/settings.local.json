@@ -19,7 +19,8 @@
       "Bash(node -e:*)",
       "Bash(npm run lint)",
       "Bash(cat:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(git -C \"D:\\WebApps\\OPMS-FINAL\" diff --name-only)"
     ],
     "deny": [],
     "ask": []

@@ -19,15 +19,22 @@ import {
 export default function AdminLayout({ user, userData }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
   const handleLogout = async () => {
     try {
+      setShowLogoutModal(false);
       // Navigate immediately to prevent showing protected route
       navigate(ROUTES.HOME, { replace: true });
       await signOut(auth);
       navigate("/");
+      toast.success("Logged out successfully");
     } catch (error) {
       toast.error("Error logging out: " + error.message);
     }
@@ -201,7 +208,7 @@ export default function AdminLayout({ user, userData }) {
           {/* Sidebar Footer */}
           <div className="border-t border-slate-800 p-4 bg-slate-900/50">
             <button
-              onClick={handleLogout}
+              onClick={handleLogoutClick}
               className={`flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-400 hover:bg-red-500/15 hover:text-red-400 transition-all w-full group relative overflow-hidden ${
                 !isSidebarOpen && "justify-center"
               }`}
@@ -279,7 +286,7 @@ export default function AdminLayout({ user, userData }) {
 
               <div className="border-t border-slate-800 p-4 bg-slate-900/50">
                 <button
-                  onClick={handleLogout}
+                  onClick={handleLogoutClick}
                   className="flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-400 hover:bg-red-500/15 hover:text-red-400 transition-all w-full"
                 >
                   <LogOut className="w-6 h-6 flex-shrink-0" />
@@ -301,6 +308,42 @@ export default function AdminLayout({ user, userData }) {
           <Outlet />
         </div>
       </main>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-2xl w-full max-w-md p-6 border border-red-500/30">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                <LogOut className="w-6 h-6 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Confirm Logout</h3>
+                <p className="text-sm text-slate-400">Admin Panel</p>
+              </div>
+            </div>
+
+            <p className="text-slate-300 mb-6">
+              Are you sure you want to log out from the admin panel? You'll need to log in again to access admin features.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 px-4 py-3 border-2 border-slate-600 text-slate-300 rounded-xl hover:bg-slate-700/50 hover:border-slate-500 transition-all duration-200 font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl hover:from-red-700 hover:to-red-600 transition-all duration-200 font-semibold shadow-lg shadow-red-500/20 hover:shadow-red-500/30"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

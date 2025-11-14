@@ -49,6 +49,7 @@ export const sendBookingCancellationEmail = async (
   options = {}
 ) => {
   try {
+    // Use ALTERNATIVE EmailJS service for cancellation emails only
     const publicKey = import.meta.env.VITE_EMAIL_JS_ANOTHER_PUBLIC_KEY?.trim();
     const serviceId = import.meta.env.VITE_EMAIL_JS_ANOTHER_SERVICE_ID?.trim();
     const templateId =
@@ -61,7 +62,7 @@ export const sendBookingCancellationEmail = async (
       return;
     }
 
-    // Initialize EmailJS
+    // Initialize EmailJS with ALTERNATIVE service (dedicated for cancellations)
     emailjs.init({
       publicKey: publicKey,
       blockHeadless: false,
@@ -119,76 +120,7 @@ export const sendBookingCancellationEmail = async (
     console.log("✅ Booking cancellation email sent successfully");
   } catch (error) {
     console.error("❌ Error sending cancellation email:", error);
-
-    // Try fallback service (primary credentials)
-    try {
-      const fallbackPublicKey =
-        import.meta.env.VITE_EMAIL_JS_PUBLIC_KEY?.trim();
-      const fallbackServiceId =
-        import.meta.env.VITE_EMAIL_JS_SERVICE_ID?.trim();
-      const fallbackTemplateId =
-        import.meta.env.VITE_CANCELED_EMAIL_JS_TEMPLATE_ID?.trim();
-
-      if (fallbackPublicKey && fallbackServiceId && fallbackTemplateId) {
-        emailjs.init({
-          publicKey: fallbackPublicKey,
-          blockHeadless: false,
-        });
-
-        // Get platform service fee percentage for this listing type
-        const listingType = booking.type || "stays";
-        const serviceFeePercentage = await getServiceFeeForType(listingType);
-
-        // Get average rating from reviews
-        const fallbackListingRating = await getAverageListingRating(booking.listing_id);
-
-        // Rebuild emailParams for fallback
-        const basePrice = options.basePrice || booking.totalAmount || 0;
-        const serviceFee =
-          options.serviceFee || Math.round(basePrice * (serviceFeePercentage / 100) * 100) / 100;
-        const refundAmount = options.refundAmount || basePrice;
-        const now = new Date();
-        const cancellationDate = now.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        });
-
-        const fallbackEmailParams = {
-          to_email: guestData.email,
-          guestName: guestData.fullName || guestData.displayName || "Guest",
-          listingTitle: booking.listing?.title || booking.title || "Booking",
-          listingLocation:
-            booking.listing?.location || booking.location || "N/A",
-          listingRating: fallbackListingRating,
-          listingType: booking.type
-            ? booking.type.charAt(0).toUpperCase() + booking.type.slice(1)
-            : "Booking",
-          bookingId: booking.id,
-          numberOfGuests: booking.totalGuests || booking.numberOfGuests || 1,
-          basePrice: basePrice.toFixed(2),
-          serviceFee: serviceFee.toFixed(2),
-          serviceFeePercentage: serviceFeePercentage.toFixed(2),
-          refundAmount: refundAmount.toFixed(2),
-          cancellationDate: cancellationDate,
-          dashboardLink: `${window.location.origin}/guest/my-bookings`,
-        };
-
-        // Send using fallback service
-        await emailjs.send(
-          fallbackServiceId,
-          fallbackTemplateId,
-          fallbackEmailParams
-        );
-        console.log(
-          "✅ Cancellation email sent via fallback service successfully"
-        );
-      }
-    } catch (fallbackError) {
-      console.error(
-        "❌ Both primary and fallback email services failed:",
-        fallbackError
-      );
-    }
+    // Don't use fallback - this service is already the dedicated cancellation service
+    throw error;
   }
 };

@@ -1,9 +1,14 @@
 import { useRef } from "react";
 import { toast } from "react-toastify";
 import pdfMake from "pdfmake/build/pdfmake";
-import vfsFonts from "pdfmake/build/vfs_fonts";
+import * as vfsFonts from "pdfmake/build/vfs_fonts";
 
-pdfMake.vfs = vfsFonts;
+// Initialize pdfMake with fonts (handle new pdfmake v0.2.x structure)
+if (vfsFonts.pdfMake && vfsFonts.pdfMake.vfs) {
+  pdfMake.vfs = vfsFonts.pdfMake.vfs;
+} else if (typeof vfsFonts === 'object' && Object.keys(vfsFonts).some(key => key.endsWith('.ttf'))) {
+  pdfMake.vfs = vfsFonts;
+}
 
 export default function ReceiptModal({ transaction, user, onClose }) {
   const receiptRef = useRef(null);

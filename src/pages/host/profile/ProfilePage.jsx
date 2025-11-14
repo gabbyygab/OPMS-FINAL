@@ -9,13 +9,14 @@ import {
   Plus,
   Ticket,
   Tag,
-  Percent,
   Trash2,
-  DollarSign,
   X,
   Heart,
   Loader,
 } from "lucide-react";
+import { DateRange } from "react-date-range";
+import "react-date-range/dist/styles.css";
+import "react-date-range/dist/theme/default.css";
 import { useAuth } from "../../../context/AuthContext";
 import { db } from "../../../firebase/firebase";
 import {
@@ -82,11 +83,30 @@ export default function ProfilePage() {
     code: "",
     discount: "",
     type: "percentage",
+    startDate: "",
     expiryDate: "",
   });
   const [showAddModal, setShowAddModal] = useState(false);
   const [coupons, setCoupons] = useState([]);
   const [loadingCoupons, setLoadingCoupons] = useState(true);
+  const [addingCoupon, setAddingCoupon] = useState(false);
+  const [togglingCouponId, setTogglingCouponId] = useState(null);
+  const [deletingCouponId, setDeletingCouponId] = useState(null);
+  const [showDatePickerModal, setShowDatePickerModal] = useState(false);
+  const [dateRange, setDateRange] = useState(() => {
+    const today = new Date();
+    const futureDate = new Date(today);
+    futureDate.setDate(today.getDate() + 30);
+    return [
+      {
+        startDate: today,
+        endDate: futureDate,
+        key: "selection",
+      },
+    ];
+  });
+  const [couponToDelete, setCouponToDelete] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const activeCoupons = coupons.filter((c) => c.active);
   const inactiveCoupons = coupons.filter((c) => !c.active);
@@ -225,6 +245,9 @@ export default function ProfilePage() {
     }
 
     try {
+      // Determine priority based on whether guest has bookings
+      const priority = bookings.length > 0 ? "high" : "medium";
+
       const wishlistRef = collection(db, "wishlists");
       await addDoc(wishlistRef, {
         userId: userData.id,
@@ -233,7 +256,7 @@ export default function ProfilePage() {
         item: wishlistItem.trim(),
         description: wishlistDescription.trim(),
         createdAt: new Date(),
-        priority: "medium",
+        priority: priority,
       });
 
       toast.success("Wishlist item added!");
@@ -361,17 +384,28 @@ export default function ProfilePage() {
       toast.error("Please enter a valid discount value");
       return;
     }
+    if (!couponFormData.startDate) {
+      toast.error("Please select a start date");
+      return;
+    }
     if (!couponFormData.expiryDate) {
       toast.error("Please select an expiry date");
       return;
     }
 
-    // Validate expiry date is in the future
+    // Validate dates
+    const startDate = new Date(couponFormData.startDate);
     const expiryDate = new Date(couponFormData.expiryDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (expiryDate <= today) {
-      toast.error("Expiry date must be in the future");
+    
+    if (startDate < today) {
+      toast.error("Start date must be today or in the future");
+      return;
+    }
+    
+    if (expiryDate <= startDate) {
+      toast.error("Expiry date must be after start date");
       return;
     }
 
@@ -384,6 +418,7 @@ export default function ProfilePage() {
       return;
     }
 
+    setAddingCoupon(true);
     try {
       const couponsRef = collection(db, "coupons");
       const newCoupon = {
@@ -391,6 +426,7 @@ export default function ProfilePage() {
         code: couponFormData.code.toUpperCase(),
         discount: parseFloat(couponFormData.discount),
         type: couponFormData.type, // "percentage" or "fixed"
+        startDate: couponFormData.startDate,
         expiryDate: couponFormData.expiryDate,
         active: true,
         createdAt: new Date(),
@@ -413,6 +449,7 @@ export default function ProfilePage() {
         code: "",
         discount: "",
         type: "percentage",
+        startDate: "",
         expiryDate: "",
       });
       setShowAddModal(false);
@@ -420,10 +457,13 @@ export default function ProfilePage() {
     } catch (error) {
       console.error("Error adding coupon:", error);
       toast.error("Failed to add coupon. Please try again.");
+    } finally {
+      setAddingCoupon(false);
     }
   };
 
   const toggleCouponStatus = async (id) => {
+    setTogglingCouponId(id);
     try {
       const couponToToggle = coupons.find((c) => c.id === id);
       if (!couponToToggle) return;
@@ -449,25 +489,100 @@ export default function ProfilePage() {
     } catch (error) {
       console.error("Error toggling coupon status:", error);
       toast.error("Failed to update coupon status.");
+    } finally {
+      setTogglingCouponId(null);
     }
   };
 
-  const deleteCoupon = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this coupon?")) {
-      return;
-    }
+  const deleteCoupon = async () => {
+    if (!couponToDelete) return;
 
+    setDeletingCouponId(couponToDelete);
     try {
       // Delete from Firestore
-      await deleteDoc(doc(db, "coupons", id));
+      await deleteDoc(doc(db, "coupons", couponToDelete));
 
       // Update local state
-      setCoupons(coupons.filter((coupon) => coupon.id !== id));
+      setCoupons(coupons.filter((coupon) => coupon.id !== couponToDelete));
       toast.success("Coupon deleted successfully!");
+      setShowDeleteModal(false);
+      setCouponToDelete(null);
     } catch (error) {
       console.error("Error deleting coupon:", error);
       toast.error("Failed to delete coupon.");
+    } finally {
+      setDeletingCouponId(null);
     }
+  };
+
+  const handleDeleteCouponClick = (id) => {
+    setCouponToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleDateRangeChange = (ranges) => {
+    setDateRange([ranges.selection]);
+  };
+
+  const handleOpenDatePicker = () => {
+    // If there are already dates, initialize the date range with them
+    if (couponFormData.startDate && couponFormData.expiryDate) {
+      setDateRange([
+        {
+          startDate: new Date(couponFormData.startDate),
+          endDate: new Date(couponFormData.expiryDate),
+          key: "selection",
+        },
+      ]);
+    } else if (couponFormData.startDate) {
+      // Only start date exists
+      const start = new Date(couponFormData.startDate);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 30);
+      setDateRange([
+        {
+          startDate: start,
+          endDate: end,
+          key: "selection",
+        },
+      ]);
+    } else {
+      // Reset to default (today and 30 days from now)
+      const today = new Date();
+      const futureDate = new Date(today);
+      futureDate.setDate(today.getDate() + 30);
+      setDateRange([
+        {
+          startDate: today,
+          endDate: futureDate,
+          key: "selection",
+        },
+      ]);
+    }
+    setShowDatePickerModal(true);
+  };
+
+  const handleApplyDates = () => {
+    const startDate = dateRange[0].startDate;
+    const endDate = dateRange[0].endDate;
+    const formattedStartDate = startDate.toISOString().split("T")[0];
+    const formattedEndDate = endDate.toISOString().split("T")[0];
+    setCouponFormData({
+      ...couponFormData,
+      startDate: formattedStartDate,
+      expiryDate: formattedEndDate,
+    });
+    setShowDatePickerModal(false);
+  };
+
+  const formatDateForDisplay = (dateString, placeholder = "Select date") => {
+    if (!dateString) return placeholder;
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   return (
@@ -796,6 +911,12 @@ export default function ProfilePage() {
             {/* Bookings Tab */}
             {activeTab === "bookings" && userData?.role === "guest" && (
               <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-xl shadow-2xl p-6 md:p-8 border border-indigo-500/20">
+                <h2 className="text-2xl md:text-3xl font-bold text-transparent bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text mb-2">
+                  My Bookings
+                </h2>
+                <p className="text-indigo-200/70 mb-8">
+                  View and manage your reservations
+                </p>
 
                 {loadingBookings ? (
                   <div className="flex items-center justify-center py-12">
@@ -1023,70 +1144,6 @@ export default function ProfilePage() {
                     </p>
                   </div>
                 )}
-
-                {/* Add Wishlist Modal */}
-                {showWishlistModal && (
-                  <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-2xl max-w-md w-full p-6 border border-indigo-500/30">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">
-                          Add Wishlist Item
-                        </h3>
-                        <button
-                          onClick={() => setShowWishlistModal(false)}
-                          className="text-indigo-300/70 hover:text-indigo-300 transition"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-indigo-200 mb-2">
-                            What are you looking for?
-                          </label>
-                          <input
-                            type="text"
-                            value={wishlistItem}
-                            onChange={(e) => setWishlistItem(e.target.value)}
-                            placeholder="e.g., 3 bedroom apartment"
-                            className="w-full px-4 py-3 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-semibold text-indigo-200 mb-2">
-                            Additional Details (Optional)
-                          </label>
-                          <textarea
-                            value={wishlistDescription}
-                            onChange={(e) =>
-                              setWishlistDescription(e.target.value)
-                            }
-                            placeholder="e.g., Near public transport, WiFi required..."
-                            rows={3}
-                            className="w-full px-4 py-3 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition resize-none"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3 mt-6">
-                        <button
-                          onClick={() => setShowWishlistModal(false)}
-                          className="flex-1 px-4 py-2.5 border-2 border-indigo-500/30 text-indigo-200 rounded-lg hover:bg-indigo-500/10 hover:border-indigo-500/50 transition-all font-semibold"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleAddWishlistItem}
-                          className="flex-1 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg"
-                        >
-                          Add Item
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -1142,37 +1199,59 @@ export default function ProfilePage() {
                               <div className="flex items-center gap-2">
                                 {coupon.type === "percentage" ? (
                                   <>
-                                    <Percent className="w-5 h-5 text-green-400" />
                                     <span className="text-xl font-bold text-green-400">
                                       {coupon.discount}%
                                     </span>
+                                    <span className="text-sm text-green-400/70">OFF</span>
                                   </>
                                 ) : (
                                   <>
-                                    <DollarSign className="w-5 h-5 text-green-400" />
                                     <span className="text-xl font-bold text-green-400">
                                       ${coupon.discount}
                                     </span>
+                                    <span className="text-sm text-green-400/70">OFF</span>
                                   </>
                                 )}
                               </div>
                             </div>
-                            <p className="text-sm text-indigo-200/70">
-                              Expires: {coupon.expiryDate}
-                            </p>
+                            <div className="flex flex-wrap items-center gap-3 text-sm text-indigo-200/70">
+                              {coupon.startDate && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3.5 h-3.5" />
+                                  Starts: {formatDateForDisplay(coupon.startDate, "N/A")}
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5" />
+                                Expires: {formatDateForDisplay(coupon.expiryDate, "N/A")}
+                              </span>
+                            </div>
                           </div>
                           <div className="flex items-center gap-2 w-full sm:w-auto">
                             <button
                               onClick={() => toggleCouponStatus(coupon.id)}
-                              className="flex-1 sm:flex-none px-3 py-2 bg-slate-700/50 border border-indigo-500/30 text-indigo-200 rounded-lg hover:bg-slate-700 hover:border-indigo-500/50 transition-all font-medium text-sm"
+                              disabled={togglingCouponId === coupon.id}
+                              className="flex-1 sm:flex-none px-3 py-2 bg-slate-700/50 border border-indigo-500/30 text-indigo-200 rounded-lg hover:bg-slate-700 hover:border-indigo-500/50 transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
-                              Deactivate
+                              {togglingCouponId === coupon.id ? (
+                                <>
+                                  <Loader className="w-4 h-4 animate-spin" />
+                                  Processing...
+                                </>
+                              ) : (
+                                "Deactivate"
+                              )}
                             </button>
                             <button
-                              onClick={() => deleteCoupon(coupon.id)}
-                              className="flex-1 sm:flex-none px-3 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all border border-red-500/30"
+                              onClick={() => handleDeleteCouponClick(coupon.id)}
+                              disabled={deletingCouponId === coupon.id}
+                              className="flex-1 sm:flex-none px-3 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all border border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              {deletingCouponId === coupon.id ? (
+                                <Loader className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
                             </button>
                           </div>
                         </div>
@@ -1209,151 +1288,63 @@ export default function ProfilePage() {
                               <div className="flex items-center gap-2">
                                 {coupon.type === "percentage" ? (
                                   <>
-                                    <Percent className="w-5 h-5 text-slate-400" />
                                     <span className="text-xl font-bold text-slate-400">
                                       {coupon.discount}%
                                     </span>
+                                    <span className="text-sm text-slate-400/70">OFF</span>
                                   </>
                                 ) : (
                                   <>
-                                    <DollarSign className="w-5 h-5 text-slate-400" />
                                     <span className="text-xl font-bold text-slate-400">
                                       ${coupon.discount}
                                     </span>
+                                    <span className="text-sm text-slate-400/70">OFF</span>
                                   </>
                                 )}
                               </div>
                             </div>
-                            <p className="text-sm text-slate-400">
-                              Expires: {coupon.expiryDate}
-                            </p>
+                            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
+                              {coupon.startDate && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3.5 h-3.5" />
+                                  Starts: {formatDateForDisplay(coupon.startDate, "N/A")}
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5" />
+                                Expires: {formatDateForDisplay(coupon.expiryDate, "N/A")}
+                              </span>
+                            </div>
                           </div>
                           <div className="flex items-center gap-2 w-full sm:w-auto">
                             <button
                               onClick={() => toggleCouponStatus(coupon.id)}
-                              className="flex-1 sm:flex-none px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-medium text-sm"
+                              disabled={togglingCouponId === coupon.id}
+                              className="flex-1 sm:flex-none px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
-                              Activate
+                              {togglingCouponId === coupon.id ? (
+                                <>
+                                  <Loader className="w-4 h-4 animate-spin" />
+                                  Processing...
+                                </>
+                              ) : (
+                                "Activate"
+                              )}
                             </button>
                             <button
-                              onClick={() => deleteCoupon(coupon.id)}
-                              className="flex-1 sm:flex-none px-3 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all border border-red-500/30"
+                              onClick={() => handleDeleteCouponClick(coupon.id)}
+                              disabled={deletingCouponId === coupon.id}
+                              className="flex-1 sm:flex-none px-3 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all border border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              {deletingCouponId === coupon.id ? (
+                                <Loader className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
                             </button>
                           </div>
                         </div>
                       ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Add Coupon Modal */}
-                {showAddModal && (
-                  <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-2xl max-w-md w-full p-6 border border-indigo-500/30">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">
-                          Add Coupon
-                        </h3>
-                        <button
-                          onClick={() => setShowAddModal(false)}
-                          className="text-indigo-300/70 hover:text-indigo-300 transition"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-indigo-200 mb-2">
-                            Coupon Code
-                          </label>
-                          <input
-                            type="text"
-                            value={couponFormData.code}
-                            onChange={(e) =>
-                              setCouponFormData({
-                                ...couponFormData,
-                                code: e.target.value,
-                              })
-                            }
-                            placeholder="e.g., SUMMER20"
-                            className="w-full px-4 py-2.5 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-semibold text-indigo-200 mb-2">
-                              Discount Value
-                            </label>
-                            <input
-                              type="number"
-                              value={couponFormData.discount}
-                              onChange={(e) =>
-                                setCouponFormData({
-                                  ...couponFormData,
-                                  discount: e.target.value,
-                                })
-                              }
-                              placeholder="e.g., 20"
-                              className="w-full px-4 py-2.5 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-semibold text-indigo-200 mb-2">
-                              Type
-                            </label>
-                            <select
-                              value={couponFormData.type}
-                              onChange={(e) =>
-                                setCouponFormData({
-                                  ...couponFormData,
-                                  type: e.target.value,
-                                })
-                              }
-                              className="w-full px-4 py-2.5 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
-                            >
-                              <option value="percentage">Percentage</option>
-                              <option value="fixed">Fixed</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-semibold text-indigo-200 mb-2">
-                            Expiry Date
-                          </label>
-                          <input
-                            type="date"
-                            value={couponFormData.expiryDate}
-                            onChange={(e) =>
-                              setCouponFormData({
-                                ...couponFormData,
-                                expiryDate: e.target.value,
-                              })
-                            }
-                            className="w-full px-4 py-2.5 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3 mt-6">
-                        <button
-                          onClick={() => setShowAddModal(false)}
-                          className="flex-1 px-4 py-2.5 border-2 border-indigo-500/30 text-indigo-200 rounded-lg hover:bg-indigo-500/10 hover:border-indigo-500/50 transition-all font-semibold"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleAddCoupon}
-                          className="flex-1 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg"
-                        >
-                          Add Coupon
-                        </button>
-                      </div>
                     </div>
                   </div>
                 )}
@@ -1364,6 +1355,534 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Add Wishlist Modal - Rendered at root level */}
+      {showWishlistModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm" style={{ height: '100vh' }}>
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-2xl max-w-md w-full p-6 border border-indigo-500/30 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">
+                Add Wishlist Item
+              </h3>
+              <button
+                onClick={() => setShowWishlistModal(false)}
+                className="text-indigo-300/70 hover:text-indigo-300 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-indigo-200 mb-2">
+                  What are you looking for?
+                </label>
+                <input
+                  type="text"
+                  value={wishlistItem}
+                  onChange={(e) => setWishlistItem(e.target.value)}
+                  placeholder="e.g., 3 bedroom apartment"
+                  className="w-full px-4 py-3 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-indigo-200 mb-2">
+                  Additional Details (Optional)
+                </label>
+                <textarea
+                  value={wishlistDescription}
+                  onChange={(e) =>
+                    setWishlistDescription(e.target.value)
+                  }
+                  placeholder="e.g., Near public transport, WiFi required..."
+                  rows={3}
+                  className="w-full px-4 py-3 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowWishlistModal(false)}
+                className="flex-1 px-4 py-2.5 border-2 border-indigo-500/30 text-indigo-200 rounded-lg hover:bg-indigo-500/10 hover:border-indigo-500/50 transition-all font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddWishlistItem}
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg"
+              >
+                Add Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Coupon Modal - Rendered at root level */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm" style={{ height: '100vh' }}>
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-2xl max-w-md w-full p-6 border border-indigo-500/30 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">
+                Add Coupon
+              </h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-indigo-300/70 hover:text-indigo-300 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-indigo-200 mb-2">
+                  Coupon Code
+                </label>
+                <input
+                  type="text"
+                  value={couponFormData.code}
+                  onChange={(e) =>
+                    setCouponFormData({
+                      ...couponFormData,
+                      code: e.target.value,
+                    })
+                  }
+                  placeholder="e.g., SUMMER20"
+                  className="w-full px-4 py-2.5 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-indigo-200 mb-2">
+                    Discount Value
+                  </label>
+                  <input
+                    type="number"
+                    value={couponFormData.discount}
+                    onChange={(e) =>
+                      setCouponFormData({
+                        ...couponFormData,
+                        discount: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., 20"
+                    className="w-full px-4 py-2.5 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-indigo-200 mb-2">
+                    Type
+                  </label>
+                  <select
+                    value={couponFormData.type}
+                    onChange={(e) =>
+                      setCouponFormData({
+                        ...couponFormData,
+                        type: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2.5 bg-[#1e293b] border border-indigo-500/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition"
+                  >
+                    <option value="percentage">Percentage</option>
+                    <option value="fixed">Fixed</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-indigo-200 mb-2">
+                  Promo Period
+                </label>
+                <button
+                  type="button"
+                  onClick={handleOpenDatePicker}
+                  className="w-full px-4 py-3 bg-[#1e293b] border-2 border-indigo-500/20 rounded-lg text-white hover:border-indigo-500/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500/40 transition cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      {couponFormData.startDate && couponFormData.expiryDate ? (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-xs text-slate-400 mb-1">Start Date</div>
+                            <div className="text-sm font-semibold text-white">
+                              {formatDateForDisplay(couponFormData.startDate, "Select date")}
+                            </div>
+                          </div>
+                          <div className="text-slate-400 mx-3">→</div>
+                          <div className="text-right">
+                            <div className="text-xs text-slate-400 mb-1">End Date</div>
+                            <div className="text-sm font-semibold text-white">
+                              {formatDateForDisplay(couponFormData.expiryDate, "Select date")}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-slate-400 text-sm">Select promo period</div>
+                      )}
+                    </div>
+                    <Calendar className="w-5 h-5 text-indigo-400 ml-3" />
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowAddModal(false)}
+                disabled={addingCoupon}
+                className="flex-1 px-4 py-2.5 border-2 border-indigo-500/30 text-indigo-200 rounded-lg hover:bg-indigo-500/10 hover:border-indigo-500/50 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddCoupon}
+                disabled={addingCoupon}
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {addingCoupon ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  "Add Coupon"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Date Range Picker Modal for Expiry Date */}
+      {showDatePickerModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col border border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
+            <div className="overflow-y-auto flex-1 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-indigo-400" />
+                  Select Promo Period
+                </h3>
+                <button
+                  onClick={() => setShowDatePickerModal(false)}
+                  className="text-indigo-400/60 hover:text-indigo-400 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mb-4 w-full flex justify-center">
+                <style>{`
+                  .rdrCalendarWrapper {
+                    background-color: rgba(15, 23, 42, 0.8);
+                    border-radius: 12px;
+                    width: 100%;
+                    padding: 16px;
+                  }
+                  .rdrCalendarContainer {
+                    width: 100%;
+                  }
+                  .rdrMonth {
+                    width: 100%;
+                    padding: 0 10px;
+                  }
+                  .rdrMonths {
+                    width: 100%;
+                    display: flex;
+                    gap: 20px;
+                  }
+                  .rdrMonthAndYearWrapper {
+                    background-color: rgba(30, 41, 59, 0.5);
+                    border-radius: 8px;
+                    padding: 10px;
+                    margin-bottom: 12px;
+                    text-align: center;
+                    color: #a5b4fc;
+                    font-weight: 600;
+                    font-size: 14px;
+                  }
+                  .rdrMonthAndYearPickers button {
+                    color: #a5b4fc;
+                    padding: 2px 6px;
+                  }
+                  .rdrMonthAndYearPickers button:hover {
+                    background-color: rgba(79, 70, 229, 0.2);
+                  }
+                  .rdrDayNames {
+                    margin-bottom: 10px;
+                    display: grid;
+                    grid-template-columns: repeat(7, 1fr);
+                    gap: 3px;
+                  }
+                  .rdrDayName {
+                    color: #c7d2fe;
+                    font-size: 11px;
+                    font-weight: 600;
+                    text-align: center;
+                    padding: 6px 0;
+                  }
+                  .rdrDays {
+                    display: grid;
+                    grid-template-columns: repeat(7, 1fr);
+                    gap: 3px;
+                  }
+                  .rdrDayDisabled {
+                    background-color: transparent !important;
+                    cursor: not-allowed !important;
+                    opacity: 0.3 !important;
+                  }
+                  .rdrDayDisabled .rdrDayNumber span {
+                    color: #475569 !important;
+                    text-decoration: line-through !important;
+                  }
+                  .rdrDayPassive {
+                    opacity: 0.3 !important;
+                    pointer-events: none !important;
+                  }
+                  .rdrDay {
+                    height: 42px;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    border-radius: 6px;
+                    border: 1px solid transparent !important;
+                    cursor: pointer;
+                    position: relative;
+                    width: 100%;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                  }
+                  .rdrDayNumber {
+                    color: #cbd5e1;
+                    font-size: 13px;
+                    font-weight: 500;
+                    position: relative;
+                    z-index: 1;
+                    text-decoration: none !important;
+                    border: none !important;
+                    outline: none !important;
+                  }
+                  .rdrDayNumber span {
+                    color: #cbd5e1;
+                    text-decoration: none !important;
+                    border: none !important;
+                  }
+                  .rdrDayNumber::before,
+                  .rdrDayNumber::after {
+                    content: none !important;
+                  }
+                  .rdrStartEdge {
+                    border-radius: 6px 0 0 6px !important;
+                    border: 1px solid #818cf8 !important;
+                    border-right: none !important;
+                    background-color: #6366f1 !important;
+                    width: 100% !important;
+                  }
+                  .rdrStartEdge::after {
+                    content: none !important;
+                  }
+                  .rdrEndEdge {
+                    border-radius: 0 6px 6px 0 !important;
+                    border: 1px solid #818cf8 !important;
+                    border-left: none !important;
+                    background-color: #6366f1 !important;
+                    width: 100% !important;
+                  }
+                  .rdrEndEdge::before {
+                    content: none !important;
+                  }
+                  .rdrDayStartPreview {
+                    background-color: #6366f1 !important;
+                    border-radius: 6px !important;
+                    border: 1px solid #818cf8 !important;
+                    width: 100% !important;
+                  }
+                  .rdrDayInPreview {
+                    background-color: rgba(99, 102, 241, 0.2) !important;
+                    border: none !important;
+                    width: 100% !important;
+                  }
+                  .rdrDayInPreview::before,
+                  .rdrDayInPreview::after {
+                    content: none !important;
+                  }
+                  .rdrDayEndPreview {
+                    background-color: #6366f1 !important;
+                    border-radius: 6px !important;
+                    border: 1px solid #818cf8 !important;
+                    width: 100% !important;
+                  }
+                  .rdrDayInRange {
+                    background-color: rgba(99, 102, 241, 0.2) !important;
+                    border: none !important;
+                    width: 100% !important;
+                  }
+                  .rdrDayInRange::before,
+                  .rdrDayInRange::after {
+                    content: none !important;
+                  }
+                  .rdrDayStartOfMonth,
+                  .rdrDayEndOfMonth {
+                    background-color: transparent;
+                  }
+                  .rdrDaySelected {
+                    background-color: #6366f1 !important;
+                    color: #ffffff !important;
+                    border-radius: 6px !important;
+                    border: 1px solid #818cf8 !important;
+                  }
+                  .rdrDaySelected .rdrDayNumber {
+                    color: #ffffff !important;
+                  }
+                  .rdrDayStartOfWeek,
+                  .rdrDayEndOfWeek {
+                    border-radius: 6px;
+                  }
+                  /* Scrollbar Styling */
+                  div:has(> .DateRange)::-webkit-scrollbar {
+                    width: 8px;
+                  }
+                  div:has(> .DateRange)::-webkit-scrollbar-track {
+                    background-color: rgba(30, 41, 59, 0.5);
+                    border-radius: 10px;
+                  }
+                  div:has(> .DateRange)::-webkit-scrollbar-thumb {
+                    background: linear-gradient(180deg, #6366f1 0%, #818cf8 100%);
+                    border-radius: 10px;
+                    border: 2px solid rgba(30, 41, 59, 0.5);
+                  }
+                  div:has(> .DateRange)::-webkit-scrollbar-thumb:hover {
+                    background: linear-gradient(180deg, #818cf8 0%, #a5b4fc 100%);
+                  }
+                `}</style>
+                <DateRange
+                  editableDateInputs={false}
+                  onChange={handleDateRangeChange}
+                  moveRangeOnFirstSelection={false}
+                  ranges={dateRange}
+                  months={2}
+                  direction="horizontal"
+                  showMonthAndYearPickers={false}
+                  minDate={new Date()}
+                />
+              </div>
+
+              <div className="mb-4 p-4 bg-slate-900/50 rounded-lg border border-indigo-500/20">
+                <div className="flex items-center justify-between text-sm">
+                  <div>
+                    <div className="text-xs text-slate-400 mb-1">Start Date</div>
+                    <div className="text-sm font-semibold text-white">
+                      {dateRange[0].startDate.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </div>
+                  </div>
+                  <div className="text-slate-500">→</div>
+                  <div className="text-right">
+                    <div className="text-xs text-slate-400 mb-1">Expiry Date</div>
+                    <div className="text-sm font-semibold text-white">
+                      {dateRange[0].endDate.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-xs text-slate-400 text-center mt-3">
+                  Promo valid for {Math.ceil(
+                    (dateRange[0].endDate - dateRange[0].startDate) /
+                      (1000 * 60 * 60 * 24)
+                  )}{" "}
+                  day(s)
+                </div>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-gradient-to-br from-slate-800 to-slate-900 border-t border-slate-700/50 p-5 rounded-b-2xl">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowDatePickerModal(false)}
+                  className="flex-1 px-4 py-2 border border-indigo-500/30 text-indigo-300 rounded-lg hover:bg-slate-700/50 hover:border-indigo-500/50 transition font-medium text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleApplyDates}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition flex items-center justify-center gap-2 font-medium text-sm shadow-lg shadow-indigo-500/20"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Apply Dates
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[10000] p-4 backdrop-blur-sm">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-2xl max-w-md w-full p-6 border border-red-500/30">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl md:text-2xl font-bold text-red-400 flex items-center gap-2">
+                <Trash2 className="w-6 h-6" />
+                Delete Coupon
+              </h3>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setCouponToDelete(null);
+                }}
+                className="text-slate-400 hover:text-slate-200 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-slate-300 mb-6">
+              Are you sure you want to delete this coupon? This action cannot be undone.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setCouponToDelete(null);
+                }}
+                disabled={deletingCouponId === couponToDelete}
+                className="flex-1 px-4 py-2.5 border-2 border-slate-600 text-slate-300 rounded-lg hover:bg-slate-700 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deleteCoupon}
+                disabled={deletingCouponId === couponToDelete}
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-700 hover:to-red-600 transition-all font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {deletingCouponId === couponToDelete ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

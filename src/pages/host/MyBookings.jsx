@@ -35,6 +35,8 @@ import { toast } from "react-toastify";
 import { addPointsToUser } from "../../utils/rewardsUtils";
 import { approveRefund, denyRefund } from "../../utils/refundUtils";
 import { getServiceFeeForType } from "../../utils/platformSettingsUtils";
+import { sendBookingConfirmationEmail } from "../../utils/sendBookingConfirmationEmail";
+import { sendBookingCancellationEmail } from "../../utils/sendBookingCancellationEmail";
 
 export default function HostMyBookings() {
   const [bookings, setBookings] = useState([]);
@@ -221,191 +223,6 @@ export default function HostMyBookings() {
     filterBookings(bookings, status, searchTerm);
   };
 
-  // Send booking confirmation email
-  const sendBookingConfirmationEmail = async (booking, guestData) => {
-    try {
-      const listing = booking.listing;
-      const serviceId = import.meta.env.VITE_EMAIL_JS_SERVICE_ID;
-      const templateId = import.meta.env.VITE_BOOKING_EMAIL_JS_TEMPLATE_ID;
-
-      if (!serviceId || !templateId) {
-        console.warn("EmailJS service or template ID not configured");
-        return;
-      }
-
-      if (!guestData?.email) {
-        console.warn("Guest email not available, skipping email send");
-        return;
-      }
-
-      // Use the amounts stored in the booking document
-      const totalAmount = booking.totalAmount || 0;
-      const serviceFee = booking.serviceFee || 0;
-
-      // Generate booking type-specific details HTML
-      let bookingDetailsHtml = "";
-      if (booking.type === "stays") {
-        const checkInDate = booking.checkIn
-          ? new Date(
-              booking.checkIn.toDate?.() || booking.checkIn
-            ).toLocaleDateString()
-          : "N/A";
-        const checkOutDate = booking.checkOut
-          ? new Date(
-              booking.checkOut.toDate?.() || booking.checkOut
-            ).toLocaleDateString()
-          : "N/A";
-        let nights = 1;
-        if (booking.checkIn && booking.checkOut) {
-          const checkInObj = new Date(
-            booking.checkIn.toDate?.() || booking.checkIn
-          );
-          const checkOutObj = new Date(
-            booking.checkOut.toDate?.() || booking.checkOut
-          );
-          nights = Math.max(
-            Math.ceil((checkOutObj - checkInObj) / (1000 * 60 * 60 * 24)),
-            1
-          );
-        }
-        bookingDetailsHtml = `
-          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
-            <span style="color: #6b7280; font-weight: 500;">Check-in Date</span>
-            <span style="color: #1f2937; font-weight: 600;">${checkInDate}</span>
-          </div>
-          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
-            <span style="color: #6b7280; font-weight: 500;">Check-out Date</span>
-            <span style="color: #1f2937; font-weight: 600;">${checkOutDate}</span>
-          </div>
-          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
-            <span style="color: #6b7280; font-weight: 500;">Number of Nights</span>
-            <span style="color: #1f2937; font-weight: 600;">${nights}</span>
-          </div>
-        `;
-      } else if (booking.type === "experiences") {
-        const expDate = booking.selectedDateTime?.date || "N/A";
-        const expTime = booking.selectedDateTime?.time || "N/A";
-        const duration = listing?.duration || 0;
-        bookingDetailsHtml = `
-          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
-            <span style="color: #6b7280; font-weight: 500;">Experience Date</span>
-            <span style="color: #1f2937; font-weight: 600;">${expDate}</span>
-          </div>
-          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
-            <span style="color: #6b7280; font-weight: 500;">Experience Time</span>
-            <span style="color: #1f2937; font-weight: 600;">${expTime}</span>
-          </div>
-          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
-            <span style="color: #6b7280; font-weight: 500;">Duration</span>
-            <span style="color: #1f2937; font-weight: 600;">${duration} hours</span>
-          </div>
-        `;
-      } else if (booking.type === "services") {
-        const svcDate = booking.selectedDateTime?.date || "N/A";
-        const svcTime = booking.selectedDateTime?.time || "N/A";
-        const duration = listing?.duration || 0;
-        bookingDetailsHtml = `
-          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
-            <span style="color: #6b7280; font-weight: 500;">Service Date</span>
-            <span style="color: #1f2937; font-weight: 600;">${svcDate}</span>
-          </div>
-          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
-            <span style="color: #6b7280; font-weight: 500;">Service Time</span>
-            <span style="color: #1f2937; font-weight: 600;">${svcTime}</span>
-          </div>
-          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; font-size: 14px;">
-            <span style="color: #6b7280; font-weight: 500;">Duration</span>
-            <span style="color: #1f2937; font-weight: 600;">${duration} hours</span>
-          </div>
-        `;
-      }
-
-      // Calculate grandTotal (what guest actually pays)
-      const grandTotal = totalAmount + serviceFee;
-
-      // Prepare email template variables (MUST match template {{variables}})
-      const emailParams = {
-        to_email: guestData.email,
-        guestName: guestData.fullName || "Guest",
-        listingTitle: listing?.title || "N/A",
-        listingLocation: listing?.location || "N/A",
-        listingRating: listing?.rating || 0,
-        listingType: listing?.type
-          ? listing.type.charAt(0).toUpperCase() + listing.type.slice(1)
-          : "Booking",
-        bookingId: booking.id || "N/A",
-        numberOfGuests: booking.numberOfGuests || booking.totalGuests || 1,
-        basePrice: totalAmount.toFixed(2),
-        serviceFee: serviceFee.toFixed(2),
-        totalAmount: grandTotal.toFixed(2),
-        dashboardLink: `${window.location.origin}/guest/my-bookings`,
-      };
-
-      // Send email using EmailJS
-      console.log("Sending booking confirmation email to:", guestData.email);
-      console.log("Email params:", emailParams);
-
-      try {
-        const response = await emailjs.send(serviceId, templateId, emailParams);
-
-        console.log("✓ Booking confirmation email sent successfully", {
-          status: response.status,
-          to: guestData.email,
-          bookingId: booking.id,
-        });
-      } catch (emailError) {
-        // If primary template fails, try alternative approach
-        console.warn(
-          "Primary template failed, attempting alternative send:",
-          emailError?.message
-        );
-
-        // Try using the alternative email service if available
-        const altServiceId = import.meta.env.VITE_EMAIL_JS_ANOTHER_SERVICE_ID;
-        const altPublicKey = import.meta.env.VITE_EMAIL_JS_ANOTHER_PUBLIC_KEY;
-
-        if (altServiceId && altPublicKey) {
-          try {
-            emailjs.init({
-              publicKey: altPublicKey,
-              blockHeadless: false,
-            });
-
-            const altResponse = await emailjs.send(
-              altServiceId,
-              templateId,
-              emailParams
-            );
-
-            console.log("✓ Email sent via alternative service:", {
-              status: altResponse.status,
-              to: guestData.email,
-            });
-          } catch (altError) {
-            console.error(
-              "Alternative email service also failed:",
-              altError?.message
-            );
-            // Re-initialize with primary key for future emails
-            emailjs.init({
-              publicKey: import.meta.env.VITE_EMAIL_JS_PUBLIC_KEY,
-              blockHeadless: false,
-            });
-          }
-        } else {
-          throw emailError;
-        }
-      }
-    } catch (error) {
-      console.error("Error sending booking confirmation email:", {
-        message: error?.message,
-        status: error?.status,
-        errorText: error?.text,
-        fullError: error,
-      });
-      // Don't throw error - email failure shouldn't stop booking confirmation
-    }
-  };
 
   // Handle confirm booking
   const handleConfirmBooking = async () => {
@@ -440,7 +257,11 @@ export default function HostMyBookings() {
       const guestData = guestSnap.exists() ? guestSnap.data() : null;
 
       if (guestData) {
-        await sendBookingConfirmationEmail(bookingToAction, guestData);
+        await sendBookingConfirmationEmail(
+          bookingToAction,
+          bookingToAction.listing,
+          guestData
+        );
       }
 
       // Update local state

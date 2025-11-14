@@ -200,7 +200,8 @@ export const getUserListingCount = async (userId, listingType) => {
     const q = query(
       collection(db, "listings"),
       where("hostId", "==", userId),
-      where("type", "==", listingType)
+      where("type", "==", listingType),
+      where("isDraft", "==", false) // Only count active (non-draft) listings
     );
     const querySnapshot = await getDocs(q);
     return querySnapshot.size;

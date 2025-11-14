@@ -1,11 +1,21 @@
-import pdfMake from "pdfmake/build/pdfmake";
-import pdfFonts from "pdfmake/build/vfs_fonts";
+import pdfMakeLib from "pdfmake/build/pdfmake";
+import * as pdfFontsLib from "pdfmake/build/vfs_fonts";
 import { formatCurrency } from "./adminAnalytics";
 import { formatDateRange } from "./reportUtils";
 
-// Initialize fonts - handle both module formats
-const vfs = pdfFonts.pdfMake?.vfs || pdfFonts;
-pdfMake.vfs = vfs;
+// Get the pdfMake instance
+const pdfMake = pdfMakeLib.default || pdfMakeLib;
+
+// Initialize fonts - the VFS is directly the imported object
+if (pdfFontsLib.pdfMake && pdfFontsLib.pdfMake.vfs) {
+  // Old structure: { pdfMake: { vfs: {...} } }
+  pdfMake.vfs = pdfFontsLib.pdfMake.vfs;
+} else if (typeof pdfFontsLib === 'object' && Object.keys(pdfFontsLib).some(key => key.endsWith('.ttf'))) {
+  // New structure: direct VFS object with .ttf files
+  pdfMake.vfs = pdfFontsLib;
+} else {
+  console.error("Unable to load pdfMake fonts. Structure:", pdfFontsLib);
+}
 
 /**
  * PDF Generation Utility for BookingNest Reports

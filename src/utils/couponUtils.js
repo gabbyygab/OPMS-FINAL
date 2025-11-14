@@ -30,13 +30,26 @@ export const validateCoupon = async (couponCode, hostId) => {
     const coupon = querySnapshot.docs[0].data();
     const couponId = querySnapshot.docs[0].id;
 
-    // Check if coupon has expired
-    const expiryDate = new Date(coupon.expiryDate);
+    // Check dates
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    if (expiryDate < today) {
-      return { valid: false, coupon: null, message: "Coupon has expired" };
+    // Check if coupon has started (if startDate exists)
+    if (coupon.startDate) {
+      const startDate = new Date(coupon.startDate);
+      startDate.setHours(0, 0, 0, 0);
+      if (today < startDate) {
+        return { valid: false, coupon: null, message: "Coupon is not yet active" };
+      }
+    }
+
+    // Check if coupon has expired
+    if (coupon.expiryDate) {
+      const expiryDate = new Date(coupon.expiryDate);
+      expiryDate.setHours(0, 0, 0, 0);
+      if (expiryDate < today) {
+        return { valid: false, coupon: null, message: "Coupon has expired" };
+      }
     }
 
     return {
