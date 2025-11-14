@@ -31,7 +31,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-toastify";
 import LoadingSpinner from "../loading/Loading";
-import { sendBookingCancellationEmail } from "../utils/sendBookingCancellationEmail";
+import { sendGuestRefundEmail } from "../utils/sendGuestRefundEmail";
 import { requestRefund, canRequestRefund } from "../utils/refundUtils";
 
 function parseDate(dateStr) {
@@ -155,9 +155,9 @@ export default function MyBookingsSection() {
       // Update local state
       setBookings(bookings.filter((b) => b.id !== selectedBooking.id));
 
-      // Send cancellation email to guest
+      // Send refund email to guest
       try {
-        await sendBookingCancellationEmail(
+        await sendGuestRefundEmail(
           selectedBooking,
           {
             email: user.email,
@@ -170,7 +170,7 @@ export default function MyBookingsSection() {
           }
         );
       } catch (emailError) {
-        console.error("Error sending cancellation email:", emailError);
+        console.error("Error sending refund email:", emailError);
         // Don't fail the cancellation if email fails
       }
 
@@ -740,26 +740,26 @@ export default function MyBookingsSection() {
 
         {selectedBooking && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start justify-center z-50 px-4">
-            <div className="bg-slate-800/90 backdrop-blur-lg border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6 relative mt-[110px]">
+            <div className="bg-slate-800/90 backdrop-blur-lg border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-4 relative mt-[110px] max-h-[calc(100vh-140px)] overflow-y-auto">
               <button
                 onClick={() => setSelectedBooking(null)}
-                className="absolute top-4 right-4 text-slate-400 hover:text-white hover:bg-slate-700 p-2 rounded-lg transition-all"
+                className="absolute top-3 right-3 text-slate-400 hover:text-white hover:bg-slate-700 p-1.5 rounded-lg transition-all z-10"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
 
               <img
                 src={selectedBooking.photo}
                 alt={selectedBooking.title}
-                className="w-full h-48 object-cover rounded-xl mb-4 border border-slate-700"
+                className="w-full h-32 object-cover rounded-lg mb-3 border border-slate-700"
               />
 
-              <div className="flex items-start justify-between mb-4">
-                <h2 className="text-2xl font-bold text-white">
+              <div className="flex items-start justify-between mb-3">
+                <h2 className="text-lg font-bold text-white pr-2">
                   {selectedBooking.title}
                 </h2>
                 <span
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+                  className={`px-2 py-1 rounded-lg text-xs font-semibold border flex-shrink-0 ${
                     selectedBooking.status === "confirmed"
                       ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                       : "bg-amber-500/10 text-amber-400 border-amber-500/20"
@@ -770,14 +770,14 @@ export default function MyBookingsSection() {
                 </span>
               </div>
 
-              <div className="space-y-3 mb-5">
-                <div className="flex items-center text-slate-300 text-sm">
-                  <MapPin className="w-4 h-4 mr-2 text-indigo-400" />
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center text-slate-300 text-xs">
+                  <MapPin className="w-3.5 h-3.5 mr-1.5 text-indigo-400" />
                   {selectedBooking.location}
                 </div>
 
-                <div className="flex items-center text-slate-300 text-sm">
-                  <Calendar className="w-4 h-4 mr-2 text-emerald-400" />
+                <div className="flex items-center text-slate-300 text-xs">
+                  <Calendar className="w-3.5 h-3.5 mr-1.5 text-emerald-400" />
                   {selectedBooking.type === "experiences" ? (
                     <>
                       {formatDate(
@@ -804,17 +804,17 @@ export default function MyBookingsSection() {
                   )}
                 </div>
 
-                <div className="flex items-center text-slate-300 text-sm">
-                  <Users className="w-4 h-4 mr-2 text-amber-400" />
+                <div className="flex items-center text-slate-300 text-xs">
+                  <Users className="w-3.5 h-3.5 mr-1.5 text-amber-400" />
                   {selectedBooking.guests}{" "}
                   {selectedBooking.guests === 1 ? "Guest" : "Guests"}
                 </div>
               </div>
 
-              <div className="border-t border-slate-700 pt-4 mb-5">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-slate-400">Amount Paid (with service fee)</span>
-                  <span className="text-2xl font-bold text-white">
+              <div className="border-t border-slate-700 pt-3 mb-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-slate-400 text-xs">Amount Paid (with service fee)</span>
+                  <span className="text-lg font-bold text-white">
                     ₱
                     {selectedBooking.grandTotal?.toFixed(2) ||
                       selectedBooking.totalAmount?.toFixed(2) ||
@@ -824,7 +824,7 @@ export default function MyBookingsSection() {
                 </div>
 
                 {(selectedBooking.totalAmount || selectedBooking.serviceFee) && (
-                  <div className="bg-slate-900/50 rounded-lg p-3 space-y-2">
+                  <div className="bg-slate-900/50 rounded-lg p-2 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-slate-500">Booking Amount:</span>
                       <span className="text-slate-300">
@@ -844,9 +844,9 @@ export default function MyBookingsSection() {
               </div>
 
               {selectedBooking.status === "pending" && (
-                <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                <div className="mb-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <div className="flex items-start gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-blue-400 mt-0.5 flex-shrink-0" />
                     <p className="text-xs text-blue-300">
                       Your booking is pending. You can cancel it anytime before
                       the host confirms.
@@ -857,9 +857,9 @@ export default function MyBookingsSection() {
 
               {selectedBooking.status === "confirmed" &&
                 canRefund(selectedBooking) && (
-                  <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                  <div className="mb-3 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <div className="flex items-start gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
                       <p className="text-xs text-amber-300">
                         You can request a full refund for this booking since the
                         check-in date hasn't arrived yet.
@@ -868,42 +868,42 @@ export default function MyBookingsSection() {
                   </div>
                 )}
 
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 {selectedBooking.status === "pending" ? (
                   <button
                     onClick={() => setShowRefundModal(true)}
-                    className="flex-1 bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40 flex items-center justify-center gap-2"
+                    className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40 flex items-center justify-center gap-1.5"
                   >
-                    <Trash2 className="w-4 h-4" />
-                    Cancel Booking
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Cancel
                   </button>
                 ) : selectedBooking.status === "confirmed" ? (
                   canRefund(selectedBooking) ? (
                     <button
                       onClick={() => setShowRefundModal(true)}
-                      className="flex-1 bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40 flex items-center justify-center gap-2"
+                      className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40 flex items-center justify-center gap-1.5"
                     >
-                      <RefreshCw className="w-4 h-4" />
-                      Request Refund
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Refund
                     </button>
                   ) : (
                     <button
                       disabled
-                      className="flex-1 bg-slate-700 text-slate-500 py-3 rounded-lg font-semibold cursor-not-allowed border border-slate-600 flex items-center justify-center gap-2"
+                      className="flex-1 bg-slate-700 text-slate-500 py-2 rounded-lg text-sm font-semibold cursor-not-allowed border border-slate-600 flex items-center justify-center gap-1.5"
                     >
-                      <CheckCircle className="w-4 h-4" />
+                      <CheckCircle className="w-3.5 h-3.5" />
                       Completed
                     </button>
                   )
                 ) : (
                   <button
                     disabled
-                    className="flex-1 bg-slate-700 text-slate-500 py-3 rounded-lg font-semibold cursor-not-allowed border border-slate-600"
+                    className="flex-1 bg-slate-700 text-slate-500 py-2 rounded-lg text-sm font-semibold cursor-not-allowed border border-slate-600"
                   >
                     Unavailable
                   </button>
                 )}
-                <button className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40">
+                <button className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40">
                   View Listing
                 </button>
               </div>

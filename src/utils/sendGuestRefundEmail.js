@@ -33,23 +33,23 @@ const getAverageListingRating = async (listingId) => {
 };
 
 /**
- * Send booking cancellation email to guest
+ * Send guest refund email notification
  * @param {Object} booking - The booking document
  * @param {Object} guestData - Guest user data with email and name
  * @param {Object} options - Optional configuration
- * @param {string} options.cancellationReason - Reason for cancellation (if applicable)
+ * @param {string} options.cancellationReason - Reason for refund (if applicable)
  * @param {number} options.refundAmount - Amount being refunded
  * @param {string} options.basePrice - Original booking price
  * @param {string} options.serviceFee - Service fee amount
  * @returns {Promise<void>}
  */
-export const sendBookingCancellationEmail = async (
+export const sendGuestRefundEmail = async (
   booking,
   guestData,
   options = {}
 ) => {
   try {
-    // Use ALTERNATIVE EmailJS service for cancellation emails only
+    // Use ALTERNATIVE EmailJS service for refund emails only
     const publicKey = import.meta.env.VITE_EMAIL_JS_ANOTHER_PUBLIC_KEY?.trim();
     const serviceId = import.meta.env.VITE_EMAIL_JS_ANOTHER_SERVICE_ID?.trim();
     const templateId =
@@ -57,12 +57,12 @@ export const sendBookingCancellationEmail = async (
 
     if (!publicKey || !serviceId || !templateId) {
       console.warn(
-        "EmailJS credentials not configured for cancellation emails"
+        "EmailJS credentials not configured for refund emails"
       );
       return;
     }
 
-    // Initialize EmailJS with ALTERNATIVE service (dedicated for cancellations)
+    // Initialize EmailJS with ALTERNATIVE service (dedicated for refunds)
     emailjs.init({
       publicKey: publicKey,
       blockHeadless: false,
@@ -109,7 +109,7 @@ export const sendBookingCancellationEmail = async (
       dashboardLink: `${window.location.origin}/guest/my-bookings`,
     };
 
-    console.log("📧 Sending booking cancellation email...", {
+    console.log("📧 Sending guest refund email...", {
       to: emailParams.to_email,
       bookingId: emailParams.bookingId,
       serviceFeePercentage: serviceFeePercentage,
@@ -117,10 +117,10 @@ export const sendBookingCancellationEmail = async (
 
     await emailjs.send(serviceId, templateId, emailParams);
 
-    console.log("✅ Booking cancellation email sent successfully");
+    console.log("✅ Guest refund email sent successfully");
   } catch (error) {
-    console.error("❌ Error sending cancellation email:", error);
-    // Don't use fallback - this service is already the dedicated cancellation service
+    console.error("❌ Error sending refund email:", error);
+    // Don't use fallback - this service is already the dedicated refund service
     throw error;
   }
 };

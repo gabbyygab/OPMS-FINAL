@@ -1,11 +1,11 @@
-import { sendBookingCancellationEmail } from "./sendBookingCancellationEmail";
+import { sendGuestRefundEmail } from "./sendGuestRefundEmail";
 
 /**
- * Test the booking cancellation email functionality
- * Use this to verify that cancellation emails work correctly
+ * Test the guest refund email functionality
+ * Use this to verify that refund emails work correctly
  */
 export const testCancellationEmail = async (testEmail = "test@bookingnest.com") => {
-  console.log("🧪 Testing booking cancellation email...");
+  console.log("🧪 Testing guest refund email...");
 
   try {
     // Test data for STAYS booking
@@ -32,14 +32,14 @@ export const testCancellationEmail = async (testEmail = "test@bookingnest.com") 
       fullName: "John Doe",
     };
 
-    console.log("📧 Sending STAYS cancellation email...");
-    await sendBookingCancellationEmail(staysBooking, guestData, {
+    console.log("📧 Sending STAYS refund email...");
+    await sendGuestRefundEmail(staysBooking, guestData, {
       cancellationReason: "Guest requested cancellation",
       basePrice: 5000,
       serviceFee: 250,
       refundAmount: 5250,
     });
-    console.log("✅ STAYS cancellation email test passed!");
+    console.log("✅ STAYS refund email test passed!");
 
     // Test data for EXPERIENCES booking
     const experiencesBooking = {
@@ -62,14 +62,14 @@ export const testCancellationEmail = async (testEmail = "test@bookingnest.com") 
       numberOfGuests: 2,
     };
 
-    console.log("📧 Sending EXPERIENCES cancellation email...");
-    await sendBookingCancellationEmail(experiencesBooking, guestData, {
+    console.log("📧 Sending EXPERIENCES refund email...");
+    await sendGuestRefundEmail(experiencesBooking, guestData, {
       cancellationReason: "Guest requested cancellation",
       basePrice: 3000,
       serviceFee: 150,
       refundAmount: 3150,
     });
-    console.log("✅ EXPERIENCES cancellation email test passed!");
+    console.log("✅ EXPERIENCES refund email test passed!");
 
     // Test data for SERVICES booking
     const servicesBooking = {
@@ -92,22 +92,22 @@ export const testCancellationEmail = async (testEmail = "test@bookingnest.com") 
       numberOfGuests: 1,
     };
 
-    console.log("📧 Sending SERVICES cancellation email...");
-    await sendBookingCancellationEmail(servicesBooking, guestData, {
+    console.log("📧 Sending SERVICES refund email...");
+    await sendGuestRefundEmail(servicesBooking, guestData, {
       cancellationReason: "Guest requested cancellation",
       basePrice: 1500,
       serviceFee: 75,
       refundAmount: 1575,
     });
-    console.log("✅ SERVICES cancellation email test passed!");
+    console.log("✅ SERVICES refund email test passed!");
 
     console.log(
-      "✅ All cancellation email tests passed! Check your inbox at " + testEmail
+      "✅ All refund email tests passed! Check your inbox at " + testEmail
     );
     return { success: true, message: "All tests passed" };
   } catch (error) {
     console.error(
-      "❌ Cancellation email test failed:",
+      "❌ Refund email test failed:",
       error.message || error
     );
     return {
@@ -118,12 +118,12 @@ export const testCancellationEmail = async (testEmail = "test@bookingnest.com") 
 };
 
 /**
- * Test pending booking cancellation (no refund)
+ * Test pending booking refund (no refund)
  */
 export const testPendingBookingCancellation = async (
   testEmail = "test@bookingnest.com"
 ) => {
-  console.log("🧪 Testing PENDING booking cancellation email...");
+  console.log("🧪 Testing PENDING booking refund email...");
 
   try {
     const pendingBooking = {
@@ -149,9 +149,9 @@ export const testPendingBookingCancellation = async (
     };
 
     console.log(
-      "📧 Sending pending booking cancellation email (no refund)..."
+      "📧 Sending pending booking refund email (no refund)..."
     );
-    await sendBookingCancellationEmail(
+    await sendGuestRefundEmail(
       pendingBooking,
       guestData,
       {
@@ -160,11 +160,11 @@ export const testPendingBookingCancellation = async (
         refundAmount: 0, // No refund for pending cancellations
       }
     );
-    console.log("✅ Pending booking cancellation email test passed!");
+    console.log("✅ Pending booking refund email test passed!");
     return { success: true, message: "Pending booking test passed" };
   } catch (error) {
     console.error(
-      "❌ Pending booking cancellation test failed:",
+      "❌ Pending booking refund test failed:",
       error.message || error
     );
     return {

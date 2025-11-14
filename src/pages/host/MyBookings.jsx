@@ -36,7 +36,7 @@ import { addPointsToUser } from "../../utils/rewardsUtils";
 import { approveRefund, denyRefund } from "../../utils/refundUtils";
 import { getServiceFeeForType } from "../../utils/platformSettingsUtils";
 import { sendBookingConfirmationEmail } from "../../utils/sendBookingConfirmationEmail";
-import { sendBookingCancellationEmail } from "../../utils/sendBookingCancellationEmail";
+import { sendGuestRefundEmail } from "../../utils/sendGuestRefundEmail";
 
 export default function HostMyBookings() {
   const [bookings, setBookings] = useState([]);
