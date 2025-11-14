@@ -14,6 +14,7 @@ import {
   LogOut,
   ChevronLeft,
   Users,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function AdminLayout({ user, userData }) {
@@ -70,6 +71,12 @@ export default function AdminLayout({ user, userData }) {
       icon: Users,
       path: "/admin/users",
       description: "Manage Users & Accounts",
+    },
+    {
+      name: "Policy & Compliance",
+      icon: ShieldCheck,
+      path: "/admin/policy-compliance",
+      description: "Platform Policies",
     },
   ];
 

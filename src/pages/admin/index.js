@@ -4,3 +4,4 @@ export { default as ServiceFees } from "./ServiceFees";
 export { default as Reports } from "./Reports";
 export { default as Payments } from "./Payments";
 export { default as UserManagement } from "./UserManagement";
+export { default as PolicyCompliance } from "./PolicyCompliance";
