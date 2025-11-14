@@ -4,6 +4,38 @@ import { db } from "../firebase/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
 /**
+ * Safely parse a date from various formats
+ * @param {Date|string|Object} dateValue - The date value to parse
+ * @returns {Date|null} Parsed date or null if invalid
+ */
+const parseDate = (dateValue) => {
+  if (!dateValue) return null;
+  
+  // If it's already a valid Date object
+  if (dateValue instanceof Date && !isNaN(dateValue)) {
+    return dateValue;
+  }
+  
+  // If it's a Firestore Timestamp
+  if (dateValue.toDate && typeof dateValue.toDate === 'function') {
+    return dateValue.toDate();
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof dateValue === 'string') {
+    const parsed = new Date(dateValue);
+    return isNaN(parsed) ? null : parsed;
+  }
+  
+  // If it's an object with seconds (Firestore Timestamp-like)
+  if (dateValue.seconds) {
+    return new Date(dateValue.seconds * 1000);
+  }
+  
+  return null;
+};
+
+/**
  * Fetch average rating for a listing from reviews collection
  * @param {string} listingId - The listing ID
  * @returns {Promise<number>} Average rating (0 if no reviews)
@@ -76,8 +108,49 @@ export const sendGuestRefundEmail = async (
       day: "numeric",
     });
 
-    // Get platform service fee percentage for this listing type
+    // Determine booking type and extract relevant dates
     const listingType = booking.type || "stays";
+    let checkInDate = "N/A";
+    let checkOutDate = "N/A";
+
+    if (listingType === "stays") {
+      const checkIn = parseDate(booking.checkIn);
+      const checkOut = parseDate(booking.checkOut);
+      
+      if (checkIn && !isNaN(checkIn)) {
+        checkInDate = checkIn.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      }
+      
+      if (checkOut && !isNaN(checkOut)) {
+        checkOutDate = checkOut.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      }
+    } else if (
+      listingType === "experiences" ||
+      listingType === "services"
+    ) {
+      const selectedDateValue = booking.selectedDate || booking.selectedDateTime?.date || booking.startDate;
+      const selectedDate = parseDate(selectedDateValue);
+      
+      if (selectedDate && !isNaN(selectedDate)) {
+        checkInDate = selectedDate.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      }
+      
+      checkOutDate = "N/A"; // Not applicable for experiences/services
+    }
+
+    // Get platform service fee percentage for this listing type
     const serviceFeePercentage = await getServiceFeeForType(listingType);
 
     // Get average rating from reviews
@@ -88,6 +161,11 @@ export const sendGuestRefundEmail = async (
     const serviceFee =
       options.serviceFee || Math.round(basePrice * (serviceFeePercentage / 100) * 100) / 100;
     const refundAmount = options.refundAmount || basePrice;
+
+    // Prepare discount information
+    const discountAmount = booking.discountAmount || 0;
+    const discountType = booking.discountType || "Promo Code";
+    const hasDiscount = discountAmount > 0;
 
     // Prepare email parameters
     const emailParams = {
@@ -100,10 +178,15 @@ export const sendGuestRefundEmail = async (
         ? booking.type.charAt(0).toUpperCase() + booking.type.slice(1)
         : "Booking",
       bookingId: booking.id,
-      numberOfGuests: booking.totalGuests || booking.numberOfGuests || 1,
+      numberOfGuests: booking.totalGuests || booking.numberOfGuests || booking.guests || 1,
+      checkInDate: checkInDate || "N/A",
+      checkOutDate: checkOutDate || "N/A",
       basePrice: basePrice.toFixed(2),
       serviceFee: serviceFee.toFixed(2),
       serviceFeePercentage: serviceFeePercentage.toFixed(2),
+      discountAmount: discountAmount.toFixed(2),
+      discountType: discountType,
+      discountDisplay: hasDiscount ? "" : "display: none;",
       refundAmount: refundAmount.toFixed(2),
       cancellationDate: cancellationDate,
       dashboardLink: `${window.location.origin}/guest/my-bookings`,

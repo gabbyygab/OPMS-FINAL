@@ -4,6 +4,38 @@ import { db } from "../firebase/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
 /**
+ * Safely parse a date from various formats
+ * @param {Date|string|Object} dateValue - The date value to parse
+ * @returns {Date|null} Parsed date or null if invalid
+ */
+const parseDate = (dateValue) => {
+  if (!dateValue) return null;
+  
+  // If it's already a valid Date object
+  if (dateValue instanceof Date && !isNaN(dateValue)) {
+    return dateValue;
+  }
+  
+  // If it's a Firestore Timestamp
+  if (dateValue.toDate && typeof dateValue.toDate === 'function') {
+    return dateValue.toDate();
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof dateValue === 'string') {
+    const parsed = new Date(dateValue);
+    return isNaN(parsed) ? null : parsed;
+  }
+  
+  // If it's an object with seconds (Firestore Timestamp-like)
+  if (dateValue.seconds) {
+    return new Date(dateValue.seconds * 1000);
+  }
+  
+  return null;
+};
+
+/**
  * Fetch average rating for a listing from reviews collection
  * @param {string} listingId - The listing ID
  * @returns {Promise<number>} Average rating (0 if no reviews)
@@ -66,32 +98,64 @@ export const sendBookingConfirmationEmail = async (
     const bookingType = listingData?.type || booking.type || "booking";
     let dateDisplay = "";
     let numberOfNights = 0;
+    let checkInDate = "N/A";
+    let checkOutDate = "N/A";
 
     if (bookingType === "stays") {
-      const checkIn = new Date(booking.checkIn);
-      const checkOut = new Date(booking.checkOut);
-      dateDisplay = `${checkIn.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      })} - ${checkOut.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })}`;
-      numberOfNights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+      const checkIn = parseDate(booking.checkIn);
+      const checkOut = parseDate(booking.checkOut);
+      
+      if (checkIn && !isNaN(checkIn)) {
+        checkInDate = checkIn.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      }
+      
+      if (checkOut && !isNaN(checkOut)) {
+        checkOutDate = checkOut.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      }
+      
+      if (checkIn && checkOut && !isNaN(checkIn) && !isNaN(checkOut)) {
+        dateDisplay = `${checkIn.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        })} - ${checkOut.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })}`;
+        numberOfNights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+      }
     } else if (
       bookingType === "experiences" ||
       bookingType === "services"
     ) {
-      const selectedDate = new Date(booking.selectedDate || booking.selectedDateTime?.date);
-      dateDisplay = selectedDate.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-      if (booking.selectedTime || booking.selectedDateTime?.time) {
-        dateDisplay += ` at ${booking.selectedTime || booking.selectedDateTime.time}`;
+      const selectedDateValue = booking.selectedDate || booking.selectedDateTime?.date || booking.startDate;
+      const selectedDate = parseDate(selectedDateValue);
+      
+      if (selectedDate && !isNaN(selectedDate)) {
+        checkInDate = selectedDate.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+        dateDisplay = selectedDate.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+        if (booking.selectedTime || booking.selectedDateTime?.time) {
+          dateDisplay += ` at ${booking.selectedTime || booking.selectedDateTime.time}`;
+        }
       }
+      
+      checkOutDate = "N/A"; // Not applicable for experiences/services
     }
 
     // Get platform service fee percentage for this listing type
@@ -99,6 +163,11 @@ export const sendBookingConfirmationEmail = async (
 
     // Get average rating from reviews
     const listingRating = await getAverageListingRating(booking.listing_id);
+
+    // Prepare discount information
+    const discountAmount = booking.discountAmount || 0;
+    const discountType = booking.discountType || "Promo Code";
+    const hasDiscount = discountAmount > 0;
 
     // Prepare email parameters
     const emailParams = {
@@ -112,9 +181,14 @@ export const sendBookingConfirmationEmail = async (
         bookingType.slice(1),
       bookingId: booking.id || "N/A",
       numberOfGuests: booking.guests || booking.numberOfGuests || 1,
+      checkInDate: checkInDate || "N/A",
+      checkOutDate: checkOutDate || "N/A",
       basePrice: (booking.baseAmount || booking.totalAmount || 0).toFixed(2),
       serviceFee: (booking.serviceFee || 0).toFixed(2),
       serviceFeePercentage: serviceFeePercentage.toFixed(2),
+      discountAmount: discountAmount.toFixed(2),
+      discountType: discountType,
+      discountDisplay: hasDiscount ? "" : "display: none;",
       totalAmount: (booking.grandTotal || booking.totalAmount || 0).toFixed(
         2
       ),

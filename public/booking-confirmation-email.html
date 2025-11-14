@@ -1,178 +1,567 @@
 <!DOCTYPE html>
 <html>
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BookingNest - Booking Confirmation</title>
-</head>
+  </head>
 
-<body
-    style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px 30px;">
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+        'Helvetica Neue', Arial, sans-serif;
+    "
+  >
+    <div
+      style="
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        padding: 40px 30px;
+      "
+    >
+      <!-- Logo -->
+      <div style="text-align: center; margin-bottom: 30px">
+        <img
+          style="height: 50px"
+          height="50"
+          src="https://res.cloudinary.com/dunltycks/image/upload/v1761738935/BookingNestLogo_lcwshw.png"
+          alt="BookingNest Logo"
+        />
+      </div>
 
-        <!-- Logo -->
-        <div style="text-align: center; margin-bottom: 30px;">
-            <img style="height: 50px;" height="50"
-                src="https://res.cloudinary.com/dunltycks/image/upload/v1761738935/BookingNestLogo_lcwshw.png"
-                alt="BookingNest Logo" />
-        </div>
+      <!-- Welcome Message -->
+      <div style="text-align: center; margin-bottom: 30px">
+        <h1
+          style="
+            margin: 0 0 10px 0;
+            color: #1f2937;
+            font-size: 28px;
+            font-weight: 600;
+          "
+        >
+          Booking Confirmed!
+        </h1>
+        <p style="margin: 0; color: #6b7280; font-size: 16px">
+          Hi <strong style="color: #4f46e5">{{guestName}}</strong>, your
+          reservation has been confirmed by the host.
+        </p>
+      </div>
 
-        <!-- Welcome Message -->
-        <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="margin: 0 0 10px 0; color: #1f2937; font-size: 28px; font-weight: 600;">Booking Confirmed!</h1>
-            <p style="margin: 0; color: #6b7280; font-size: 16px;">Hi <strong
-                    style="color: #4f46e5;">{{guestName}}</strong>, your reservation has been confirmed by the host.</p>
-        </div>
+      <!-- Main Content -->
+      <div
+        style="
+          padding: 30px;
+          background-color: #f9fafb;
+          border-radius: 8px;
+          border-left: 4px solid #4f46e5;
+        "
+      >
+        <h2 style="margin: 0 0 20px 0; color: #1f2937; font-size: 24px">
+          Booking Details
+        </h2>
 
-        <!-- Main Content -->
-        <div style="padding: 30px; background-color: #f9fafb; border-radius: 8px; border-left: 4px solid #4f46e5;">
-            <h2 style="margin: 0 0 20px 0; color: #1f2937; font-size: 24px;">Booking Details</h2>
+        <p
+          style="
+            color: #4b5563;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+          "
+        >
+          Great news! Your booking request has been confirmed by the host. We're
+          excited to help you plan your next adventure. Here are your booking
+          details:
+        </p>
 
-            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">Great news! Your booking
-                request has been confirmed by the host. We're excited to help you plan your next adventure. Here are
-                your booking details:</p>
-
-            <!-- Listing Information -->
-            <div
-                style="background-color: #ffffff; padding: 16px; border-radius: 6px; text-align: center; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <h3 style="margin: 0 0 8px 0; color: #1f2937; font-size: 18px; font-weight: 700;">{{listingTitle}}</h3>
-                <div style="font-size: 14px; color: #6b7280; margin-bottom: 10px;">
-                    <div>📍 {{listingLocation}}</div>
-                    <div>⭐ {{listingRating}} stars</div>
-                </div>
-                <span
-                    style="background-color: #e0e7ff; color: #4f46e5; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; margin-top: 8px;">{{listingType}}</span>
-            </div>
-
-            <!-- Booking Info Box -->
-            <div style="background-color: #ffffff; padding: 20px; border-radius: 6px; margin: 20px 0;">
-                <p
-                    style="margin: 0 0 15px 0; color: #9ca3af; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">
-                    Confirmation #{{bookingId}}</p>
-
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                        <td style="padding: 8px 0; color: #6b7280; font-weight: 500; font-size: 14px;">Number of Guests
-                        </td>
-                        <td
-                            style="padding: 8px 0; color: #1f2937; font-weight: 600; font-size: 14px; text-align: right;">
-                            {{numberOfGuests}}</td>
-                    </tr>
-                </table>
-            </div>
-
-            <!-- Price Breakdown -->
-            <div style="background-color: #ffffff; padding: 20px; border-radius: 6px; margin: 20px 0;">
-                <p
-                    style="margin: 0 0 20px 0; color: #9ca3af; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">
-                    Price Breakdown</p>
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                        <td style="padding: 8px 0; color: #6b7280; font-weight: 500; font-size: 14px;">Base Price</td>
-                        <td
-                            style="padding: 8px 0; color: #1f2937; font-weight: 600; font-size: 14px; text-align: right;">
-                            ₱{{basePrice}}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px 0; color: #6b7280; font-weight: 500; font-size: 14px;">Service Fee (5%)
-                        </td>
-                        <td
-                            style="padding: 8px 0; color: #1f2937; font-weight: 600; font-size: 14px; text-align: right;">
-                            ₱{{serviceFee}}</td>
-                    </tr>
-                </table>
-                <div style="border-top: 1px solid #e5e7eb; margin: 15px 0;"></div>
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                        <td style="padding: 8px 0; font-size: 16px; font-weight: 700; color: #1f2937;">Total Amount</td>
-                        <td
-                            style="padding: 8px 0; font-size: 18px; font-weight: 800; color: #4f46e5; text-align: right;">
-                            ₱{{totalAmount}}</td>
-                    </tr>
-                </table>
-                <p style="font-size: 12px; color: #9ca3af; margin-top: 12px; text-align: right; margin-bottom: 0;">
-                    Deducted from your e-wallet</p>
-            </div>
-        </div>
-
-        <!-- What's Next Section -->
-        <div style="margin-top: 30px; padding: 20px; background-color: #ede9fe; border-radius: 8px;">
-            <h3 style="margin: 0 0 20px 0; color: #1f2937; font-size: 16px; font-weight: 700;">What's Next?</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                    <td style="padding: 12px 0; vertical-align: top; width: 32px;">
-                        <div
-                            style="background: #4f46e5; color: white; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-weight: 700; font-size: 13px; margin: 0;">
-                            1</div>
-                    </td>
-                    <td style="padding: 12px 0 12px 12px; font-size: 13px; color: #4b5563; line-height: 1.5;">Review the
-                        host's contact information and communication preferences</td>
-                </tr>
-                <tr>
-                    <td style="padding: 12px 0; vertical-align: top; width: 32px;">
-                        <div
-                            style="background: #4f46e5; color: white; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-weight: 700; font-size: 13px; margin: 0;">
-                            2</div>
-                    </td>
-                    <td style="padding: 12px 0 12px 12px; font-size: 13px; color: #4b5563; line-height: 1.5;">Check your
-                        email for the host's details and any special instructions</td>
-                </tr>
-                <tr>
-                    <td style="padding: 12px 0; vertical-align: top; width: 32px;">
-                        <div
-                            style="background: #4f46e5; color: white; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-weight: 700; font-size: 13px; margin: 0;">
-                            3</div>
-                    </td>
-                    <td style="padding: 12px 0 12px 12px; font-size: 13px; color: #4b5563; line-height: 1.5;">View your
-                        booking in your account dashboard to access all details</td>
-                </tr>
-                <tr>
-                    <td style="padding: 12px 0; vertical-align: top; width: 32px;">
-                        <div
-                            style="background: #4f46e5; color: white; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-weight: 700; font-size: 13px; margin: 0;">
-                            4</div>
-                    </td>
-                    <td style="padding: 12px 0 12px 12px; font-size: 13px; color: #4b5563; line-height: 1.5;">Contact
-                        the host if you have any questions or need to make changes</td>
-                </tr>
-            </table>
-        </div>
-
-        <!-- Security/Payment Confirmation -->
+        <!-- Listing Information -->
         <div
-            style="margin-top: 30px; padding: 20px; background-color: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981;">
-            <p style="color: #15803d; font-weight: 600; margin-bottom: 10px; font-size: 14px;">✓ Payment Confirmed</p>
-            <p style="color: #22863a; font-size: 13px; line-height: 1.5; margin: 0;">Your payment of ₱{{totalAmount}}
-                has been successfully deducted from your e-wallet. You can view your transaction history in your account
-                settings.</p>
+          style="
+            background-color: #ffffff;
+            padding: 16px;
+            border-radius: 6px;
+            text-align: center;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+          "
+        >
+          <h3
+            style="
+              margin: 0 0 8px 0;
+              color: #1f2937;
+              font-size: 18px;
+              font-weight: 700;
+            "
+          >
+            {{listingTitle}}
+          </h3>
+          <div style="font-size: 14px; color: #6b7280; margin-bottom: 10px">
+            <div>📍 {{listingLocation}}</div>
+            <div>⭐ {{listingRating}} stars</div>
+          </div>
+          <span
+            style="
+              background-color: #e0e7ff;
+              color: #4f46e5;
+              padding: 4px 12px;
+              border-radius: 20px;
+              font-size: 12px;
+              font-weight: 600;
+              display: inline-block;
+              margin-top: 8px;
+            "
+            >{{listingType}}</span
+          >
         </div>
 
-        <!-- CTA Button -->
-        <div style="margin-top: 30px; text-align: center;">
-            <a href="{{dashboardLink}}"
-                style="display: inline-block; background-color: #4f46e5; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);">View
-                Your Booking</a>
+        <!-- Booking Info Box -->
+        <div
+          style="
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+          "
+        >
+          <p
+            style="
+              margin: 0 0 15px 0;
+              color: #9ca3af;
+              font-size: 12px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            "
+          >
+            Confirmation #{{bookingId}}
+          </p>
+
+          <table style="width: 100%; border-collapse: collapse">
+            <tr>
+              <td
+                style="
+                  padding: 8px 0;
+                  color: #6b7280;
+                  font-weight: 500;
+                  font-size: 14px;
+                "
+              >
+                Check-in Date
+              </td>
+              <td
+                style="
+                  padding: 8px 0;
+                  color: #1f2937;
+                  font-weight: 600;
+                  font-size: 14px;
+                  text-align: right;
+                "
+              >
+                {{checkInDate}}
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="
+                  padding: 8px 0;
+                  color: #6b7280;
+                  font-weight: 500;
+                  font-size: 14px;
+                "
+              >
+                Check-out Date
+              </td>
+              <td
+                style="
+                  padding: 8px 0;
+                  color: #1f2937;
+                  font-weight: 600;
+                  font-size: 14px;
+                  text-align: right;
+                "
+              >
+                {{checkOutDate}}
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="
+                  padding: 8px 0;
+                  color: #6b7280;
+                  font-weight: 500;
+                  font-size: 14px;
+                "
+              >
+                Number of Guests
+              </td>
+              <td
+                style="
+                  padding: 8px 0;
+                  color: #1f2937;
+                  font-weight: 600;
+                  font-size: 14px;
+                  text-align: right;
+                "
+              >
+                {{numberOfGuests}}
+              </td>
+            </tr>
+          </table>
         </div>
 
-        <!-- Cancellation Policy -->
-        <div style="margin-top: 30px;">
-            <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin: 0;"><strong>Cancellation
-                    Policy:</strong> Please review the host's cancellation policy. If you need to cancel, you can submit
-                a cancellation request from your dashboard. The host has the right to approve or deny cancellation
-                requests. Approved cancellations will result in a full refund to your e-wallet.</p>
+        <!-- Price Breakdown -->
+        <div
+          style="
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+          "
+        >
+          <p
+            style="
+              margin: 0 0 20px 0;
+              color: #9ca3af;
+              font-size: 12px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              font-weight: 600;
+            "
+          >
+            Price Breakdown
+          </p>
+          <table style="width: 100%; border-collapse: collapse">
+            <tr>
+              <td
+                style="
+                  padding: 8px 0;
+                  color: #6b7280;
+                  font-weight: 500;
+                  font-size: 14px;
+                "
+              >
+                Base Price
+              </td>
+              <td
+                style="
+                  padding: 8px 0;
+                  color: #1f2937;
+                  font-weight: 600;
+                  font-size: 14px;
+                  text-align: right;
+                "
+              >
+                ₱{{basePrice}}
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="
+                  padding: 8px 0;
+                  color: #6b7280;
+                  font-weight: 500;
+                  font-size: 14px;
+                "
+              >
+                Service Fee (5%)
+              </td>
+              <td
+                style="
+                  padding: 8px 0;
+                  color: #1f2937;
+                  font-weight: 600;
+                  font-size: 14px;
+                  text-align: right;
+                "
+              >
+                ₱{{serviceFee}}
+              </td>
+            </tr>
+            <tr style="{{discountDisplay}}">
+              <td
+                style="
+                  padding: 8px 0;
+                  color: #10b981;
+                  font-weight: 500;
+                  font-size: 14px;
+                "
+              >
+                Discount ({{discountType}})
+              </td>
+              <td
+                style="
+                  padding: 8px 0;
+                  color: #10b981;
+                  font-weight: 600;
+                  font-size: 14px;
+                  text-align: right;
+                "
+              >
+                -₱{{discountAmount}}
+              </td>
+            </tr>
+          </table>
+          <div style="border-top: 1px solid #e5e7eb; margin: 15px 0"></div>
+          <table style="width: 100%; border-collapse: collapse">
+            <tr>
+              <td
+                style="
+                  padding: 8px 0;
+                  font-size: 16px;
+                  font-weight: 700;
+                  color: #1f2937;
+                "
+              >
+                Total Amount
+              </td>
+              <td
+                style="
+                  padding: 8px 0;
+                  font-size: 18px;
+                  font-weight: 800;
+                  color: #4f46e5;
+                  text-align: right;
+                "
+              >
+                ₱{{totalAmount}}
+              </td>
+            </tr>
+          </table>
+          <p
+            style="
+              font-size: 12px;
+              color: #9ca3af;
+              margin-top: 12px;
+              text-align: right;
+              margin-bottom: 0;
+            "
+          >
+            Deducted from your e-wallet
+          </p>
         </div>
+      </div>
 
-        <!-- Footer -->
-        <div style="margin-top: 30px; text-align: center;">
-            <p style="color: #6b7280; font-size: 14px; margin: 10px 0;">Ready to explore more? Your next unforgettable
-                experience is just a few clicks away. ✨</p>
-            <p style="color: #9ca3af; font-size: 12px; margin: 20px 0 0 0;">© 2025 BookingNest. All rights reserved.</p>
-            <p style="color: #d1d5db; font-size: 11px; margin: 10px 0 0 0;">Need help? Contact us anytime at <a
-                    href="mailto:support@bookingnest.com"
-                    style="color: #4f46e5; text-decoration: none;">support@bookingnest.com</a></p>
-        </div>
+      <!-- What's Next Section -->
+      <div
+        style="
+          margin-top: 30px;
+          padding: 20px;
+          background-color: #ede9fe;
+          border-radius: 8px;
+        "
+      >
+        <h3
+          style="
+            margin: 0 0 20px 0;
+            color: #1f2937;
+            font-size: 16px;
+            font-weight: 700;
+          "
+        >
+          What's Next?
+        </h3>
+        <table style="width: 100%; border-collapse: collapse">
+          <tr>
+            <td style="padding: 12px 0; vertical-align: top; width: 32px">
+              <div
+                style="
+                  background: #4f46e5;
+                  color: white;
+                  width: 28px;
+                  height: 28px;
+                  border-radius: 50%;
+                  text-align: center;
+                  line-height: 28px;
+                  font-weight: 700;
+                  font-size: 13px;
+                  margin: 0;
+                "
+              >
+                1
+              </div>
+            </td>
+            <td
+              style="
+                padding: 12px 0 12px 12px;
+                font-size: 13px;
+                color: #4b5563;
+                line-height: 1.5;
+              "
+            >
+              Review the host's contact information and communication
+              preferences
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0; vertical-align: top; width: 32px">
+              <div
+                style="
+                  background: #4f46e5;
+                  color: white;
+                  width: 28px;
+                  height: 28px;
+                  border-radius: 50%;
+                  text-align: center;
+                  line-height: 28px;
+                  font-weight: 700;
+                  font-size: 13px;
+                  margin: 0;
+                "
+              >
+                2
+              </div>
+            </td>
+            <td
+              style="
+                padding: 12px 0 12px 12px;
+                font-size: 13px;
+                color: #4b5563;
+                line-height: 1.5;
+              "
+            >
+              Check your email for the host's details and any special
+              instructions
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0; vertical-align: top; width: 32px">
+              <div
+                style="
+                  background: #4f46e5;
+                  color: white;
+                  width: 28px;
+                  height: 28px;
+                  border-radius: 50%;
+                  text-align: center;
+                  line-height: 28px;
+                  font-weight: 700;
+                  font-size: 13px;
+                  margin: 0;
+                "
+              >
+                3
+              </div>
+            </td>
+            <td
+              style="
+                padding: 12px 0 12px 12px;
+                font-size: 13px;
+                color: #4b5563;
+                line-height: 1.5;
+              "
+            >
+              View your booking in your account dashboard to access all details
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0; vertical-align: top; width: 32px">
+              <div
+                style="
+                  background: #4f46e5;
+                  color: white;
+                  width: 28px;
+                  height: 28px;
+                  border-radius: 50%;
+                  text-align: center;
+                  line-height: 28px;
+                  font-weight: 700;
+                  font-size: 13px;
+                  margin: 0;
+                "
+              >
+                4
+              </div>
+            </td>
+            <td
+              style="
+                padding: 12px 0 12px 12px;
+                font-size: 13px;
+                color: #4b5563;
+                line-height: 1.5;
+              "
+            >
+              Contact the host if you have any questions or need to make changes
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Security/Payment Confirmation -->
+      <div
+        style="
+          margin-top: 30px;
+          padding: 20px;
+          background-color: #f0fdf4;
+          border-radius: 8px;
+          border-left: 4px solid #10b981;
+        "
+      >
+        <p
+          style="
+            color: #15803d;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 14px;
+          "
+        >
+          ✓ Payment Confirmed
+        </p>
+        <p style="color: #22863a; font-size: 13px; line-height: 1.5; margin: 0">
+          Your payment of ₱{{totalAmount}} has been successfully deducted from
+          your e-wallet. You can view your transaction history in your account
+          settings.
+        </p>
+      </div>
+
+      <!-- CTA Button -->
+      <div style="margin-top: 30px; text-align: center">
+        <a
+          href="{{dashboardLink}}"
+          style="
+            display: inline-block;
+            background-color: #4f46e5;
+            color: white;
+            padding: 12px 32px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+          "
+          >View Your Booking</a
+        >
+      </div>
+
+      <!-- Cancellation Policy -->
+      <div style="margin-top: 30px">
+        <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin: 0">
+          <strong>Cancellation Policy:</strong> Please review the host's
+          cancellation policy. If you need to cancel, you can submit a
+          cancellation request from your dashboard. The host has the right to
+          approve or deny cancellation requests. Approved cancellations will
+          result in a full refund to your e-wallet.
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="margin-top: 30px; text-align: center">
+        <p style="color: #6b7280; font-size: 14px; margin: 10px 0">
+          Ready to explore more? Your next unforgettable experience is just a
+          few clicks away. ✨
+        </p>
+        <p style="color: #9ca3af; font-size: 12px; margin: 20px 0 0 0">
+          © 2025 BookingNest. All rights reserved.
+        </p>
+        <p style="color: #d1d5db; font-size: 11px; margin: 10px 0 0 0">
+          Need help? Contact us anytime at
+          <a
+            href="mailto:support@bookingnest.com"
+            style="color: #4f46e5; text-decoration: none"
+            >support@bookingnest.com</a
+          >
+        </p>
+      </div>
     </div>
-</body>
-
+  </body>
 </html>
